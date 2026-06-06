@@ -1,0 +1,2629 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestor de Clientes IPTV</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, sans-serif;
+}
+
+body{
+    background:#0f172a;
+    color:white;
+    padding:20px;
+}
+
+h1{
+    margin-bottom:20px;
+    color:#38bdf8;
+}
+
+.topo{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:20px;
+}
+
+.topo-clientes{
+    display:flex;
+    gap:10px;
+}
+
+.topo-clientes button{
+    flex:1;
+}
+
+input, button{
+    padding:12px;
+    border:none;
+    border-radius:10px;
+}
+
+input{
+    background:#1e293b;
+    color:white;
+}
+
+button{
+    cursor:pointer;
+    font-weight:bold;
+}
+.btn-lembrete{
+
+    background:#22c55e;
+
+    color:white;
+
+    padding:10px 15px;
+
+    border:none;
+
+    border-radius:10px;
+
+    font-weight:bold;
+
+    cursor:pointer;
+}
+.btn-add{
+    background:#22c55e;
+    color:white;
+}
+
+.btn-whats{
+    background:#25d366;
+    color:white;
+}
+
+.btn-delete{
+    background:#ef4444;
+    color:white;
+}
+
+.btn-edit{
+    background:#3b82f6;
+    color:white;
+}
+
+.btn-vencendo{
+    background:#f59e0b;
+    color:black;
+}
+
+.btn-icon{
+
+    width:45px;
+    height:45px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:22px;
+
+    padding:0;
+}
+
+.btn-renovar{
+    background:#22c55e;
+    color:white;
+}
+
+.lista{
+    display:grid;
+    gap:15px;
+}
+
+.card{
+    background:#1e293b;
+    padding:15px;
+    border-radius:15px;
+    border-left:5px solid #38bdf8;
+}
+
+.card.vencido{
+    border-left:5px solid #ef4444;
+}
+
+.card.vencendo{
+    border-left:5px solid #f59e0b;
+}
+
+.nome{
+    font-size:20px;
+    font-weight:bold;
+    margin-bottom:10px;
+}
+
+.info{
+    margin:5px 0;
+}
+
+.acoes{
+    margin-top:15px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.status{
+    padding:5px 10px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.ativo{
+    background:#22c55e;
+    color:black;
+}
+
+.vencido-status{
+    background:#ef4444;
+    color:white;
+}
+
+.vencendo-status{
+    background:#f59e0b;
+    color:black;
+}
+
+@media(max-width:700px){
+    .topo{
+        flex-direction:column;
+    }
+    .topo-clientes{
+        flex-direction:row !important;
+    }
+    .grupo-data-valor{
+        width:100%;
+    }
+    .grupo-data-valor input{
+        flex:1;
+    }
+}
+
+.grupo-data-valor{
+    display:flex;
+    gap:10px;
+}
+
+.grupo-data-valor input{
+    width:140px;
+}
+.menu-btn{
+    position:fixed;
+    top:10px;
+    left:15px;
+    width:50px;
+    height:50px;
+    background:#1e293b;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:12px;
+    font-size:26px;
+    cursor:pointer;
+    z-index:5001;
+    box-shadow:0 0 10px rgba(0,0,0,.3);
+}
+
+.sidebar{
+    position:fixed;
+    top:0;
+    left:-260px;
+    width:250px;
+    height:100vh;
+    background:#111827;
+
+    padding:90px 20px 20px 20px;
+
+    transition:.3s;
+    z-index:5000;
+    overflow-y:auto;
+}
+
+.sidebar.ativo{
+    left:0;
+}
+
+.sidebar h2{
+    margin-bottom:30px;
+    color:#38bdf8;
+}
+
+.sidebar button{
+    width:100%;
+    margin-bottom:10px;
+    background:#1e293b;
+    color:white;
+    padding:15px;
+    border-radius:12px;
+    border:none;
+    text-align:left;
+}
+
+.guia{
+    display:none;
+    padding-top:80px;
+    position:relative;
+    z-index:1;
+}
+
+.guia.ativa{
+    display:block;
+}
+
+.cards-dashboard{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:15px;
+    margin:20px 0;
+}
+
+.dash-card{
+    background:#1e293b;
+    padding:20px;
+    border-radius:16px;
+}
+
+.dash-card h3{
+    margin-bottom:10px;
+    color:#94a3b8;
+}
+
+.dash-card span{
+    font-size:28px;
+    font-weight:bold;
+    color:#38bdf8;
+}
+
+.vencimentos-box{
+    margin-top:30px;
+    background:#1e293b;
+    padding:20px;
+    border-radius:16px;
+}
+
+.config-box{
+    background:#1e293b;
+    padding:20px;
+    border-radius:16px;
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+
+select{
+    background:#1e293b;
+    color:white;
+    padding:12px;
+    border:none;
+    border-radius:10px;
+}
+.plano-item{
+    background:#0f172a;
+    padding:15px;
+    border-radius:12px;
+    margin-top:10px;
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.plano-info{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+}
+
+.plano-nome{
+    font-weight:bold;
+    color:#38bdf8;
+}
+
+.plano-valor{
+    color:#94a3b8;
+}
+.modal{
+
+    position:fixed;
+    top:0;
+    left:0;
+
+    width:100%;
+    height:100%;
+
+    background:rgba(0,0,0,.6);
+
+    display:none;
+
+    align-items:center;
+    justify-content:center;
+
+    z-index:2000;
+}
+
+.modal.ativo{
+    display:flex;
+}
+
+.modal-box{
+
+    background:#111827;
+
+    width:95%;
+    max-width:450px;
+
+    padding:25px;
+
+    border-radius:20px;
+
+    display:flex;
+    flex-direction:column;
+
+    gap:15px;
+
+    animation:modalEntrada .25s ease;
+}
+
+@keyframes modalEntrada{
+
+    from{
+        opacity:0;
+        transform:translateY(20px);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+.modal-topo{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+}
+
+.fechar-modal{
+    background:#ef4444;
+    color:white;
+    width:40px;
+    height:40px;
+    border-radius:10px;
+    font-size:18px;
+}
+
+.filtros-clientes{
+    display:flex;
+    gap:10px;
+    margin-bottom:20px;
+    overflow-x:auto;
+}
+
+.filtro-btn{
+    background:#1e293b;
+    color:white;
+    border:none;
+    padding:12px 18px;
+    border-radius:12px;
+    font-weight:bold;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.filtro-btn.ativo{
+    background:#38bdf8;
+    color:black;
+}
+
+#cabecalhoSistema{
+
+    position:fixed;
+
+    top:0;
+    left:0;
+
+    width:100%;
+
+    height:70px;
+
+    background:#111827;
+
+    display:flex;
+
+    align-items:center;
+    justify-content:center;
+
+    gap:12px;
+
+    z-index:4000;
+
+    box-shadow:0 2px 10px rgba(0,0,0,.3);
+}
+
+#logoSistema{
+
+    width:45px;
+    height:45px;
+
+    object-fit:contain;
+}
+
+#tituloSistema{
+
+    font-size:24px;
+    font-weight:bold;
+
+    color:#38bdf8;
+}
+.backup-acoes{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.backup-acoes button{
+    flex:1;
+}
+#renovacaoNome,
+#renovacaoAtual,
+#renovacaoPlano{
+    color:white;
+}
+#modalRenovacao .modal-box,
+#modalRenovacao .modal-box *{
+    color:white;
+}
+</style>
+</head>
+<body>
+<div id="cabecalhoSistema">
+
+    <img
+        id="logoSistema"
+        src=""
+        style="display:none;"
+    >
+
+    <span id="tituloSistema">
+        Gestor IPTV
+    </span>
+
+</div>
+<!-- MENU -->
+
+<div class="menu-btn" onclick="toggleMenu()">
+    ☰
+</div>
+
+<div class="sidebar" id="sidebar">
+
+    <button onclick="abrirGuia('dashboard')">
+        Dashboard
+    </button>
+
+    <button onclick="abrirGuia('clientes')">
+        Clientes
+    </button>
+
+    <button onclick="abrirGuia('configuracoes')">
+        Configurações
+    </button>
+
+</div>
+
+<!-- DASHBOARD -->
+
+<div id="dashboard" class="guia ativa">
+
+    <h1>📊 Dashboard</h1>
+
+    <div class="cards-dashboard">
+
+        <div class="dash-card">
+            <h3>💰 Lucro Mensal</h3>
+            <span id="lucroTotal">R$ 0,00</span>
+        </div>
+
+        <div class="dash-card">
+            <h3>✅ Clientes Ativos</h3>
+            <span id="clientesAtivos">0</span>
+        </div>
+
+        <div class="dash-card">
+            <h3>⚠️ Vencendo</h3>
+            <span id="clientesVencendo">0</span>
+        </div>
+
+    </div>
+
+    <canvas id="graficoLucro"></canvas>
+
+    <div class="vencimentos-box">
+        <h2>Clientes vencendo nos próximos 3 dias</h2>
+
+        <div id="listaVencendo"></div>
+    </div>
+
+</div>
+
+<!-- CLIENTES -->
+
+<div id="clientes" class="guia">
+
+    <h1>📺 Clientes</h1>
+
+    <div class="topo topo-clientes">
+
+    <button
+        class="btn-add"
+        onclick="toggleAdicionar()"
+    >
+        ➕ Adicionar
+    </button>
+
+    <button
+        class="btn-edit"
+        onclick="togglePesquisa()"
+    >
+        🔎 Pesquisar
+    </button>
+
+</div>
+
+<div
+    class="topo"
+    id="boxAdicionar"
+    style="display:none;"
+>
+
+    <select id="servidor"></select>
+
+    <input
+        type="text"
+        id="nome"
+        placeholder="Nome"
+    >
+
+    <input
+        type="text"
+        id="usuario"
+        placeholder="Usuário"
+    >
+
+    <input
+        type="text"
+        id="senha"
+        placeholder="Senha"
+    >
+
+    <input
+        type="text"
+        id="whatsapp"
+        placeholder="+55 DDD NÚMERO"
+    >
+
+    <select id="plano"></select>
+
+    <input 
+        type="text"
+        id="vencimento"
+        placeholder="Data"
+        onfocus="(this.type='date')"
+        onblur="if(!this.value)this.type='text'"
+    >
+
+    <input
+        type="text"
+        id="obs"
+        placeholder="OBS: dispositivo"
+    >
+
+    <button
+        class="btn-add"
+        onclick="adicionarCliente()"
+    >
+        ✅
+    </button>
+
+</div>
+
+    <div
+    class="topo"
+    id="boxPesquisa"
+    style="display:none;"
+>
+
+    <input 
+        type="text" 
+        id="pesquisa" 
+        placeholder="Pesquisar cliente..."
+        onkeyup="renderizar()"
+    >
+</div>
+<div class="filtros-clientes">
+    <button
+    class="filtro-btn"
+    id="btnTodos"
+    onclick="filtrarClientes('todos')"
+>
+    Todos [0]
+</button>
+    <button
+        class="filtro-btn"
+        id="btnAtivos"
+        onclick="filtrarClientes('ativo')"
+    >
+        Ativos [0]
+    </button>
+
+    <button
+        class="filtro-btn"
+        id="btnVencendo"
+        onclick="filtrarClientes('vencendo')"
+    >
+        Vencendo [0]
+    </button>
+
+    <button
+        class="filtro-btn"
+        id="btnVencidos"
+        onclick="filtrarClientes('vencido')"
+    >
+        Vencidos [0]
+    </button>
+</div>
+    <div class="lista" id="listaClientes"></div>
+
+</div>
+
+<!-- CONFIGURAÇÕES -->
+
+<div id="configuracoes" class="guia">
+
+    <h1>⚙️ Configurações</h1>
+
+    <div class="config-box">
+    
+        <label>Nome do sistema</label>
+        <input type="text" id="nomeSistema">
+        <label>Logo do sistema (PNG)</label>
+          <input
+              type="file"
+              id="logoUpload"
+              accept=".png,image/png"
+          >
+        <hr>
+
+<h2>Servidores</h2>
+
+<div class="topo">
+
+    <button
+        class="btn-add"
+        onclick="toggleServidor()"
+    >
+        ➕ Servidor
+    </button>
+
+</div>
+
+<div
+    class="topo"
+    id="boxServidor"
+    style="display:none;"
+>
+
+    <input
+        type="text"
+        id="novoServidor"
+        placeholder="Nome do servidor"
+    >
+
+    <input
+        type="text"
+        id="custoServidor"
+        placeholder="R$0,00"
+        oninput="formatarMoeda(this)"
+    >
+
+    <button
+        class="btn-add"
+        onclick="adicionarServidor()"
+    >
+        ✅
+    </button>
+
+</div>
+
+<div id="listaServidores"></div>
+        <h2>Planos</h2>
+
+<div class="topo">
+
+    <button
+        class="btn-add"
+        onclick="togglePlano()"
+    >
+        ➕ Plano
+    </button>
+
+</div>
+
+<div
+    class="topo"
+    id="boxPlano"
+    style="display:none;"
+>
+
+    <input
+        type="text"
+        id="novoPlanoNome"
+        placeholder="Nome do plano"
+    >
+
+    <input
+        type="number"
+        id="novoPlanoValor"
+        placeholder="Valor"
+    >
+
+    <button
+        class="btn-add"
+        onclick="adicionarPlano()"
+    >
+        ✅
+    </button>
+
+</div>
+
+<div id="listaPlanos"></div>
+    
+    <hr>
+
+<h2>Backup Completo</h2>
+
+<div class="backup-acoes">
+
+    <button
+        class="btn-add"
+        onclick="exportarSistema()"
+    >
+        📤 Exportar Sistema
+    </button>
+
+    <button
+        class="btn-edit"
+        onclick="document.getElementById('arquivoSistema').click()"
+    >
+        📥 Importar Sistema
+    </button>
+
+    <input
+        type="file"
+        id="arquivoSistema"
+        accept=".json"
+        style="display:none"
+        onchange="importarSistema(event)"
+    >
+
+</div>
+<hr>
+
+<h2>Dados PIX</h2>
+
+<label>Chave PIX</label>
+<input
+    type="text"
+    id="pixChave"
+    placeholder="Digite a chave PIX"
+>
+
+<label>Nome do Recebedor</label>
+<input
+    type="text"
+    id="pixNome"
+    placeholder="Nome do titular"
+>
+
+<label>Banco</label>
+<input
+    type="text"
+    id="pixBanco"
+    placeholder="Banco"
+>
+
+        <button class="btn-vencendo"
+            onclick="salvarConfiguracoes()">
+    
+            Salvar Configurações
+    
+        </button>
+    </div>
+</div>
+  
+
+<script>
+  // JS 
+let filtroAtual = "todos";
+let planoEditando = null;
+let clienteEditando = null;
+let servidores =
+    JSON.parse(
+        localStorage.getItem("servidores")
+    ) || [
+
+        {
+            nome:"Genial",
+            custo:"R$11,00"
+        }
+
+    ];
+let planos = JSON.parse(localStorage.getItem("planos")) || [
+    {
+        nome:"Mensal 1 Tela",
+        valor:30
+    },
+
+    {
+        nome:"Mensal Econômico",
+        valor:15
+    },
+
+    {
+        nome:"Mensal 2 Telas",
+        valor:50
+    },
+
+    {
+        nome:"Trimestral",
+        valor:75
+    }
+];
+
+  // FUNCTION
+function exportarSistema(){
+
+    const backup = {
+
+        clientes,
+
+        planos,
+
+        servidores,
+
+        configuracoes:
+            JSON.parse(
+                localStorage.getItem("configuracoes")
+            ) || {}
+
+    };
+
+    const blob =
+        new Blob(
+            [JSON.stringify(backup,null,2)],
+            {type:"application/json"}
+        );
+
+    const url =
+        URL.createObjectURL(blob);
+
+    const a =
+        document.createElement("a");
+
+    a.href = url;
+
+    a.download =
+        "backup_completo_iptv.json";
+
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+function importarSistema(event){
+
+    const arquivo =
+        event.target.files[0];
+
+    if(!arquivo){
+        return;
+    }
+
+    const leitor =
+        new FileReader();
+
+    leitor.onload = function(e){
+
+        try{
+
+            const dados =
+                JSON.parse(
+                    e.target.result
+                );
+
+            if(
+                !confirm(
+                    "Isso substituirá todos os dados atuais. Continuar?"
+                )
+            ){
+                return;
+            }
+
+            clientes =
+                dados.clientes || [];
+
+            planos =
+                dados.planos || [];
+
+            servidores =
+                dados.servidores || [];
+
+            localStorage.setItem(
+                "clientes",
+                JSON.stringify(clientes)
+            );
+
+            localStorage.setItem(
+                "planos",
+                JSON.stringify(planos)
+            );
+
+            localStorage.setItem(
+                "servidores",
+                JSON.stringify(servidores)
+            );
+
+            localStorage.setItem(
+                "configuracoes",
+                JSON.stringify(
+                    dados.configuracoes || {}
+                )
+            );
+
+            carregarConfiguracoes();
+
+            renderizarServidores();
+
+            renderizarPlanos();
+
+            renderizar();
+
+            atualizarDashboard();
+
+            alert(
+                "Backup restaurado com sucesso."
+            );
+
+        }catch(erro){
+
+            alert(
+                "Arquivo inválido."
+            );
+        }
+    };
+
+    leitor.readAsText(arquivo);
+}
+function atualizarCabecalho(){
+
+    let config =
+        JSON.parse(
+            localStorage.getItem("configuracoes")
+        ) || {};
+
+    let titulo =
+        document.getElementById("tituloSistema");
+
+    titulo.innerText =
+        config.nomeSistema || "Gestor IPTV";
+
+    let logo =
+        document.getElementById("logoSistema");
+
+    if(config.logoSistema){
+
+        logo.src =
+            config.logoSistema;
+
+        logo.style.display =
+            "block";
+
+    }else{
+
+        logo.style.display =
+            "none";
+    }
+}
+function abrirModalRenovacao(index){
+
+    clienteRenovacao = index;
+
+    let cliente = clientes[index];
+
+    document.getElementById("renovacaoNome").innerText =
+        cliente.nome;
+
+    document.getElementById("renovacaoAtual").innerText =
+        formatarData(cliente.vencimento);
+
+    document.getElementById("renovacaoPlano").innerHTML =
+    `<strong>Plano:</strong> ${cliente.plano || "-"}`;
+
+    document.getElementById("modalRenovacao")
+        .classList.add("ativo");
+}
+
+function fecharModalRenovacao(){
+
+    document.getElementById("modalRenovacao")
+        .classList.remove("ativo");
+}
+
+function renovarCliente(){
+
+    if(clienteRenovacao === null){
+        return;
+    }
+
+    let cliente = clientes[clienteRenovacao];
+
+    let dias = 30;
+
+    let planoTexto =
+        (cliente.plano || "").toLowerCase();
+
+    if(planoTexto.includes("trimestral")){
+        dias = 90;
+    }
+
+    if(planoTexto.includes("semestral")){
+        dias = 180;
+    }
+
+    if(planoTexto.includes("anual")){
+        dias = 365;
+    }
+
+    let dataBase;
+
+    if(
+        cliente.vencimento &&
+        new Date(cliente.vencimento) > new Date()
+    ){
+        dataBase = new Date(cliente.vencimento);
+    }else{
+        dataBase = new Date();
+    }
+
+    dataBase.setDate(
+        dataBase.getDate() + dias
+    );
+
+    clientes[clienteRenovacao].vencimento =
+        dataBase.toISOString().split("T")[0];
+
+    clientes[clienteRenovacao].ultimaRenovacao =
+        new Date().toISOString().split("T")[0];
+
+    salvar();
+
+    renderizar();
+
+    atualizarDashboard();
+
+    enviarMensagemRenovacao(
+        clientes[clienteRenovacao]
+    );
+
+    fecharModalRenovacao();
+}
+function enviarMensagemRenovacao(cliente){
+
+    let valor = "";
+
+    let match =
+        cliente.plano.match(
+            /R\$\s*([\d.,]+)/
+        );
+
+    if(match){
+        valor = match[1];
+    }
+
+    let nomePlano =
+        cliente.plano.split(" - ")[0];
+
+    let mensagem =
+`*✅ Renovação realizada ✅*
+
+*🔰 Seguem seus dados de acesso:*
+
+*✨️ Nome:* ${cliente.nome}
+*✨️ Usuário:* ${cliente.usuario}
+*✨️ Senha:* ${cliente.senha}
+
+*🔸 Plano:* ${nomePlano}
+*🔸 Valor:* R$ ${valor}
+
+*🗓️ Vencimento:* ${formatarData(cliente.vencimento)}
+*--------------------------------*
+*📱 App Android:*
+https://bit.ly/htvapkjmf
+*📱 App iOS:*
+https://apple.co/3Y1lv7G
+
+*💵 INDIQUE E GANHE 💵*
+
+Quando seu indicado assinar, você ganha *R$20,00 de desconto na próxima renovação 😱🤩*
+
+*🧑‍💻 Att.* HyperTV, trazendo o melhor a você.`;
+if(cliente.obs){
+
+    let obsFormatado =
+        cliente.obs.replace(/\\n/g, "\n");
+
+    mensagem +=
+`\n\n~~~~~~~~~~~~~~~~~~
+${obsFormatado}`;
+}
+
+    let url =
+`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`;
+
+    window.open(url,"_blank");
+}
+function configurarUploadLogo(){
+
+    let campoLogo =
+        document.getElementById("logoUpload");
+
+    if(!campoLogo){
+        return;
+    }
+
+    campoLogo.addEventListener(
+        "change",
+        function(event){
+
+            let arquivo =
+                event.target.files[0];
+
+            if(!arquivo){
+                return;
+            }
+
+            let leitor =
+                new FileReader();
+
+            leitor.onload =
+                function(e){
+
+                    let config =
+                        JSON.parse(
+                            localStorage.getItem(
+                                "configuracoes"
+                            )
+                        ) || {};
+
+                    config.logoSistema =
+                        e.target.result;
+
+                    localStorage.setItem(
+                        "configuracoes",
+                        JSON.stringify(config)
+                    );
+
+                    atualizarCabecalho();
+                };
+
+            leitor.readAsDataURL(
+                arquivo
+            );
+        }
+    );
+}
+function toggleServidor(){
+
+    let box =
+        document.getElementById("boxServidor");
+
+    if(box.style.display == "none"){
+
+        box.style.display = "flex";
+
+    }else{
+
+        box.style.display = "none";
+    }
+}
+
+function togglePlano(){
+
+    let box =
+        document.getElementById("boxPlano");
+
+    if(box.style.display == "none"){
+
+        box.style.display = "flex";
+
+    }else{
+
+        box.style.display = "none";
+    }
+}
+function enviarDadosCliente(cliente){
+
+    let mensagem =
+`Ooi, ${cliente.nome}. Segue seus dados de acesso 📺
+
+👤 Usuário: ${cliente.usuario}
+
+🔑 Senha: ${cliente.senha}
+
+📅 Vencimento: ${formatarData(cliente.vencimento)}
+
+📦 Plano: ${cliente.plano}`;
+
+    let url =
+`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`;
+
+    window.open(url,"_blank");
+}
+function filtrarClientes(tipo){
+
+    filtroAtual = tipo;
+
+    document
+        .querySelectorAll(".filtro-btn")
+        .forEach(btn=>{
+
+            btn.classList.remove("ativo");
+        });
+    if(tipo == "todos")
+    document
+    .getElementById("btnTodos")
+    .classList.add("ativo");
+    
+    if(tipo == "ativo")
+        document
+        .getElementById("btnAtivos")
+        .classList.add("ativo");
+
+    if(tipo == "vencendo")
+        document
+        .getElementById("btnVencendo")
+        .classList.add("ativo");
+
+    if(tipo == "vencido")
+        document
+        .getElementById("btnVencidos")
+        .classList.add("ativo");
+
+    renderizar();
+}
+function moeda(valor){
+
+    valor = Number(valor);
+
+    if(Number.isInteger(valor)){
+
+        return `R$ ${valor}`;
+    }
+
+    return `R$ ${valor.toFixed(2).replace(".",",")}`;
+}
+function formatarMoeda(input){
+
+    let valor =
+        input.value.replace(/\D/g,'');
+
+    valor =
+        Number(valor) / 100;
+
+    input.value =
+        moeda(valor);
+}
+function renderizarServidores(){
+
+    let lista =
+        document.getElementById("listaServidores");
+
+    let select =
+        document.getElementById("servidor");
+
+    let selectEdit =
+        document.getElementById("editServidor");
+
+    lista.innerHTML = "";
+
+    if(select)
+        select.innerHTML = "";
+
+    if(selectEdit)
+        selectEdit.innerHTML = "";
+
+    servidores.forEach((servidor,index)=>{
+
+        lista.innerHTML += `
+
+            <div class="plano-item">
+
+                <div class="plano-info">
+
+                    <div class="plano-nome">
+                        ${servidor.nome}
+                    </div>
+
+                    <div class="plano-valor">
+                        ${servidor.custo}
+                    </div>
+
+                </div>
+
+                <button
+                    class="btn-delete"
+                    onclick="removerServidor(${index})"
+                >
+                    ❌
+                </button>
+
+            </div>
+
+        `;
+
+        if(select){
+
+            select.innerHTML += `
+
+                <option>
+
+                    ${servidor.nome}
+
+                </option>
+
+            `;
+        }
+
+        if(selectEdit){
+
+            selectEdit.innerHTML += `
+
+                <option>
+
+                    ${servidor.nome}
+
+                </option>
+
+            `;
+        }
+
+    });
+
+    localStorage.setItem(
+        "servidores",
+        JSON.stringify(servidores)
+    );
+}
+
+function adicionarServidor(){
+
+    let nome =
+        document.getElementById("novoServidor").value;
+
+    let custo =
+        document.getElementById("custoServidor").value;
+
+    if(!nome || !custo){
+        return;
+    }
+
+    servidores.push({
+
+        nome,
+        custo
+    });
+
+    document.getElementById("novoServidor").value = "";
+
+    document.getElementById("custoServidor").value = "";
+
+    renderizarServidores();
+    document.getElementById("boxServidor").style.display = "none";
+}
+
+function removerServidor(index){
+
+    servidores.splice(index,1);
+
+    renderizarServidores();
+}
+function renderizarPlanos(){
+
+    let lista = document.getElementById("listaPlanos");
+
+    let select =
+    document.getElementById("plano");
+
+lista.innerHTML = "";
+
+if(select){
+    select.innerHTML = "";
+}
+
+    planos.forEach((plano,index)=>{
+
+        lista.innerHTML += `
+
+            <div class="plano-item">
+
+                <div class="plano-info">
+
+                    <div class="plano-nome">
+                        ${plano.nome}
+                    </div>
+
+                    <div class="plano-valor">
+                        ${moeda(plano.valor)}
+                    </div>
+
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                  <button class="btn-vencendo"
+                      onclick="editarPlano(${index})">
+              
+                      Editar
+                  </button>
+              
+                  <button class="btn-delete"
+                      onclick="removerPlano(${index})">
+              
+                      Excluir
+                  </button>
+              </div>
+
+            </div>
+
+        `;
+
+        if(select){
+
+    select.innerHTML += `
+
+        <option value="${plano.valor}">
+    ${plano.nome} - ${moeda(plano.valor)}
+</option>
+
+    `;
+}
+
+    });
+
+    localStorage.setItem(
+        "planos",
+        JSON.stringify(planos)
+    );
+}
+function editarPlano(index){
+
+    planoEditando = index;
+
+    let plano = planos[index];
+
+    document.getElementById("editPlanoNome").value =
+        plano.nome;
+
+    document.getElementById("editPlanoValor").value =
+        `R$${Number(plano.valor).toFixed(2).replace(".",",")}`;
+
+    const modal =
+        document.getElementById("modalPlano");
+
+    modal.style.display = "flex";
+
+    modal.classList.add("ativo");
+}
+function adicionarPlano(){
+    let nome =
+        document.getElementById("novoPlanoNome").value;
+    let valor =
+        document.getElementById("novoPlanoValor").value;
+    if(!nome || !valor){
+        alert("Preencha os campos.");
+        return;
+    }
+    planos.push({
+        nome,
+        valor
+    });
+    document.getElementById("novoPlanoNome").value = "";
+    document.getElementById("novoPlanoValor").value = "";
+    renderizarPlanos()
+    document.getElementById("boxPlano").style.display = "none";
+}
+
+function removerPlano(index){
+
+    planos.splice(index,1);
+    renderizarPlanos();
+}
+
+let clientes = JSON.parse(
+    localStorage.getItem("clientes")
+) || [];
+
+function salvar(){
+
+    localStorage.setItem(
+        "clientes",
+        JSON.stringify(clientes)
+    );
+
+    clientes =
+        JSON.parse(
+            localStorage.getItem("clientes")
+        ) || [];
+}
+
+function adicionarCliente(){
+
+    let servidor =
+        document.getElementById("servidor").value;
+
+    let nome =
+        document.getElementById("nome").value;
+
+    let usuario =
+        document.getElementById("usuario").value;
+
+    let senha =
+        document.getElementById("senha").value;
+
+    let whatsapp =
+        document.getElementById("whatsapp").value;
+
+    let vencimento =
+        document.getElementById("vencimento").value;
+
+    let obs =
+        document.getElementById("obs").value;
+
+    let selectPlano =
+        document.getElementById("plano");
+    if(selectPlano.selectedIndex == -1){
+
+    alert("Cadastre um plano primeiro.");
+
+    return;
+}
+    let planoTexto =
+        selectPlano.options[
+            selectPlano.selectedIndex
+        ].text;
+
+    if(
+        !nome ||
+        !usuario ||
+        !senha
+    ){
+        alert("Preencha os campos.");
+        return;
+    }
+
+    clientes.push({
+
+        servidor,
+        nome,
+        usuario,
+        senha,
+        whatsapp,
+        vencimento,
+        plano: planoTexto,
+        obs
+    });
+
+    salvar();
+
+clientes =
+    JSON.parse(
+        localStorage.getItem("clientes")
+    ) || [];
+
+filtroAtual = "todos";
+
+renderizar();
+
+atualizarDashboard();
+
+    document.getElementById("nome").value = "";
+    document.getElementById("usuario").value = "";
+    document.getElementById("senha").value = "";
+    document.getElementById("whatsapp").value = "";
+    document.getElementById("vencimento").value = "";
+    document.getElementById("obs").value = "";
+}
+
+function deletar(index){
+    clientes.splice(index,1);
+    salvar();
+    renderizar();
+}
+
+function ordenarVencimento(){
+
+    clientes.sort((a,b)=>{
+        return new Date(a.vencimento) - new Date(b.vencimento);
+    });
+
+    renderizar();
+}
+
+function statusCliente(data){
+
+    if(!data || !data.includes("-")){
+        return "ativo";
+    }
+
+    let partes = data.split("-");
+
+    if(partes.length < 3){
+        return "ativo";
+    }
+
+    let venc = new Date(
+        Number(partes[0]),
+        Number(partes[1]) - 1,
+        Number(partes[2])
+    );
+
+    if(isNaN(venc.getTime())){
+        return "ativo";
+    }
+
+    let hoje = new Date();
+
+    hoje.setHours(0,0,0,0);
+
+    venc.setHours(0,0,0,0);
+
+    let diff =
+        Math.ceil(
+            (venc - hoje)
+            / (1000 * 60 * 60 * 24)
+        );
+
+    if(diff < 0){
+        return "vencido";
+    }
+
+    if(diff <= 3){
+        return "vencendo";
+    }
+
+    return "ativo";
+}
+
+function abrirWhats(numero,nome){
+
+    let msg = `Oooi, ${nome}, sua assinatura está próxima do vencimento 📺`;
+
+    let url = `https://wa.me/${numero}?text=${encodeURIComponent(msg)}`;
+
+    window.open(url, "_blank");
+}
+
+function renderizar(){
+
+    let lista = document.getElementById("listaClientes");
+
+    let campoPesquisa =
+    document.getElementById("pesquisa");
+
+let pesquisa = "";
+
+if(campoPesquisa){
+    pesquisa =
+        campoPesquisa.value.toLowerCase();
+}
+
+    lista.innerHTML = "";
+
+    let qtdAtivos = 0;
+let qtdVencendo = 0;
+let qtdVencidos = 0;
+
+clientes
+.filter(c=>{
+
+    let status =
+    statusCliente(
+        c.vencimento || ""
+    );
+
+    if(status == "ativo")
+        qtdAtivos++;
+
+    if(status == "vencendo")
+        qtdVencendo++;
+
+    if(status == "vencido")
+        qtdVencidos++;
+
+    let nomeCliente =
+    (c.nome || "").toLowerCase();
+
+    let passouPesquisa =
+    nomeCliente.includes(pesquisa);
+
+    if(!passouPesquisa)
+        return false;
+
+    if(filtroAtual == "todos"){     return true; }  return status == filtroAtual;
+})
+.forEach((cliente)=>{      
+        let indexReal = clientes.indexOf(cliente);
+
+        let status = statusCliente(cliente.vencimento);
+
+        let statusTexto = "";
+
+        if(status == "ativo"){
+            statusTexto = `<span class="status ativo">ATIVO</span>`;
+        }
+
+        if(status == "vencendo"){
+            statusTexto = `<span class="status vencendo-status">VENCE EM BREVE</span>`;
+        }
+
+        if(status == "vencido"){
+            statusTexto = `<span class="status vencido-status">VENCIDO</span>`;
+        }
+
+        let mostrarLembrete = false;
+
+if(status == "vencendo"){
+
+    let dias =
+        calcularDiasRestantes(
+            cliente.vencimento
+        );
+
+    if(dias <= 2){
+        mostrarLembrete = true;
+    }
+}
+
+lista.innerHTML += `
+
+<div class="card ${status}">
+    
+    <div class="nome">
+        ${cliente.nome}
+    </div>
+
+    ${statusTexto}
+
+    <div class="info">
+        👤 ${cliente.usuario || "-"}
+    </div>
+    <div class="info">
+        📦 ${cliente.plano || "-"}
+    </div>
+    <div class="info">
+        📅 ${formatarData(cliente.vencimento)}
+    </div>
+
+    <div class="acoes">
+
+        <button
+            class="btn-whats btn-icon"
+            onclick='enviarDadosCliente(${JSON.stringify(cliente)})'
+        >
+            📱
+        </button>
+
+        <button
+            class="btn-vencendo btn-icon"
+            onclick="editarCliente(${indexReal})"
+        >
+            ✏️
+        </button>
+
+        <button
+            class="btn-delete btn-icon"
+            onclick="deletar(${indexReal})"
+        >
+            🗑️
+        </button>
+
+        <button
+            class="btn-renovar btn-icon"
+            onclick="abrirModalRenovacao(${indexReal})"
+        >
+            🔄
+        </button>
+
+        ${
+            mostrarLembrete
+            ?
+
+            `
+            <button
+                class="btn-lembrete btn-icon"
+
+                onclick="
+                    enviarLembrete(
+                        '${cliente.nome}',
+                        '${cliente.whatsapp}',
+                        '${cliente.plano}',
+                        '${calcularDiasRestantes(cliente.vencimento)}'
+                    )
+                "
+            >
+                ⏰
+            </button>
+            `
+            :
+
+            ""
+        }
+
+    </div>
+
+</div>
+`;
+    });
+document.getElementById("btnTodos")
+.innerHTML =
+`Todos [${clientes.length}]`;
+
+document.getElementById("btnAtivos")
+.innerHTML =
+`Ativos [${qtdAtivos}]`;
+
+document.getElementById("btnVencendo")
+.innerHTML =
+`Vencendo [${qtdVencendo}]`;
+
+document.getElementById("btnVencidos")
+.innerHTML =
+`Vencidos [${qtdVencidos}]`;
+}
+function editarCliente(index){
+
+    clienteEditando = index;
+
+    let cliente = clientes[index];
+
+    document.getElementById("editNome").value =
+        cliente.nome || "";
+
+    document.getElementById("editUsuario").value =
+        cliente.usuario || "";
+
+    document.getElementById("editSenha").value =
+        cliente.senha || "";
+
+    document.getElementById("editWhatsapp").value =
+        cliente.whatsapp || "";
+
+    document.getElementById("editVencimento").value =
+        cliente.vencimento || "";
+
+    document.getElementById("editObs").value =
+        cliente.obs || "";
+
+    let selectServidor =
+        document.getElementById("editServidor");
+
+    selectServidor.innerHTML = "";
+
+    servidores.forEach(servidor=>{
+
+        let selected =
+            cliente.servidor == servidor.nome
+            ? "selected"
+            : "";
+
+        selectServidor.innerHTML += `
+
+            <option ${selected}>
+                ${servidor.nome}
+            </option>
+
+        `;
+    });
+
+    let selectPlano =
+        document.getElementById("editPlano");
+
+    selectPlano.innerHTML = "";
+
+    planos.forEach(plano=>{
+
+        let textoPlano =
+    `${plano.nome} - ${moeda(plano.valor)}`;
+
+        let selected =
+            cliente.plano == textoPlano
+            ? "selected"
+            : "";
+
+        selectPlano.innerHTML += `
+
+            <option ${selected}>
+                ${textoPlano}
+            </option>
+
+        `;
+    });
+
+    let modal =
+        document.getElementById("modalEditar");
+
+    modal.style.display = "flex";
+
+    modal.classList.add("ativo");
+}
+function salvarEdicaoPlano(){
+
+    let nome =
+        document.getElementById("editPlanoNome").value;
+
+    let valorTexto =
+        document.getElementById("editPlanoValor").value;
+
+    let valor =
+    parseFloat(
+        valorTexto
+        .replace("R$","")
+        .replace(",",".")
+        .trim()
+    );
+
+    let nomePlanoAntigo =
+        planos[planoEditando].nome;
+
+    planos[planoEditando] = {
+
+        nome,
+        valor
+    };
+
+    clientes = clientes.map(cliente=>{
+
+        if(
+            cliente.plano &&
+            cliente.plano.includes(nomePlanoAntigo)
+        ){
+
+            return {
+
+                ...cliente,
+
+                plano:
+    `${nome} - ${moeda(valor)}`
+            };
+        }
+
+        return cliente;
+    });
+
+    localStorage.setItem(
+        "planos",
+        JSON.stringify(planos)
+    );
+
+    salvar();
+
+    renderizar();
+    renderizarServidores();
+    renderizarPlanos();
+
+    atualizarDashboard();
+
+    fecharModalPlano();
+}
+function salvarEdicaoCliente(){
+
+    clientes[clienteEditando] = {
+
+        ...clientes[clienteEditando],
+
+        servidor:
+            document.getElementById("editServidor").value,
+
+        nome:
+            document.getElementById("editNome").value,
+
+        usuario:
+            document.getElementById("editUsuario").value,
+
+        senha:
+            document.getElementById("editSenha").value,
+
+        whatsapp:
+            document.getElementById("editWhatsapp").value,
+
+        vencimento:
+            document.getElementById("editVencimento").value,
+
+        plano:
+            document.getElementById("editPlano").value,
+
+        obs:
+            document.getElementById("editObs").value
+    };
+
+    salvar();
+
+    renderizar();
+
+    atualizarDashboard();
+
+    fecharModal();
+}
+function fecharModal(){
+
+    const modal =
+    document.getElementById("modalEditar");
+
+modal.classList.remove("ativo");
+
+modal.style.display = "none";
+}
+
+function fecharModalPlano(){
+
+    const modal =
+        document.getElementById("modalPlano");
+
+    modal.classList.remove("ativo");
+
+    modal.style.display = "none";
+}
+function toggleMenu(){
+
+    document
+    .getElementById("sidebar")
+    .classList
+    .toggle("ativo");
+}
+
+function abrirGuia(id){
+
+    document
+    .querySelectorAll(".guia")
+    .forEach(g => g.classList.remove("ativa"));
+
+    document
+    .getElementById(id)
+    .classList
+    .add("ativa");
+
+    localStorage.setItem(
+        "guiaAtual",
+        id
+    );
+
+    document
+    .getElementById("sidebar")
+    .classList
+    .remove("ativo");
+}
+
+function formatarData(data){
+
+    if(!data || !data.includes("-")){
+        return "-";
+    }
+
+    let partes = data.split("-");
+
+    if(partes.length < 3){
+        return "-";
+    }
+
+    let ano = partes[0];
+    let mes = partes[1];
+    let dia = partes[2];
+
+    return `${dia}/${mes}/${ano}`;
+}
+
+function atualizarDashboard(){
+
+    let lucro = 0;
+      const hoje = new Date();
+      const mesAtual = hoje.getMonth();
+      const anoAtual = hoje.getFullYear();
+
+    let ativos = 0;
+
+    let vencendo = 0;
+
+    let lista =
+        document.getElementById("listaVencendo");
+
+    lista.innerHTML = "";
+
+    clientes.forEach(cliente=>{
+
+        let status =
+            statusCliente(cliente.vencimento);
+
+        let valor = 0;
+
+if(
+    cliente.plano &&
+    typeof cliente.plano === "string"
+){
+
+    let match =
+        cliente.plano.match(
+            /R\$\s*([\d.,]+)/
+        );
+
+    if(match){
+
+        let textoValor =
+            match[1];
+
+        textoValor =
+            textoValor.replace(",", ".");
+
+        valor =
+            parseFloat(textoValor) || 0;
+    }
+}
+
+        let servidorCliente = null;
+
+if(cliente.servidor){
+
+    servidorCliente =
+        servidores.find(
+            s => s.nome == cliente.servidor
+        );
+}
+
+let custoServidor = 0;
+
+if(servidorCliente){
+
+    custoServidor =
+        Number(
+            servidorCliente.custo
+            .replace("R$","")
+            .replace(".","")
+            .replace(",",".")
+        );
+}
+
+if(cliente.ultimaRenovacao){
+
+    let renovacao =
+        new Date(cliente.ultimaRenovacao);
+
+    if(
+        renovacao.getMonth() === mesAtual &&
+        renovacao.getFullYear() === anoAtual
+    ){
+
+        let lucroCliente =
+            valor - custoServidor;
+
+        if(!isNaN(lucroCliente)){
+          
+            lucro += lucroCliente;
+        }
+    }
+}
+
+        if(status == "ativo"){
+            ativos++;
+        }
+
+        if(status == "vencendo"){
+
+            vencendo++;
+
+            let diasRestantes =
+    calcularDiasRestantes(
+        cliente.vencimento
+    );
+
+lista.innerHTML += `
+
+    <div class="card vencendo">
+
+        <div class="nome">
+            ${cliente.nome}
+        </div>
+
+        <div class="info">
+            📅
+            ${formatarData(cliente.vencimento)}
+        </div>
+
+        <div class="info">
+            📦 ${cliente.plano}
+        </div>
+
+        <div class="acoes">
+
+            <button
+                class="btn-lembrete"
+
+                onclick="
+                    enviarLembrete(
+                        '${cliente.nome}',
+                        '${cliente.whatsapp}',
+                        '${cliente.plano}',
+                        '${diasRestantes}'
+                    )
+                "
+            >
+
+                Lembrar
+            </button>
+        </div>
+
+    </div>
+
+`;
+        }
+
+    });
+
+    document.getElementById("lucroTotal")
+        .innerHTML =
+        `R$ ${lucro.toFixed(2).replace(".",",")}`;
+
+    document.getElementById("clientesAtivos")
+        .innerHTML =
+        ativos;
+
+    document.getElementById("clientesVencendo")
+        .innerHTML =
+        vencendo;
+}
+function calcularDiasRestantes(data){
+
+    let partes = data.split("-");
+
+    let venc = new Date(
+        partes[0],
+        partes[1] - 1,
+        partes[2]
+    );
+
+    let hoje = new Date();
+
+    hoje.setHours(0,0,0,0);
+
+    venc.setHours(0,0,0,0);
+
+    let diff =
+        Math.ceil(
+            (venc - hoje)
+            / (1000 * 60 * 60 * 24)
+        );
+
+    return diff;
+}
+function enviarLembrete(
+    nome,
+    whatsapp,
+    plano,
+    dias
+){
+
+    let config =
+        JSON.parse(
+            localStorage.getItem("configuracoes")
+        ) || {};
+
+    let chavePix =
+        config.pixChave || "";
+
+    let nomePix =
+        config.pixNome || "";
+
+    let bancoPix =
+        config.pixBanco || "";
+
+    let mensagem = `🙋🏽‍♂️ Ooi, ${nome}. Passando para lembrar que seu plano ${plano} expira em ${dias} dia(s).
+
+> ❌️ NÃO FIQUE SEM SUA PROGRAMAÇÃO
+
+*🔑 Chave pix:* ${chavePix}
+*👤 Nome:* ${nomePix}
+*🏦 Banco:* ${bancoPix}
+
+📄 Favor enviar o comprovante ao efetuar a transferência.
+
+Nosso sistema leva até 30 minutos para checar e confirmar o pagamento para liberação.
+
+Assim que confirmado, enviarei a mensagem de renovação 😉`;
+
+    let url =
+        `https://wa.me/${whatsapp}?text=${encodeURIComponent(mensagem)}`;
+
+    window.open(url, "_blank");
+}
+function salvarConfiguracoes(){
+
+    let config =
+        JSON.parse(
+            localStorage.getItem("configuracoes")
+        ) || {};
+    config.pixChave =
+        document.getElementById("pixChave").value;
+    
+    config.pixNome =
+        document.getElementById("pixNome").value;
+    
+    config.pixBanco =
+        document.getElementById("pixBanco").value;
+        
+    config.nomeSistema =
+        document.getElementById("nomeSistema").value;
+
+    localStorage.setItem(
+        "configuracoes",
+        JSON.stringify(config)
+    );
+
+    atualizarCabecalho();
+}
+function carregarConfiguracoes(){
+
+    let config =
+        JSON.parse(
+            localStorage.getItem("configuracoes")
+        ) || {};
+document.getElementById("pixChave").value =
+    config.pixChave || "";
+
+document.getElementById("pixNome").value =
+    config.pixNome || "";
+
+document.getElementById("pixBanco").value =
+    config.pixBanco || "";
+    
+    let nomeSistema =
+        document.getElementById("nomeSistema");
+
+    if(nomeSistema){
+
+        nomeSistema.value =
+            config.nomeSistema || "";
+    }
+
+    atualizarCabecalho();
+}
+function toggleAdicionar(){
+
+    let box =
+        document.getElementById("boxAdicionar");
+
+    if(box.style.display == "none"){
+
+        box.style.display = "flex";
+
+    }else{
+
+        box.style.display = "none";
+    }
+}
+
+function togglePesquisa(){
+
+    let box =
+        document.getElementById("boxPesquisa");
+
+    if(box.style.display == "none"){
+
+        box.style.display = "flex";
+
+    }else{
+
+        box.style.display = "none";
+    }
+}
+document.addEventListener(
+    "DOMContentLoaded",
+    function(){
+
+        try{
+
+            carregarConfiguracoes();
+            configurarUploadLogo();
+            let guiaSalva =
+                localStorage.getItem("guiaAtual") || "dashboard";
+            
+            abrirGuia(guiaSalva);
+            
+            if(guiaSalva){
+                abrirGuia(guiaSalva);
+            }
+            
+            renderizarServidores();
+            renderizarPlanos();
+            filtroAtual = "todos";
+            renderizar();
+            atualizarDashboard();
+
+        }catch(erro){
+
+            console.log(erro);
+
+            alert(
+                "Erro ao carregar sistema: "
+                + erro.message
+            );
+        }
+    }
+);
+
+</script>
+<!-- MODAL EDITAR CLIENTE -->
+
+<div class="modal" id="modalEditar">
+
+    <div class="modal-box">
+
+        <div class="modal-topo">
+
+            <h2>Editar Cliente</h2>
+
+            <button
+                class="fechar-modal"
+                onclick="fecharModal()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <select id="editServidor"></select>
+
+        <input
+            type="text"
+            id="editNome"
+            placeholder="Nome"
+        >
+
+        <input
+            type="text"
+            id="editUsuario"
+            placeholder="Usuário"
+        >
+
+        <input
+            type="text"
+            id="editSenha"
+            placeholder="Senha"
+        >
+
+        <input
+            type="text"
+            id="editWhatsapp"
+            placeholder="WhatsApp"
+        >
+
+        <select id="editPlano"></select>
+
+        <input
+            type="date"
+            id="editVencimento"
+        >
+
+        <input
+            type="text"
+            id="editObs"
+            placeholder="Dispositivo"
+        >
+
+        <button
+            class="btn-add"
+            onclick="salvarEdicaoCliente()"
+        >
+            Salvar Alterações
+        </button>
+
+    </div>
+
+</div>
+<!-- MODAL EDITAR PLANO -->
+
+<div class="modal" id="modalPlano">
+
+    <div class="modal-box">
+
+        <div class="modal-topo">
+
+            <h2>Editar Plano</h2>
+
+            <button class="fechar-modal"
+                onclick="fecharModalPlano()">
+
+                ✕
+
+            </button>
+
+        </div>
+
+        <input
+            type="text"
+            id="editPlanoNome"
+            placeholder="Nome do plano"
+        >
+
+        <input
+            type="text"
+            id="editPlanoValor"
+            placeholder="R$0,00"
+            
+        >
+
+        <button class="btn-add"
+            onclick="salvarEdicaoPlano()">
+
+            Salvar Alterações
+
+        </button>
+
+    </div>
+
+</div>
+<div class="modal" id="modalRenovacao">
+
+    <div class="modal-box">
+
+        <div class="modal-topo">
+
+            <h2>Renovar Cliente</h2>
+
+            <button
+                class="fechar-modal"
+                onclick="fecharModalRenovacao()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <strong id="renovacaoNome"></strong>
+
+        <div>
+            Vencimento atual:
+            <span id="renovacaoAtual"></span>
+        </div>
+
+        <div id="renovacaoPlano"></div>
+
+        <button
+            class="btn-add"
+            onclick="renovarCliente()"
+        >
+            ✅ Confirmar Renovação
+        </button>
+    </div>
+</div>
+
+</body>
+</html>
