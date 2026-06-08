@@ -351,6 +351,9 @@ select{
 
     z-index:2000;
 }
+.modal h2{
+    color:white;
+}
 
 .modal.ativo{
     display:flex;
@@ -942,6 +945,7 @@ let configuracaoOriginal = "";
 let filtroAtual = "todos";
 let planoEditando = null;
 let clienteEditando = null;
+let servidorEditando = null;
 let servidores =
     JSON.parse(
         localStorage.getItem("servidores")
@@ -976,6 +980,90 @@ let planos = JSON.parse(localStorage.getItem("planos")) || [
 ];
 
 // FUNCTION //
+function editarServidor(index){
+
+    servidorEditando = index;
+
+    let servidor =
+        servidores[index];
+
+    document.getElementById(
+        "editServidorNome"
+    ).value = servidor.nome;
+
+    document.getElementById(
+        "editServidorCusto"
+    ).value = servidor.custo;
+
+    let modal =
+        document.getElementById(
+            "modalServidor"
+        );
+
+    modal.style.display = "flex";
+
+    modal.classList.add("ativo");
+}
+function salvarEdicaoServidor(){
+
+    let nome =
+        document.getElementById(
+            "editServidorNome"
+        ).value;
+
+    let custo =
+        document.getElementById(
+            "editServidorCusto"
+        ).value;
+
+    let nomeAntigo =
+        servidores[servidorEditando].nome;
+
+    servidores[servidorEditando] = {
+
+        nome,
+        custo
+    };
+
+    clientes = clientes.map(cliente=>{
+
+        if(cliente.servidor === nomeAntigo){
+
+            return {
+                ...cliente,
+                servidor:nome
+            };
+        }
+
+        return cliente;
+    });
+
+    salvar();
+
+    localStorage.setItem(
+        "servidores",
+        JSON.stringify(servidores)
+    );
+
+    renderizarServidores();
+
+    renderizar();
+
+    atualizarDashboard();
+
+    fecharModalServidor();
+}
+function fecharModalServidor(){
+
+    let modal =
+        document.getElementById(
+            "modalServidor"
+        );
+
+    modal.classList.remove("ativo");
+
+    modal.style.display = "none";
+}
 function removerLogo(){
 
     let config =
@@ -1616,12 +1704,23 @@ function renderizarServidores(){
 
                 </div>
 
-                <button
-                    class="btn-delete"
-                    onclick="removerServidor(${index})"
-                >
-                    ❌
-                </button>
+<div style="display:flex; gap:10px;">
+
+    <button
+        class="btn-vencendo"
+        onclick="editarServidor(${index})"
+    >
+        ✏️
+    </button>
+
+    <button
+        class="btn-delete"
+        onclick="removerServidor(${index})"
+    >
+        🗑️
+    </button>
+
+</div>
 
             </div>
 
@@ -2940,6 +3039,46 @@ verificarAlteracoesConfiguracao();
 </div>
 <div id="toastSucesso" class="toast-sucesso">
     ✅ Configurações salvas com sucesso!
+</div>
+<div class="modal" id="modalServidor">
+
+    <div class="modal-box">
+
+        <div class="modal-topo">
+
+            <h2>Editar Servidor</h2>
+
+            <button
+                class="fechar-modal"
+                onclick="fecharModalServidor()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <input
+            type="text"
+            id="editServidorNome"
+            placeholder="Nome do servidor"
+        >
+
+        <input
+            type="text"
+            id="editServidorCusto"
+            placeholder="R$0,00"
+            oninput="formatarMoeda(this)"
+        >
+
+        <button
+            class="btn-add"
+            onclick="salvarEdicaoServidor()"
+        >
+            Salvar Alterações
+        </button>
+
+    </div>
+
 </div>
 </body>
 </html>
