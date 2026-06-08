@@ -1045,7 +1045,7 @@ function enviarMensagemAtivacao(cliente){
 
 🔰 Seguem seus dados de acesso:
 
-✨️ Nome: ${cliente.nome}
+✨️ Nome: ${primeiroNome(cliente.nome)}
 ✨️ Usuário: ${cliente.usuario}
 ✨️ Senha: ${cliente.senha}
 
@@ -1344,7 +1344,7 @@ function enviarMensagemRenovacao(cliente){
 
 *🔰 Seguem seus dados de acesso:*
 
-*✨️ Nome:* ${cliente.nome}
+*✨️ Nome:* ${primeiroNome(cliente.nome)}
 *✨️ Usuário:* ${cliente.usuario}
 *✨️ Senha:* ${cliente.senha}
 
@@ -1459,7 +1459,7 @@ function togglePlano(){
 function enviarDadosCliente(cliente){
 
     let mensagem =
-`Ooi, ${cliente.nome}. Segue seus dados de acesso 📺
+`Ooi, ${primeiroNome(cliente.nome)}. Segue seus dados de acesso 📺
 
 👤 Usuário: ${cliente.usuario}
 
@@ -2008,7 +2008,7 @@ lista.innerHTML += `
 <div class="card ${status}">
     
     <div class="nome">
-        ${cliente.nome}
+        ${primeiroNome(cliente.nome)}
     </div>
 
     ${statusTexto}
@@ -2063,7 +2063,7 @@ lista.innerHTML += `
 
                 onclick="
                     enviarLembrete(
-                        '${cliente.nome}',
+                        '${primeiroNome(cliente.nome)}',
                         '${cliente.whatsapp}',
                         '${cliente.plano}',
                         '${calcularDiasRestantes(cliente.vencimento)}'
@@ -2299,7 +2299,14 @@ function toggleMenu(){
     .classList
     .toggle("ativo");
 }
+function primeiroNome(nome){
 
+    if(!nome){
+        return "";
+    }
+
+    return nome.trim().split(" ")[0];
+}
 function abrirGuia(id){
 
     document
@@ -2452,8 +2459,7 @@ lista.innerHTML += `
         </div>
 
         <div class="info">
-            📅
-            ${formatarData(cliente.vencimento)}
+            📅 ${formatarData(cliente.vencimento)}
         </div>
 
         <div class="info">
@@ -2464,23 +2470,26 @@ lista.innerHTML += `
 
             <button
                 class="btn-lembrete"
-
                 onclick="
                     enviarLembrete(
-                        '${cliente.nome}',
+                        '${primeiroNome(cliente.nome)}',
                         '${cliente.whatsapp}',
                         '${cliente.plano}',
                         '${diasRestantes}'
                     )
                 "
             >
-
                 Lembrar
             </button>
+
+            <button
+                class="btn-renovar"
+                onclick="abrirModalRenovacao(${clientes.indexOf(cliente)})"
+            >
+                🔄Renovar
+            </button>
         </div>
-
     </div>
-
 `;
         }
 
