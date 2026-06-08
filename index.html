@@ -598,6 +598,13 @@ textarea{
     <button onclick="abrirGuia('configuracoes')">
         Configurações
     </button>
+    <hr style="margin:20px 0; border-color:#374151;">
+    <button onclick="abrirWhatsappSuporte()">
+        💬 WhatsApp Suporte
+    </button>
+    <button onclick="abrirTelegramSuporte()">
+        ✈️ Telegram Suporte
+    </button>
 
 </div>
 
@@ -1035,6 +1042,21 @@ let planos = JSON.parse(localStorage.getItem("planos")) || [
 ];
 
 // FUNCTION //
+function abrirWhatsappSuporte(){
+
+    window.open(
+        "https://wa.me/5584991815446",
+        "_blank"
+    );
+}
+
+function abrirTelegramSuporte(){
+
+    window.open(
+        "https://t.me/Eduardo_TvS",
+        "_blank"
+    );
+}
 function alterarOrdenacao(){
 
     ordenacaoAtual =
