@@ -535,6 +535,33 @@ textarea{
 .logo-acoes button{
     flex:1;
 }
+.linha-config{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    width:100%;
+}
+
+.linha-config label{
+    white-space:nowrap;
+    margin:0;
+}
+
+.linha-config input{
+    flex:1;
+    min-width:0;
+}
+.config-box input,
+.config-box textarea,
+.config-box select{
+
+    background:#1e293b;
+    color:white;
+
+    border:1px solid rgba(255,255,255,.4);
+
+    border-radius:10px;
+}
 /* CSS */
 </style>
 </head>
@@ -764,9 +791,16 @@ textarea{
 
     <div class="config-box">
     
-        <label><strong>Nome do sistema</strong></label>
-        <input type="text" id="nomeSistema">
-<label><strong>Logo do sistema</strong></label>
+        <div class="linha-config">
+            <label for="nomeSistema">
+                <strong>● Nome do sistema</strong>
+            </label>
+            <input
+                type="text"
+                id="nomeSistema"
+            >
+        </div>
+        <label><strong>● Logo do sistema</strong></label>
 
 <div class="logo-acoes">
 
@@ -796,7 +830,7 @@ textarea{
 </div>
         <hr>
 
-<h2>Servidores</h2>
+<h2>● Servidores</h2>
 
 <div class="topo">
 
@@ -838,7 +872,7 @@ textarea{
 </div>
 
 <div id="listaServidores"></div>
-        <h2>Planos</h2>
+        <h2>● Planos</h2>
 
 <div class="topo">
 
@@ -882,7 +916,7 @@ textarea{
     
     <hr>
 
-<h2>Backup Completo</h2>
+<h2>● Backup Completo</h2>
 
 <div class="backup-acoes">
 
@@ -911,7 +945,7 @@ textarea{
 </div>
 <hr>
 
-<h2>Dados PIX</h2>
+<h2>● Dados PIX</h2>
 
 <label>Chave PIX</label>
 <input
@@ -934,7 +968,7 @@ textarea{
     placeholder="Banco"
 >
 <hr>
-<h2>Extras</h2>
+<h2>● Extras</h2>
 <label>Promoção</label>
 <textarea
     id="textoPromocao"
