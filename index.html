@@ -2059,6 +2059,28 @@ function adicionarCliente(){
 
     let usuario =
         document.getElementById("usuario").value;
+    let clienteExistente =
+    clientes.find(cliente =>
+
+        (cliente.usuario || "")
+        .trim()
+        .toLowerCase()
+
+        ===
+
+        usuario
+        .trim()
+        .toLowerCase()
+    );
+
+if(clienteExistente){
+
+    alert(
+        `⚠️ O(A) cliente "${clienteExistente.nome}" já utiliza o usuário "${usuario}".`
+    );
+
+    return;
+}
 
     let senha =
         document.getElementById("senha").value;
