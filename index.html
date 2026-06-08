@@ -600,7 +600,7 @@ textarea{
     </div>
 
     <div class="vencimentos-box">
-        <h2>Clientes vencendo nos próximos 3 dias</h2>
+        <h2>Clientes vencendo nos próximos 2 dias</h2>
 
         <div id="listaVencendo"></div>
     </div>
@@ -732,6 +732,26 @@ textarea{
         Vencidos [0]
     </button>
 </div>
+<div style="margin-bottom:15px;">
+
+    <select
+        id="ordenacaoClientes"
+        onchange="alterarOrdenacao()"
+    >
+        <option value="adicao">
+            Adição
+        </option>
+
+        <option value="az">
+            A-Z
+        </option>
+
+        <option value="vencimento">
+            Venc.
+        </option>
+    </select>
+</div>
+
     <div class="lista" id="listaClientes"></div>
 
 </div>
@@ -943,6 +963,7 @@ textarea{
   // JS 
 let configuracaoOriginal = "";
 let filtroAtual = "todos";
+let ordenacaoAtual = "adicao";
 let planoEditando = null;
 let clienteEditando = null;
 let servidorEditando = null;
@@ -980,6 +1001,24 @@ let planos = JSON.parse(localStorage.getItem("planos")) || [
 ];
 
 // FUNCTION //
+function alterarOrdenacao(){
+
+    ordenacaoAtual =
+        document.getElementById(
+            "ordenacaoClientes"
+        ).value;
+
+    renderizar();
+}
+function definirServidorPadrao(nomeServidor){
+
+    localStorage.setItem(
+        "servidorPadrao",
+        nomeServidor
+    );
+
+    renderizarServidores();
+}
 function editarServidor(index){
 
     servidorEditando = index;
@@ -1220,18 +1259,23 @@ ${obsFormatado}`;
 function exportarSistema(){
 
     const backup = {
-
+    
         clientes,
-
+    
         planos,
-
+    
         servidores,
-
+    
+        servidorPadrao:
+            localStorage.getItem(
+                "servidorPadrao"
+            ) || "",
+    
         configuracoes:
             JSON.parse(
                 localStorage.getItem("configuracoes")
             ) || {}
-
+    
     };
 
     const blob =
@@ -1292,6 +1336,11 @@ function importarSistema(event){
 
             servidores =
                 dados.servidores || [];
+            
+            localStorage.setItem(
+                "servidorPadrao",
+                dados.servidorPadrao || ""
+            );
 
             localStorage.setItem(
                 "clientes",
@@ -1678,6 +1727,11 @@ function renderizarServidores(){
     let selectEdit =
         document.getElementById("editServidor");
 
+    let servidorPadrao =
+        localStorage.getItem(
+            "servidorPadrao"
+        ) || "";
+    
     lista.innerHTML = "";
 
     if(select)
@@ -1705,7 +1759,16 @@ function renderizarServidores(){
                 </div>
 
 <div style="display:flex; gap:10px;">
-
+    <button
+        class="btn-add"
+        onclick="definirServidorPadrao('${servidor.nome}')"
+    >
+        ${
+            servidor.nome === servidorPadrao
+            ? "⭐"
+            : "☆"
+        }
+    </button>
     <button
         class="btn-vencendo"
         onclick="editarServidor(${index})"
@@ -1739,18 +1802,28 @@ function renderizarServidores(){
             `;
         }
 
-        if(selectEdit){
+if(select){
 
-            selectEdit.innerHTML += `
+    let padrao =
+        localStorage.getItem(
+            "servidorPadrao"
+        );
 
-                <option>
+    let selected =
+        servidor.nome === padrao
+        ? "selected"
+        : "";
 
-                    ${servidor.nome}
+    select.innerHTML += `
 
-                </option>
+        <option ${selected}>
 
-            `;
-        }
+            ${servidor.nome}
+
+        </option>
+
+    `;
+}
 
     });
 
@@ -2092,7 +2165,44 @@ if(campoPesquisa){
 let qtdVencendo = 0;
 let qtdVencidos = 0;
 
-clientes
+let listaClientes =
+    [...clientes];
+
+if(ordenacaoAtual === "az"){
+
+    listaClientes.sort((a,b)=>
+        (a.nome || "")
+        .localeCompare(
+            b.nome || "",
+            "pt-BR"
+        )
+    );
+}
+
+if(ordenacaoAtual === "vencimento"){
+
+    listaClientes.sort((a,b)=>{
+
+        let dataA =
+            new Date(
+                a.vencimento || "9999-12-31"
+            );
+
+        let dataB =
+            new Date(
+                b.vencimento || "9999-12-31"
+            );
+
+        return dataA - dataB;
+    });
+}
+
+if(ordenacaoAtual === "adicao"){
+
+    listaClientes.reverse();
+}
+
+listaClientes
 .filter(c=>{
 
     let status =
@@ -2590,17 +2700,16 @@ if(cliente.ultimaRenovacao){
         if(status == "ativo"){
             ativos++;
         }
-
-        if(status == "vencendo"){
-
+        let diasRestantes =
+            calcularDiasRestantes(
+                cliente.vencimento
+            );
+        
+        if(diasRestantes === 1){
+        
             vencendo++;
-
-            let diasRestantes =
-    calcularDiasRestantes(
-        cliente.vencimento
-    );
-
-lista.innerHTML += `
+        
+            lista.innerHTML += `
 
     <div class="card vencendo">
 
