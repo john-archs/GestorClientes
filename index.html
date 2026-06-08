@@ -517,6 +517,12 @@ textarea{
 .toast-sucesso.ativo{
     opacity:1;
 }
+.btn-desabilitado{
+    background:#64748b !important;
+    color:#cbd5e1 !important;
+    cursor:not-allowed !important;
+    opacity:.7;
+}
 /* CSS 
 </style>
 </head>
@@ -887,8 +893,10 @@ textarea{
     placeholder="Mensagem final da empresa"
 ></textarea>
 
-        <button class="btn-vencendo"
-            onclick="salvarConfiguracoes()">
+        <button
+          id="btnSalvarConfiguracoes"
+          class="btn-vencendo"
+          onclick="salvarConfiguracoes()">
     
             Salvar Configurações
     
@@ -899,6 +907,7 @@ textarea{
 
 <script>
   // JS 
+let configuracaoOriginal = "";
 let filtroAtual = "todos";
 let planoEditando = null;
 let clienteEditando = null;
@@ -935,7 +944,58 @@ let planos = JSON.parse(localStorage.getItem("planos")) || [
     }
 ];
 
-  // FUNCTION
+// FUNCTION
+function obterConfiguracoesAtuais(){
+
+    return JSON.stringify({
+
+        nomeSistema:
+            document.getElementById("nomeSistema").value,
+
+        pixChave:
+            document.getElementById("pixChave").value,
+
+        pixNome:
+            document.getElementById("pixNome").value,
+
+        pixBanco:
+            document.getElementById("pixBanco").value,
+
+        textoPromocao:
+            document.getElementById("textoPromocao").value,
+
+        textoRodape:
+            document.getElementById("textoRodape").value
+    });
+}
+
+function verificarAlteracoesConfiguracao(){
+
+    const btn =
+        document.getElementById(
+            "btnSalvarConfiguracoes"
+        );
+
+    const atual =
+        obterConfiguracoesAtuais();
+
+    if(atual === configuracaoOriginal){
+
+        btn.disabled = true;
+
+        btn.classList.add(
+            "btn-desabilitado"
+        );
+
+    }else{
+
+        btn.disabled = false;
+
+        btn.classList.remove(
+            "btn-desabilitado"
+        );
+    }
+}
 function mostrarSucesso(texto){
 
     let toast =
@@ -2550,6 +2610,9 @@ function salvarConfiguracoes(){
     mostrarSucesso(
         "✅ Configurações salvas com sucesso!"
     );
+    configuracaoOriginal =
+    obterConfiguracoesAtuais();
+    verificarAlteracoesConfiguracao();
 }
 function carregarConfiguracoes(){
 
@@ -2620,6 +2683,26 @@ document.addEventListener(
 
             carregarConfiguracoes();
             configurarUploadLogo();
+            [
+                "nomeSistema",
+                "pixChave",
+                "pixNome",
+                "pixBanco",
+                "textoPromocao",
+                "textoRodape"
+            ].forEach(id=>{
+            
+                const campo =
+                    document.getElementById(id);
+            
+                if(campo){
+            
+                    campo.addEventListener(
+                        "input",
+                        verificarAlteracoesConfiguracao
+                    );
+                }
+            });
             let guiaSalva =
                 localStorage.getItem("guiaAtual") || "dashboard";
             
@@ -2634,6 +2717,10 @@ document.addEventListener(
             filtroAtual = "todos";
             renderizar();
             atualizarDashboard();
+            configuracaoOriginal =
+    obterConfiguracoesAtuais();
+
+verificarAlteracoesConfiguracao();
 
         }catch(erro){
 
