@@ -486,6 +486,37 @@ select{
 #modalRenovacao .modal-box *{
     color:white;
 }
+textarea{
+    background:#1e293b;
+    color:white;
+    border:none;
+    border-radius:10px;
+    padding:12px;
+    min-height:120px;
+    resize:vertical;
+    width:100%;
+    font-family:Arial,sans-serif;
+}
+.toast-sucesso{
+    position:fixed;
+    top:90px;
+    left:50%;
+    transform:translateX(-50%);
+    background:#22c55e;
+    color:white;
+    padding:15px 25px;
+    border-radius:12px;
+    font-weight:bold;
+    z-index:9999;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s;
+}
+
+.toast-sucesso.ativo{
+    opacity:1;
+}
+/* CSS 
 </style>
 </head>
 <body>
@@ -625,11 +656,10 @@ select{
         onblur="if(!this.value)this.type='text'"
     >
 
-    <input
-        type="text"
-        id="obs"
-        placeholder="OBS: dispositivo"
-    >
+<textarea
+    id="obs"
+    placeholder="OBS: dispositivo"
+></textarea>
 
     <button
         class="btn-add"
@@ -844,6 +874,19 @@ select{
     id="pixBanco"
     placeholder="Banco"
 >
+<hr>
+<h2>Extras</h2>
+<label>Promoção</label>
+<textarea
+    id="textoPromocao"
+    placeholder="Texto promocional enviado nas renovações"
+></textarea>
+
+<label>Rodapé</label>
+<textarea
+    id="textoRodape"
+    placeholder="Mensagem final da empresa"
+></textarea>
 
         <button class="btn-vencendo"
             onclick="salvarConfiguracoes()">
@@ -894,6 +937,88 @@ let planos = JSON.parse(localStorage.getItem("planos")) || [
 ];
 
   // FUNCTION
+function mostrarSucesso(texto){
+
+    let toast =
+        document.getElementById("toastSucesso");
+
+    toast.innerText = texto;
+
+    toast.classList.add("ativo");
+
+    setTimeout(()=>{
+
+        toast.classList.remove("ativo");
+
+    },2000);
+}
+function enviarMensagemAtivacao(cliente){
+
+    let valor = "";
+
+    let match =
+        (cliente.plano || "").match(
+            /R\$\s*([\d.,]+)/
+        );
+
+    if(match){
+        valor = match[1];
+    }
+
+    let nomePlano =
+        (cliente.plano || "").split(" - ")[0];
+
+    let config =
+        JSON.parse(
+            localStorage.getItem("configuracoes")
+        ) || {};
+
+    let promocao =
+        (config.textoPromocao || "").trim();
+
+    let rodape =
+        (config.textoRodape || "").trim();
+
+    let mensagem =
+`✨ Ativação realizada ✨
+
+📲 Salve este contato para não perder as novidades nos Status
+
+🔰 Seguem seus dados de acesso:
+
+✨️ Nome: ${cliente.nome}
+✨️ Usuário: ${cliente.usuario}
+✨️ Senha: ${cliente.senha}
+
+🔸 Plano: ${nomePlano}
+🔸 Valor: R$ ${valor}
+
+🗓️ Vencimento: ${formatarData(cliente.vencimento)}`;
+    if(promocao){
+        mensagem += `
+
+${promocao}`;
+    }
+    if(rodape){
+        mensagem += `
+
+${rodape}`;
+    }
+    if(cliente.obs){
+
+        let obsFormatado =
+            cliente.obs.replace(/\\n/g,"\n");
+        mensagem += `
+
+~~~~~~~~~~~~~~~~~~
+${obsFormatado}`;
+    }
+
+    let url =
+`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`;
+
+    window.open(url,"_blank");
+}
 function exportarSistema(){
 
     const backup = {
@@ -1132,6 +1257,16 @@ function renovarCliente(){
 function enviarMensagemRenovacao(cliente){
 
     let valor = "";
+    let config =
+    JSON.parse(
+            localStorage.getItem("configuracoes")
+        ) || {};
+    
+    let promocao =
+        config.textoPromocao || "";
+    
+    let rodape =
+        config.textoRodape || "";
 
     let match =
         cliente.plano.match(
@@ -1157,18 +1292,17 @@ function enviarMensagemRenovacao(cliente){
 *🔸 Plano:* ${nomePlano}
 *🔸 Valor:* R$ ${valor}
 
-*🗓️ Vencimento:* ${formatarData(cliente.vencimento)}
-*--------------------------------*
-*📱 App Android:*
-https://bit.ly/htvapkjmf
-*📱 App iOS:*
-https://apple.co/3Y1lv7G
-
-*💵 INDIQUE E GANHE 💵*
-
-Quando seu indicado assinar, você ganha *R$20,00 de desconto na próxima renovação 😱🤩*
-
-*🧑‍💻 Att.* HyperTV, trazendo o melhor a você.`;
+*🗓️ Vencimento:* ${formatarData(cliente.vencimento)}`;
+if(promocao && promocao.trim()){
+    mensagem +=
+`\n\n~~~~~~~~~~~~~~~~~~
+${promocao}`;
+}
+if(rodape && rodape.trim()){
+    mensagem += 
+`\n\n~~~~~~~~~~~~~~~~~~
+${rodape}`;
+}
 if(cliente.obs){
 
     let obsFormatado =
@@ -1635,6 +1769,11 @@ function adicionarCliente(){
     });
 
     salvar();
+
+const novoCliente =
+    clientes[clientes.length - 1];
+
+enviarMensagemAtivacao(novoCliente);
 
 clientes =
     JSON.parse(
@@ -2344,8 +2483,24 @@ function enviarLembrete(
 
     let bancoPix =
         config.pixBanco || "";
+        
+    let textoExpiracao = "";
 
-    let mensagem = `🙋🏽‍♂️ Ooi, ${nome}. Passando para lembrar que seu plano ${plano} expira em ${dias} dia(s).
+if(dias == 0){
+    textoExpiracao =
+        "vence hoje";
+
+}else if(dias == 1){
+    textoExpiracao =
+        "vence amanhã";
+
+}else{
+    textoExpiracao =
+        `vence em ${dias} dia(s)`;
+}
+
+    let mensagem = `*🙋🏽‍♂️ Ooi, ${nome}*. 
+    Passando para lembrar que seu plano ${plano} *${textoExpiracao}*.
 
 > ❌️ NÃO FIQUE SEM SUA PROGRAMAÇÃO
 
@@ -2381,6 +2536,11 @@ function salvarConfiguracoes(){
         
     config.nomeSistema =
         document.getElementById("nomeSistema").value;
+    config.textoPromocao =
+        document.getElementById("textoPromocao").value;
+    
+    config.textoRodape =
+        document.getElementById("textoRodape").value;
 
     localStorage.setItem(
         "configuracoes",
@@ -2388,6 +2548,9 @@ function salvarConfiguracoes(){
     );
 
     atualizarCabecalho();
+    mostrarSucesso(
+        "✅ Configurações salvas com sucesso!"
+    );
 }
 function carregarConfiguracoes(){
 
@@ -2395,6 +2558,12 @@ function carregarConfiguracoes(){
         JSON.parse(
             localStorage.getItem("configuracoes")
         ) || {};
+document.getElementById("textoPromocao").value =
+    config.textoPromocao || "";
+
+document.getElementById("textoRodape").value =
+    config.textoRodape || "";
+    
 document.getElementById("pixChave").value =
     config.pixChave || "";
 
@@ -2532,11 +2701,10 @@ document.addEventListener(
             id="editVencimento"
         >
 
-        <input
-            type="text"
-            id="editObs"
-            placeholder="Dispositivo"
-        >
+<textarea
+    id="editObs"
+    placeholder="Dispositivo"
+></textarea>
 
         <button
             class="btn-add"
@@ -2624,6 +2792,8 @@ document.addEventListener(
         </button>
     </div>
 </div>
-
+<div id="toastSucesso" class="toast-sucesso">
+    ✅ Configurações salvas com sucesso!
+</div>
 </body>
 </html>
