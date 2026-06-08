@@ -523,6 +523,15 @@ textarea{
     cursor:not-allowed !important;
     opacity:.7;
 }
+.logo-acoes{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.logo-acoes button{
+    flex:1;
+}
 /* CSS */
 </style>
 </head>
@@ -732,14 +741,36 @@ textarea{
 
     <div class="config-box">
     
-        <label>Nome do sistema</label>
+        <label><strong>Nome do sistema</strong></label>
         <input type="text" id="nomeSistema">
-        <label>Logo do sistema (PNG)</label>
-          <input
-              type="file"
-              id="logoUpload"
-              accept=".png,image/png"
-          >
+<label><strong>Logo do sistema</strong></label>
+
+<div class="logo-acoes">
+
+    <button
+        type="button"
+        class="btn-edit"
+        onclick="document.getElementById('logoUpload').click()"
+    >
+        🖼️ Escolher Imagem
+    </button>
+
+    <button
+        type="button"
+        class="btn-delete"
+        onclick="removerLogo()"
+    >
+        🗑️ Remover Imagem
+    </button>
+
+    <input
+        type="file"
+        id="logoUpload"
+        accept="image/*"
+        style="display:none"
+    >
+
+</div>
         <hr>
 
 <h2>Servidores</h2>
@@ -945,6 +976,26 @@ let planos = JSON.parse(localStorage.getItem("planos")) || [
 ];
 
 // FUNCTION //
+function removerLogo(){
+
+    let config =
+        JSON.parse(
+            localStorage.getItem("configuracoes")
+        ) || {};
+
+    delete config.logoSistema;
+
+    localStorage.setItem(
+        "configuracoes",
+        JSON.stringify(config)
+    );
+
+    atualizarCabecalho();
+
+    mostrarSucesso(
+        "🗑️ Logo removida."
+    );
+}
 function obterConfiguracoesAtuais(){
 
     return JSON.stringify({
