@@ -862,12 +862,11 @@ textarea{
         placeholder="Nome do servidor"
     >
 
-    <input
-        type="text"
-        id="custoServidor"
-        placeholder="R$0,00"
-        oninput="formatarMoeda(this)"
-    >
+<input
+    type="text"
+    id="custoServidor"
+    placeholder="11,00"
+>
 
     <button
         class="btn-add"
@@ -1019,6 +1018,15 @@ let servidores =
         }
 
     ];
+
+servidores =
+    servidores.filter(s =>
+
+        s &&
+        s.nome &&
+        s.nome.trim() !== ""
+    );
+  
 let planos = JSON.parse(localStorage.getItem("planos")) || [
     {
         nome:"Mensal 1 Tela",
@@ -1042,6 +1050,21 @@ let planos = JSON.parse(localStorage.getItem("planos")) || [
 ];
 
 // FUNCTION //
+function normalizarCusto(valor){
+
+    valor = valor
+        .replace("R$","")
+        .trim()
+        .replace(",", ".");
+
+    let numero = parseFloat(valor);
+
+    if(isNaN(numero)){
+        return "";
+    }
+
+    return `R$ ${numero.toFixed(2).replace(".",",")}`;
+}
 function abrirWhatsappSuporte(){
 
     window.open(
@@ -1107,9 +1130,11 @@ function salvarEdicaoServidor(){
         ).value;
 
     let custo =
+    normalizarCusto(
         document.getElementById(
             "editServidorCusto"
-        ).value;
+        ).value
+    );
 
     let nomeAntigo =
         servidores[servidorEditando].nome;
@@ -1784,9 +1809,9 @@ function renderizarServidores(){
         document.getElementById("editServidor");
 
     let servidorPadrao =
-        localStorage.getItem(
-            "servidorPadrao"
-        ) || "";
+    localStorage.getItem(
+        "servidorPadrao"
+    ) || "";
     
     lista.innerHTML = "";
 
@@ -1842,21 +1867,7 @@ function renderizarServidores(){
 </div>
 
             </div>
-
         `;
-
-        if(select){
-
-            select.innerHTML += `
-
-                <option>
-
-                    ${servidor.nome}
-
-                </option>
-
-            `;
-        }
 
 if(select){
 
@@ -1895,7 +1906,9 @@ function adicionarServidor(){
         document.getElementById("novoServidor").value;
 
     let custo =
-        document.getElementById("custoServidor").value;
+    normalizarCusto(
+        document.getElementById("custoServidor").value
+    );
 
     if(!nome || !custo){
         return;
@@ -1917,7 +1930,27 @@ function adicionarServidor(){
 
 function removerServidor(index){
 
+    const servidorRemovido =
+        servidores[index]?.nome;
+
     servidores.splice(index,1);
+
+    servidores =
+        servidores.filter(s =>
+
+            s.nome &&
+            s.nome.trim() !== ""
+        );
+
+    if(
+        localStorage.getItem("servidorPadrao")
+        === servidorRemovido
+    ){
+
+        localStorage.removeItem(
+            "servidorPadrao"
+        );
+    }
 
     renderizarServidores();
 }
@@ -3250,12 +3283,11 @@ verificarAlteracoesConfiguracao();
             placeholder="Nome do servidor"
         >
 
-        <input
-            type="text"
-            id="editServidorCusto"
-            placeholder="R$0,00"
-            oninput="formatarMoeda(this)"
-        >
+<input
+    type="text"
+    id="editServidorCusto"
+    placeholder="11,00"
+>
 
         <button
             class="btn-add"
