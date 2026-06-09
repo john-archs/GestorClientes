@@ -1123,9 +1123,7 @@ if(cliente.obs){
         cliente.obs
         .replace(/\\n/g, "\n");
 
-    observacoes = `
-
-📝 Observações:
+    observacoes = `📝 Observações:
 ${observacoes}`;
 }
 
@@ -1140,10 +1138,20 @@ document.getElementById(
 🔒 Senha: ${cliente.senha}
 📦 Plano: ${cliente.plano}
 
-📅 Vencimento: ${formatarData(cliente.vencimento)}
+📅 Vencimento: ${formatarData(cliente.vencimento)}${
+linkM3U
+? `
 
-${linkM3U ? `🔗 Link M3U:
-${linkM3U}` : ""}${observacoes}`;
+🔗 Link M3U:
+${linkM3U}`
+: ""
+}${
+observacoes
+? `
+
+${observacoes}`
+: ""
+}`;
 
     document
         .getElementById(
