@@ -405,8 +405,17 @@ select{
     color:white;
     width:40px;
     height:40px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
     border-radius:10px;
+
     font-size:18px;
+    line-height:1;
+
+    padding:0;
 }
 
 .filtros-clientes{
@@ -561,6 +570,10 @@ textarea{
     border:1px solid rgba(255,255,255,.4);
 
     border-radius:10px;
+}
+.btn-cobranca{
+    background:#c084fc;
+    color:white;
 }
 /* CSS */
 </style>
@@ -834,6 +847,7 @@ textarea{
         accept="image/*"
         style="display:none"
     >
+    
 
 </div>
         <hr>
@@ -868,6 +882,11 @@ textarea{
     id="custoServidor"
     placeholder="11,00"
 >
+<input
+    type="text"
+    id="urlServidor"
+    placeholder="http://aptxu.net"
+/>
 
     <button
         class="btn-add"
@@ -1015,7 +1034,8 @@ let servidores =
 
         {
             nome:"Genial",
-            custo:"R$11,00"
+            custo:"R$11,00",
+            url:"http://aptxu.net"
         }
 
     ];
@@ -1051,6 +1071,128 @@ let planos = JSON.parse(localStorage.getItem("planos")) || [
 ];
 
 // FUNCTION //
+function copiarDadosCliente(){
+
+    let texto =
+        document.getElementById(
+            "dadosClienteTexto"
+        );
+
+    navigator.clipboard.writeText(
+        texto.value
+    );
+
+    mostrarSucesso(
+        "📋 Dados copiados."
+    );
+}
+
+function fecharDadosCliente(){
+
+    document
+        .getElementById(
+            "modalDadosCliente"
+        )
+        .classList
+        .remove("ativo");
+}
+function mostrarDadosCliente(index){
+
+    let cliente = clientes[index];
+
+    let servidor = servidores.find(
+    s => s.nome === cliente.servidor
+);
+
+let linkM3U = "";
+
+if(
+    servidor &&
+    servidor.url
+){
+
+    linkM3U =
+`${servidor.url}/get.php?username=${cliente.usuario}&password=${cliente.senha}&type=m3u_plus&output=mpegts`;
+}
+
+let observacoes = "";
+
+if(cliente.obs){
+
+    observacoes =
+        cliente.obs
+        .replace(/\\n/g, "\n");
+
+    observacoes = `
+
+📝 Observações:
+${observacoes}`;
+}
+
+document.getElementById(
+    "dadosClienteTexto"
+).value =
+
+`👤 Nome: ${cliente.nome}
+
+🖥️ Servidor: ${cliente.servidor}
+🔑 Usuário: ${cliente.usuario}
+🔒 Senha: ${cliente.senha}
+📦 Plano: ${cliente.plano}
+
+📅 Vencimento: ${formatarData(cliente.vencimento)}
+
+${linkM3U ? `🔗 Link M3U:
+${linkM3U}` : ""}${observacoes}`;
+
+    document
+        .getElementById(
+            "modalDadosCliente"
+        )
+        .classList
+        .add("ativo");
+}
+function enviarMensagemVencido(cliente){
+
+    let config =
+        JSON.parse(
+            localStorage.getItem("configuracoes")
+        ) || {};
+
+    let chavePix =
+        config.pixChave || "";
+
+    let nomePix =
+        config.pixNome || "";
+
+    let bancoPix =
+        config.pixBanco || "";
+
+    let dias =
+        Math.abs(
+            calcularDiasRestantes(
+                cliente.vencimento
+            )
+        );
+
+    let mensagem =
+`🙋🏽‍♂️ Ooi, ${primeiroNome(cliente.nome)}.
+
+Seu plano venceu há ${dias} dia(s).
+
+❌ Não fique sem sua programação.
+
+🔑 Chave PIX: ${chavePix}
+👤 Nome: ${nomePix}
+🏦 Banco: ${bancoPix}
+
+Caso deseje a chave PIX separada, me envie a palavra *PIX* ou reaja a esta mensagem.`;
+
+    let url =
+`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`;
+
+    window.open(url, "_blank");
+}
 function limparWhatsapp(campo){
 
     campo.value =
@@ -1118,6 +1260,10 @@ function editarServidor(index){
     document.getElementById(
         "editServidorCusto"
     ).value = servidor.custo;
+    
+    document.getElementById(
+        "editServidorUrl"
+    ).value = servidor.url || "";
 
     let modal =
         document.getElementById(
@@ -1141,14 +1287,19 @@ function salvarEdicaoServidor(){
             "editServidorCusto"
         ).value
     );
+    
+    let url =
+    document.getElementById(
+        "editServidorUrl"
+    ).value.trim();
 
     let nomeAntigo =
         servidores[servidorEditando].nome;
 
     servidores[servidorEditando] = {
-
         nome,
-        custo
+        custo,
+        url
     };
 
     clientes = clientes.map(cliente=>{
@@ -1842,6 +1993,11 @@ function renderizarServidores(){
                     <div class="plano-valor">
                         ${servidor.custo}
                     </div>
+                    ${servidor.url ? `
+                    <div class="plano-valor">
+                    ${servidor.url}
+                    </div>
+                     ` : "🔗 -"}
 
                 </div>
 
@@ -1915,15 +2071,18 @@ function adicionarServidor(){
     normalizarCusto(
         document.getElementById("custoServidor").value
     );
+    
+    let url =
+    document.getElementById("urlServidor").value.trim();
 
     if(!nome || !custo){
         return;
     }
 
     servidores.push({
-
         nome,
-        custo
+        custo,
+        url
     });
 
     document.getElementById("novoServidor").value = "";
@@ -2336,12 +2495,13 @@ listaClientes
     if(status == "vencido")
         qtdVencidos++;
 
-    let nomeCliente =
-    (c.nome || "").toLowerCase();
+    let textoPesquisa =
+    JSON.stringify(c)
+    .toLowerCase();
 
     let passouPesquisa =
-    nomeCliente.includes(pesquisa);
-
+        textoPesquisa.includes(pesquisa);
+    
     if(!passouPesquisa)
         return false;
 
@@ -2367,6 +2527,8 @@ listaClientes
         }
 
         let mostrarLembrete = false;
+        let mostrarVencido =
+          status == "vencido";
 
 if(status == "vencendo"){
 
@@ -2408,6 +2570,13 @@ lista.innerHTML += `
         >
             📱
         </button>
+        <button
+            class="btn-edit btn-icon"
+            onclick="mostrarDadosCliente(${indexReal})"
+            title="Mostrar dados"
+        >
+            📄
+        </button>
 
         <button
             class="btn-vencendo btn-icon"
@@ -2429,7 +2598,6 @@ lista.innerHTML += `
         >
             🔄
         </button>
-
         ${
             mostrarLembrete
             ?
@@ -2449,9 +2617,21 @@ lista.innerHTML += `
             >
                 ⏰
             </button>
+            `:
+          ""
+        }
+        ${
+            mostrarVencido
+            ?
             `
-            :
-
+            <button
+                class="btn-cobranca btn-icon"
+                onclick='enviarMensagemVencido(${JSON.stringify(cliente)})'
+                title="Cobrança"
+            >
+                💸
+            </button>
+            `:
             ""
         }
 
@@ -3295,6 +3475,11 @@ verificarAlteracoesConfiguracao();
     id="editServidorCusto"
     placeholder="11,00"
 >
+<input
+    type="text"
+    id="editServidorUrl"
+    placeholder="URL do servidor"
+/>
 
         <button
             class="btn-add"
@@ -3305,6 +3490,57 @@ verificarAlteracoesConfiguracao();
 
     </div>
 
+</div>
+<div
+    class="modal"
+    id="modalDadosCliente"
+>
+
+    <div class="modal-box">
+
+        <div class="modal-topo">
+
+            <h2>
+                Dados do Cliente
+            </h2>
+
+            <button
+                class="fechar-modal"
+                onclick="fecharDadosCliente()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <textarea
+            id="dadosClienteTexto"
+            readonly
+            style="min-height:260px;"
+        ></textarea>
+
+        <div
+            style="
+                display:flex;
+                gap:10px;
+            "
+        >
+
+            <button
+                class="btn-add"
+                onclick="copiarDadosCliente()"
+            >
+                📋 Copiar
+            </button>
+
+            <button
+                class="btn-delete"
+                onclick="fecharDadosCliente()"
+            >
+                ❌ Fechar
+            </button>
+        </div>
+    </div>
 </div>
 </body>
 </html>
