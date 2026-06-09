@@ -1500,7 +1500,6 @@ ${rodape}`;
         let obsFormatado =
             cliente.obs.replace(/\\n/g,"\n");
         mensagem += `
-
 ~~~~~~~~~~~~~~~~~~
 ${obsFormatado}`;
     }
@@ -1796,12 +1795,12 @@ function enviarMensagemRenovacao(cliente){
 *🗓️ Vencimento:* ${formatarData(cliente.vencimento)}`;
 if(promocao && promocao.trim()){
     mensagem +=
-`\n\n~~~~~~~~~~~~~~~~~~
+`\n~~~~~~~~~~~~~~~~~~
 ${promocao}`;
 }
 if(rodape && rodape.trim()){
     mensagem += 
-`\n\n~~~~~~~~~~~~~~~~~~
+`\n~~~~~~~~~~~~~~~~~~
 ${rodape}`;
 }
 if(cliente.obs){
@@ -1810,7 +1809,7 @@ if(cliente.obs){
         cliente.obs.replace(/\\n/g, "\n");
 
     mensagem +=
-`\n\n~~~~~~~~~~~~~~~~~~
+`\n~~~~~~~~~~~~~~~~~~
 ${obsFormatado}`;
 }
 
