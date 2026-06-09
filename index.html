@@ -695,6 +695,7 @@ textarea{
         type="text"
         id="whatsapp"
         placeholder="+55 DDD NÚMERO"
+        onblur="limparWhatsapp(this)"
     >
 
     <select id="plano"></select>
@@ -1050,6 +1051,11 @@ let planos = JSON.parse(localStorage.getItem("planos")) || [
 ];
 
 // FUNCTION //
+function limparWhatsapp(campo){
+
+    campo.value =
+        campo.value.replace(/\D/g, "");
+}
 function normalizarCusto(valor){
 
     valor = valor
@@ -3157,6 +3163,7 @@ verificarAlteracoesConfiguracao();
             type="text"
             id="editWhatsapp"
             placeholder="WhatsApp"
+            onblur="limparWhatsapp(this)"
         >
 
         <select id="editPlano"></select>
