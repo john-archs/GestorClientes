@@ -2497,23 +2497,15 @@ if(ordenacaoAtual === "adicao"){
 
     listaClientes.reverse();
 }
+/* APAGAR DAQUI */
+let html = listaClientes
+.filter(c => {
 
-listaClientes
-.filter(c=>{
+    let status = statusCliente(c.vencimento || "");
 
-    let status =
-    statusCliente(
-        c.vencimento || ""
-    );
-
-    if(status == "ativo")
-        qtdAtivos++;
-
-    if(status == "vencendo")
-        qtdVencendo++;
-
-    if(status == "vencido")
-        qtdVencidos++;
+    if(status == "ativo") qtdAtivos++;
+    if(status == "vencendo") qtdVencendo++;
+    if(status == "vencido") qtdVencidos++;
 
     let textoPesquisa = `
 ${c.nome || ""}
@@ -2523,150 +2515,115 @@ ${c.whatsapp || ""}
 ${c.plano || ""}
 ${c.obs || ""}
 ${c.servidor || ""}
-`
-.toLowerCase();
+`.toLowerCase();
 
-    let passouPesquisa =
-        textoPesquisa.includes(pesquisa);
-    
-    if(!passouPesquisa)
-        return false;
+    let passouPesquisa = textoPesquisa.includes(pesquisa);
 
-    if(filtroAtual == "todos"){     return true; }  return status == filtroAtual;
+    if(!passouPesquisa) return false;
+
+    if(filtroAtual == "todos") return true;
+
+    return status == filtroAtual;
+
 })
-.forEach((cliente)=>{      
-        let indexReal = clientes.indexOf(cliente);
+.map((cliente)=>{
+    
+    let indexReal = clientes.indexOf(cliente);
 
-        let status = statusCliente(cliente.vencimento);
+    let status = statusCliente(cliente.vencimento);
 
-        let statusTexto = "";
+    let statusTexto = "";
 
-        if(status == "ativo"){
-            statusTexto = `<span class="status ativo">ATIVO</span>`;
-        }
-
-        if(status == "vencendo"){
-            statusTexto = `<span class="status vencendo-status">VENCE EM BREVE</span>`;
-        }
-
-        if(status == "vencido"){
-            statusTexto = `<span class="status vencido-status">VENCIDO</span>`;
-        }
-
-        let mostrarLembrete = false;
-        let mostrarVencido =
-          status == "vencido";
-
-if(status == "vencendo"){
-
-    let dias =
-        calcularDiasRestantes(
-            cliente.vencimento
-        );
-
-    if(dias <= 2){
-        mostrarLembrete = true;
+    if(status == "ativo"){
+        statusTexto = `<span class="status ativo">ATIVO</span>`;
     }
-}
 
-lista.innerHTML += `
+    if(status == "vencendo"){
+        statusTexto = `<span class="status vencendo-status">VENCE EM BREVE</span>`;
+    }
 
+    if(status == "vencido"){
+        statusTexto = `<span class="status vencido-status">VENCIDO</span>`;
+    }
+
+    let mostrarLembrete = false;
+    let mostrarVencido = status == "vencido";
+
+    if(status == "vencendo"){
+        let dias = calcularDiasRestantes(cliente.vencimento);
+        if(dias <= 2){
+            mostrarLembrete = true;
+        }
+    }
+
+    return `
 <div class="card ${status}">
     
-    <div class="nome">
-        ${cliente.nome}
-    </div>
+    <div class="nome">${cliente.nome}</div>
 
     ${statusTexto}
 
-    <div class="info">
-        👤 ${cliente.usuario || "-"}
-    </div>
-    <div class="info">
-        📦 ${cliente.plano || "-"}
-    </div>
-    <div class="info">
-        📅 ${formatarData(cliente.vencimento)}
-    </div>
+    <div class="info">👤 ${cliente.usuario || "-"}</div>
+    <div class="info">📦 ${cliente.plano || "-"}</div>
+    <div class="info">📅 ${formatarData(cliente.vencimento)}</div>
 
     <div class="acoes">
 
-        <button
-            class="btn-whats btn-icon"
-            onclick='enviarDadosCliente(${JSON.stringify(cliente)})'
-        >
+        <button class="btn-whats btn-icon"
+            onclick='enviarDadosCliente(${JSON.stringify(cliente)})'>
             📱
         </button>
-        <button
-            class="btn-edit btn-icon"
-            onclick="mostrarDadosCliente(${indexReal})"
-            title="Mostrar dados"
-        >
+
+        <button class="btn-edit btn-icon"
+            onclick="mostrarDadosCliente(${indexReal})">
             📄
         </button>
 
-        <button
-            class="btn-vencendo btn-icon"
-            onclick="editarCliente(${indexReal})"
-        >
+        <button class="btn-vencendo btn-icon"
+            onclick="editarCliente(${indexReal})">
             ✏️
         </button>
 
-        <button
-            class="btn-delete btn-icon"
-            onclick="deletar(${indexReal})"
-        >
+        <button class="btn-delete btn-icon"
+            onclick="deletar(${indexReal})">
             🗑️
         </button>
 
-        <button
-            class="btn-renovar btn-icon"
-            onclick="abrirModalRenovacao(${indexReal})"
-        >
+        <button class="btn-renovar btn-icon"
+            onclick="abrirModalRenovacao(${indexReal})">
             🔄
         </button>
+
         ${
             mostrarLembrete
-            ?
-
-            `
-            <button
-                class="btn-lembrete btn-icon"
-
-                onclick="
-                    enviarLembrete(
-                        '${primeiroNome(cliente.nome)}',
-                        '${cliente.whatsapp}',
-                        '${cliente.plano}',
-                        '${calcularDiasRestantes(cliente.vencimento)}'
-                    )
-                "
-            >
-                ⏰
-            </button>
-            `:
-          ""
+            ? `<button class="btn-lembrete btn-icon"
+                onclick="enviarLembrete(
+                    '${primeiroNome(cliente.nome)}',
+                    '${cliente.whatsapp}',
+                    '${cliente.plano}',
+                    '${calcularDiasRestantes(cliente.vencimento)}'
+                )">⏰</button>`
+            : ""
         }
+
         ${
             mostrarVencido
-            ?
-            `
-            <button
-                class="btn-cobranca btn-icon"
-                onclick='enviarMensagemVencido(${JSON.stringify(cliente)})'
-                title="Cobrança"
-            >
+            ? `<button class="btn-cobranca btn-icon"
+                onclick='enviarMensagemVencido(${JSON.stringify(cliente)})'>
                 💸
-            </button>
-            `:
-            ""
+              </button>`
+            : ""
         }
 
     </div>
-
 </div>
 `;
-    });
+})
+.join("");
+
+lista.innerHTML = html;
+/* APAGAR ACIMA */
+  
 document.getElementById("btnTodos")
 .innerHTML =
 `Todos [${clientes.length}]`;
