@@ -2414,9 +2414,22 @@ atualizarDashboard();
 }
 
 function deletar(index){
+
+    let cliente = clientes[index];
+
+    let confirmar = confirm(
+        `⚠️ Deseja realmente excluir o cliente "${cliente.nome}"?`
+    );
+
+    if(!confirmar){
+        return;
+    }
+
     clientes.splice(index,1);
+
     salvar();
     renderizar();
+    atualizarDashboard();
 }
 
 function ordenarVencimento(){
