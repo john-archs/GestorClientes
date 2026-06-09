@@ -745,7 +745,7 @@ textarea{
         type="text" 
         id="pesquisa" 
         placeholder="Pesquisar cliente..."
-        onkeyup="renderizar()"
+        oninput="pesquisaComDelay()"
     >
 </div>
 <div class="filtros-clientes">
@@ -1071,6 +1071,18 @@ let planos = JSON.parse(localStorage.getItem("planos")) || [
 ];
 
 // FUNCTION //
+let timerPesquisa;
+
+function pesquisaComDelay(){
+
+    clearTimeout(timerPesquisa);
+
+    timerPesquisa = setTimeout(() => {
+
+        renderizar();
+
+    }, 250);
+}
 function copiarDadosCliente(){
 
     let texto =
@@ -2503,9 +2515,16 @@ listaClientes
     if(status == "vencido")
         qtdVencidos++;
 
-    let textoPesquisa =
-    JSON.stringify(c)
-    .toLowerCase();
+    let textoPesquisa = `
+${c.nome || ""}
+${c.usuario || ""}
+${c.senha || ""}
+${c.whatsapp || ""}
+${c.plano || ""}
+${c.obs || ""}
+${c.servidor || ""}
+`
+.toLowerCase();
 
     let passouPesquisa =
         textoPesquisa.includes(pesquisa);
