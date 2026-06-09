@@ -573,6 +573,22 @@ textarea{
     background:#c084fc;
     color:white;
 }
+.tooltip{
+    position:fixed;
+    background:rgba(0,0,0,0.9);
+    color:#fff;
+    padding:6px 10px;
+    border-radius:8px;
+    font-size:12px;
+    z-index:9999;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .2s;
+}
+
+.tooltip.ativo{
+    opacity:1;
+}
 /* CSS */
 </style>
 </head>
@@ -1069,6 +1085,39 @@ let planos = JSON.parse(localStorage.getItem("planos")) || [
 ];
 
 // FUNCTION //
+let pressTimer;
+
+function iniciarPressao(elemento, texto, event){
+    pressTimer = setTimeout(() => {
+        mostrarTooltip(texto, event);
+    }, 500); // tempo para considerar "segurar"
+}
+
+function cancelarPressao(){
+    clearTimeout(pressTimer);
+    esconderTooltip();
+}
+
+function mostrarTooltip(texto, event){
+    const tooltip = document.getElementById("tooltip");
+
+    tooltip.innerText = texto;
+
+    tooltip.style.left = event.touches 
+        ? event.touches[0].clientX + "px"
+        : event.clientX + "px";
+
+    tooltip.style.top = event.touches 
+        ? (event.touches[0].clientY - 40) + "px"
+        : (event.clientY - 40) + "px";
+
+    tooltip.classList.add("ativo");
+}
+
+function esconderTooltip(){
+    document.getElementById("tooltip")
+        .classList.remove("ativo");
+}
 let timerPesquisa;
 
 function pesquisaComDelay(){
@@ -2274,27 +2323,22 @@ function adicionarCliente(){
 
     let usuario =
         document.getElementById("usuario").value;
+        
     let clienteExistente =
     clientes.find(cliente =>
-
         (cliente.usuario || "")
         .trim()
-        .toLowerCase()
-
-        ===
-
-        usuario
-        .trim()
-        .toLowerCase()
+        .toLowerCase() === usuario.trim().toLowerCase()
     );
 
 if(clienteExistente){
-
-    alert(
-        `⚠️ O(A) cliente "${clienteExistente.nome}" já utiliza o usuário "${usuario}".`
+    let continuar = confirm(
+        `⚠️ Já existe um cliente com esse usuário (${clienteExistente.nome}). Deseja continuar?`
     );
 
-    return;
+    if(!continuar){
+        return;
+    }
 }
 
     let senha =
@@ -3544,5 +3588,6 @@ verificarAlteracoesConfiguracao();
         </div>
     </div>
 </div>
+<div id="tooltip" class="tooltip"></div>
 </body>
 </html>
