@@ -3102,23 +3102,34 @@ function enviarLembrete(
     let bancoPix =
         config.pixBanco || "";
         
-    let textoExpiracao = "";
+let textoExpiracao = "";
+let emoji = "";
 
-if(dias == 0){
-    textoExpiracao =
-        "vence hoje";
+if(dias < 0){
+
+    let diasAtraso = Math.abs(dias);
+
+    emoji = "😱";
+    textoExpiracao = `venceu há ${diasAtraso} dia(s)`;
+
+}else if(dias == 0){
+
+    emoji = "🔴";
+    textoExpiracao = "vence hoje";
 
 }else if(dias == 1){
-    textoExpiracao =
-        "vence amanhã";
+
+    emoji = "🟡";
+    textoExpiracao = "vence amanhã";
 
 }else{
-    textoExpiracao =
-        `vence em ${dias} dia(s)`;
+
+    emoji = "🟢";
+    textoExpiracao = `vence em ${dias} dias`;
 }
 
-    let mensagem = `*🙋🏽‍♂️ Ooi, ${nome}*. 
-    Passando para lembrar que seu plano ${plano} *${textoExpiracao}*.
+    let mensagem = `*${emoji} 🙋🏽‍♂️ Ooi, ${nome}*. 
+Passando para lembrar que seu plano ${plano} *${textoExpiracao}*.
 
 > ❌️ NÃO FIQUE SEM SUA PROGRAMAÇÃO
 
