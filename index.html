@@ -3029,16 +3029,25 @@ if(cliente.ultimaRenovacao){
                 cliente.vencimento
             );
         
-        if(diasRestantes === 1){
-        
-            vencendo++;
-        
-            lista.innerHTML += `
+if(diasRestantes === 0 || diasRestantes === 1){
+
+    vencendo++;
+
+    let textoVencimento =
+        diasRestantes === 0
+        ? "🔥 Vence Hoje"
+        : "⚠️ Vence Amanhã";
+
+    lista.innerHTML += `
 
     <div class="card vencendo">
 
         <div class="nome">
             ${cliente.nome}
+        </div>
+
+        <div class="info">
+            ${textoVencimento}
         </div>
 
         <div class="info">
@@ -3065,16 +3074,11 @@ if(cliente.ultimaRenovacao){
                 Lembrar
             </button>
 
-            <button
-                class="btn-renovar"
-                onclick="abrirModalRenovacao(${clientes.indexOf(cliente)})"
-            >
-                🔄Renovar
-            </button>
         </div>
+
     </div>
 `;
-        }
+}
 
     });
 
