@@ -123,12 +123,18 @@ button{
 /* ===== CARD NOVO ===== */
 .card{
     background:#1e293b;
+    padding:15px;
     border-radius:16px;
     border-left:4px solid #38bdf8;
     overflow:hidden;
     transition: box-shadow .2s;
     display:flex;
     flex-direction:column;
+}
+#listaVencendo{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap:16px;
 }
 
 .card:hover{
@@ -391,6 +397,12 @@ button{
     background:#1e293b;
     padding:20px;
     border-radius:16px;
+    display:flex;          /* adicionar */
+    flex-direction:column; /* adicionar */
+    gap:12px;              /* adicionar */
+}
+.vencimentos-box h2{
+    margin-bottom:5px;
 }
 
 .config-box{
@@ -1681,7 +1693,7 @@ function atualizarDashboard(){
     <div class="info">${textoVencimento}</div>
     <div class="info">📅 ${formatarData(cliente.vencimento)}</div>
     <div class="info">📦 ${cliente.plano}</div>
-    <div class="acoes" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
+    <div class="acoes" style="margin-top:15px; padding-bottom:8px; display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn-lembrete"
             onclick="enviarLembrete('${primeiroNome(cliente.nome)}','${cliente.whatsapp}','${cliente.plano}','${diasRestantes}')">
             Lembrar
