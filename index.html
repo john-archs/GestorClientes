@@ -571,22 +571,6 @@ textarea{
     background:#c084fc;
     color:white;
 }
-.tooltip{
-    position:fixed;
-    background:rgba(0,0,0,0.9);
-    color:#fff;
-    padding:6px 10px;
-    border-radius:8px;
-    font-size:12px;
-    z-index:9999;
-    pointer-events:none;
-    opacity:0;
-    transition:opacity .2s;
-}
-
-.tooltip.ativo{
-    opacity:1;
-}
 /* CSS */
 </style>
 </head>
@@ -2987,14 +2971,43 @@ if(
     }
 }
 
-        let servidorCliente = null;
+        let servidorCliente = servidores.find(s =>
+    (cliente.servidor || "").toLowerCase()
+    .includes((s.nome || "").toLowerCase())
+);
+/* BLINDAGEM */
+if(!servidorCliente){
 
-if(cliente.servidor){
+    let opcoes = servidores
+        .map((s, i) => `${i} - ${s.nome}`)
+        .join("\n");
 
-    servidorCliente =
-        servidores.find(
-            s => s.nome == cliente.servidor
-        );
+    let escolha = prompt(
+`⚠️ Servidor não encontrado para ${cliente.nome}
+
+Escolha o servidor digitando o número:
+
+${opcoes}`
+    );
+
+    if(escolha !== null){
+
+        let index = Number(escolha);
+
+        if(!isNaN(index) && servidores[index]){
+
+            servidorCliente = servidores[index];
+
+            // 🔥 já atualiza o cliente pra não dar erro de novo
+            cliente.servidor = servidorCliente.nome;
+
+            salvar();
+
+        }else{
+
+            alert("Servidor inválido. Custo será considerado 0.");
+        }
+    }
 }
 
 let custoServidor = 0;
@@ -3009,7 +3022,6 @@ if(servidorCliente){
             .replace(",",".")
         );
 }
-
 if(cliente.ultimaRenovacao){
 
     let renovacao =
@@ -3599,6 +3611,5 @@ verificarAlteracoesConfiguracao();
         </div>
     </div>
 </div>
-<div id="tooltip" class="tooltip"></div>
 </body>
 </html>
