@@ -57,19 +57,12 @@ button{
     font-weight:bold;
 }
 .btn-lembrete{
-
     background:#22c55e;
-
     color:white;
-
     padding:10px 15px;
-
     border:none;
-
     border-radius:10px;
-
     font-weight:bold;
-
     cursor:pointer;
 }
 .btn-add{
@@ -98,15 +91,15 @@ button{
 }
 
 .btn-icon{
-    width:36px;
-    height:36px;
+    width:44px;
+    height:44px;
     display:flex;
     align-items:center;
     justify-content:center;
     font-size:18px;
     padding:0;
-    border:1px solid white; /* 👈 borda branca */
-    border-radius:10px;     /* mantém arredondado */
+    border-radius:10px;
+    flex-shrink:0;
 }
 
 .btn-renovar{
@@ -114,88 +107,200 @@ button{
     color:white;
 }
 
+/* ===== GRID DE CLIENTES ===== */
 .lista{
     display:grid;
-    gap:15px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap:16px;
 }
 
+@media(max-width:640px){
+    .lista{
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===== CARD NOVO ===== */
 .card{
     background:#1e293b;
-    padding:15px;
-    border-radius:15px;
-    border-left:5px solid #38bdf8;
+    border-radius:16px;
+    border-left:4px solid #38bdf8;
+    overflow:hidden;
+    transition: box-shadow .2s;
+    display:flex;
+    flex-direction:column;
+}
+
+.card:hover{
+    box-shadow: 0 0 0 1px rgba(56,189,248,.25);
 }
 
 .card.vencido{
-    border-left:5px solid #ef4444;
+    border-left-color:#ef4444;
 }
 
 .card.vencendo{
-    border-left:5px solid #f59e0b;
+    border-left-color:#f59e0b;
+}
+
+/* Cabeçalho do card */
+.card-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 16px 10px 16px;
+    gap:10px;
+}
+
+.card-header-left{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-width:0;
 }
 
 .nome{
+    font-size:16px;
+    font-weight:bold;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+#listaVencendo .nome{
     font-size:20px;
-    font-weight:bold;
-    margin-bottom:10px;
 }
 
-.info{
-    margin:5px 0;
-}
-
-.acoes{
-    margin-top:15px;
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-}
-
+/* Status badge */
 .status{
-    padding:5px 10px;
+    display:inline-block;
+    padding:3px 9px;
     border-radius:20px;
-    font-size:12px;
+    font-size:11px;
     font-weight:bold;
+    letter-spacing:.4px;
+    width:fit-content;
 }
 
 .ativo{
-    background:#22c55e;
-    color:black;
+    background:rgba(34,197,94,.15);
+    color:#4ade80;
+    border:1px solid rgba(34,197,94,.3);
 }
 
 .vencido-status{
-    background:#ef4444;
-    color:white;
+    background:rgba(239,68,68,.15);
+    color:#f87171;
+    border:1px solid rgba(239,68,68,.3);
 }
 
 .vencendo-status{
-    background:#f59e0b;
-    color:black;
+    background:rgba(245,158,11,.15);
+    color:#fbbf24;
+    border:1px solid rgba(245,158,11,.3);
 }
 
-@media(max-width:700px){
-    .topo{
-        flex-direction:column;
-    }
-    .topo-clientes{
-        flex-direction:row !important;
-    }
-    .grupo-data-valor{
-        width:100%;
-    }
-    .grupo-data-valor input{
-        flex:1;
-    }
-}
-
-.grupo-data-valor{
+/* Botão de toggle de ações */
+.btn-toggle-acoes{
+    background:#0f172a;
+    color:#94a3b8;
+    width:36px;
+    height:36px;
+    border-radius:10px;
     display:flex;
-    gap:10px;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+    padding:0;
+    flex-shrink:0;
+    border:1px solid rgba(255,255,255,.08);
+    transition: color .2s, background .2s;
+    line-height:1;
 }
 
-.grupo-data-valor input{
-    width:140px;
+.btn-toggle-acoes:hover{
+    background:#1e3a5f;
+    color:#38bdf8;
 }
+
+.btn-toggle-acoes.aberto{
+    color:#38bdf8;
+    background:#1e3a5f;
+}
+
+/* Corpo do card: dados */
+.card-body{
+    padding:0 16px 14px 16px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.card-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color:#94a3b8;
+}
+
+.card-row span{
+    color:#cbd5e1;
+}
+
+/* Área de ações colapsável */
+.card-acoes{
+    display:none;
+    padding:12px 16px;
+    border-top:1px solid rgba(255,255,255,.07);
+    gap:8px;
+    flex-wrap:wrap;
+    background:rgba(0,0,0,.15);
+    animation: slideDown .18s ease;
+}
+
+.card-acoes.visivel{
+    display:flex;
+}
+
+@keyframes slideDown{
+    from{ opacity:0; transform:translateY(-6px); }
+    to{ opacity:1; transform:translateY(0); }
+}
+
+/* Labels dentro das ações */
+.acao-grupo{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    width:100%;
+}
+
+.btn-acao{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 12px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:bold;
+    border:none;
+    cursor:pointer;
+    flex:1;
+    justify-content:center;
+    min-width:80px;
+    height:40px;
+}
+
+.btn-acao.whats{ background:#25d366; color:white; }
+.btn-acao.dados{ background:#3b82f6; color:white; }
+.btn-acao.editar{ background:#f59e0b; color:black; }
+.btn-acao.deletar{ background:#ef4444; color:white; }
+.btn-acao.renovar{ background:#22c55e; color:white; }
+.btn-acao.lembrete{ background:#06b6d4; color:white; }
+.btn-acao.cobranca{ background:#c084fc; color:white; }
+
+/* ===== resto do layout original ===== */
 .menu-btn{
     position:fixed;
     top:10px;
@@ -220,9 +325,7 @@ button{
     width:250px;
     height:100vh;
     background:#111827;
-
     padding:90px 20px 20px 20px;
-
     transition:.3s;
     z-index:5000;
     overflow-y:auto;
@@ -311,7 +414,6 @@ select{
     padding:15px;
     border-radius:12px;
     margin-top:10px;
-
     display:flex;
     justify-content:space-between;
     align-items:center;
@@ -333,18 +435,14 @@ select{
 }
 .modal{
     position:fixed;
-    top:70px; /* 👈 altura do seu header */
+    top:70px;
     left:0;
-
     width:100%;
-    height:calc(100% - 70px); /* 👈 desconta header */
-
+    height:calc(100% - 70px);
     background:rgba(0,0,0,.6);
-
     display:none;
     align-items:center;
     justify-content:center;
-
     z-index:2000;
 }
 .modal h2{
@@ -356,43 +454,25 @@ select{
 }
 
 .modal-box{
-
     background:#111827;
-
     width:95%;
     max-width:450px;
-
     padding:25px;
-
     border-radius:20px;
-
     display:flex;
     flex-direction:column;
-
     gap:15px;
-
     animation:modalEntrada .25s ease;
 }
 
 @keyframes modalEntrada{
-
-    from{
-        opacity:0;
-        transform:translateY(20px);
-    }
-
-    to{
-        opacity:1;
-        transform:translateY(0);
-    }
+    from{ opacity:0; transform:translateY(20px); }
+    to{ opacity:1; transform:translateY(0); }
 }
 
 .modal-topo{
-
     display:flex;
-
     justify-content:space-between;
-
     align-items:center;
 }
 
@@ -401,16 +481,12 @@ select{
     color:white;
     width:40px;
     height:40px;
-
     display:flex;
     align-items:center;
     justify-content:center;
-
     border-radius:10px;
-
     font-size:18px;
     line-height:1;
-
     padding:0;
 }
 
@@ -438,43 +514,29 @@ select{
 }
 
 #cabecalhoSistema{
-
     position:fixed;
-
     top:0;
     left:0;
-
     width:100%;
-
     height:70px;
-
     background:#111827;
-
     display:flex;
-
     align-items:center;
     justify-content:center;
-
     gap:12px;
-
     z-index:4000;
-
     box-shadow:0 2px 10px rgba(0,0,0,.3);
 }
 
 #logoSistema{
-
     width:45px;
     height:45px;
-
     object-fit:contain;
 }
 
 #tituloSistema{
-
     font-size:24px;
     font-weight:bold;
-
     color:#38bdf8;
 }
 .backup-acoes{
@@ -559,619 +621,268 @@ textarea{
 .config-box input,
 .config-box textarea,
 .config-box select{
-
     background:#1e293b;
     color:white;
-
     border:1px solid rgba(255,255,255,.4);
-
     border-radius:10px;
 }
 .btn-cobranca{
     background:#c084fc;
     color:white;
 }
-/* CSS */
+
+@media(max-width:700px){
+    .topo{
+        flex-direction:column;
+    }
+    .topo-clientes{
+        flex-direction:row !important;
+    }
+    .grupo-data-valor{
+        width:100%;
+    }
+    .grupo-data-valor input{
+        flex:1;
+    }
+}
+
+.grupo-data-valor{
+    display:flex;
+    gap:10px;
+}
+
+.grupo-data-valor input{
+    width:140px;
+}
+
+/* Estado vazio */
+.lista-vazia{
+    grid-column: 1 / -1;
+    text-align:center;
+    color:#475569;
+    padding:60px 20px;
+    font-size:15px;
+}
+.lista-vazia span{
+    display:block;
+    font-size:40px;
+    margin-bottom:12px;
+}
 </style>
 </head>
 <body>
 <div id="cabecalhoSistema">
-
-    <img
-        id="logoSistema"
-        src=""
-        style="display:none;"
-    >
-
-    <span id="tituloSistema">
-        Gestor IPTV
-    </span>
-
+    <img id="logoSistema" src="" style="display:none;">
+    <span id="tituloSistema">Gestor IPTV</span>
 </div>
-<!-- MENU -->
 
-<div class="menu-btn" onclick="toggleMenu()">
-    ☰
-</div>
+<div class="menu-btn" onclick="toggleMenu()">☰</div>
 
 <div class="sidebar" id="sidebar">
-
-    <button onclick="abrirGuia('dashboard')">
-        Dashboard
-    </button>
-
-    <button onclick="abrirGuia('clientes')">
-        Clientes
-    </button>
-
-    <button onclick="abrirGuia('configuracoes')">
-        Configurações
-    </button>
+    <button onclick="abrirGuia('dashboard')">Dashboard</button>
+    <button onclick="abrirGuia('clientes')">Clientes</button>
+    <button onclick="abrirGuia('configuracoes')">Configurações</button>
     <hr style="margin:20px 0; border-color:#374151;">
-    <button onclick="abrirWhatsappSuporte()">
-        💬 WhatsApp Suporte
-    </button>
-    <button onclick="abrirTelegramSuporte()">
-        ✈️ Telegram Suporte
-    </button>
-
+    <button onclick="abrirWhatsappSuporte()">💬 WhatsApp Suporte</button>
+    <button onclick="abrirTelegramSuporte()">✈️ Telegram Suporte</button>
 </div>
 
 <!-- DASHBOARD -->
-
 <div id="dashboard" class="guia ativa">
-
     <h1>📊 Dashboard</h1>
-
     <div class="cards-dashboard">
-
         <div class="dash-card">
             <h3>💰 Lucro Mensal</h3>
             <span id="lucroTotal">R$ 0,00</span>
         </div>
-
         <div class="dash-card">
             <h3>✅ Clientes Ativos</h3>
             <span id="clientesAtivos">0</span>
         </div>
-
         <div class="dash-card">
             <h3>⚠️ Vencendo</h3>
             <span id="clientesVencendo">0</span>
         </div>
-
     </div>
-
     <div class="vencimentos-box">
         <h2>Clientes vencendo nos próximos 2 dias</h2>
-
         <div id="listaVencendo"></div>
     </div>
-
 </div>
 
 <!-- CLIENTES -->
-
 <div id="clientes" class="guia">
-
     <h1>📺 Clientes</h1>
 
     <div class="topo topo-clientes">
+        <button class="btn-add" onclick="toggleAdicionar()">➕ Adicionar</button>
+        <button class="btn-edit" onclick="togglePesquisa()">🔎 Pesquisar</button>
+    </div>
 
-    <button
-        class="btn-add"
-        onclick="toggleAdicionar()"
-    >
-        ➕ Adicionar
-    </button>
+    <div class="topo" id="boxAdicionar" style="display:none;">
+        <select id="servidor"></select>
+        <input type="text" id="nome" placeholder="Nome">
+        <input type="text" id="usuario" placeholder="Usuário">
+        <input type="text" id="senha" placeholder="Senha">
+        <input type="text" id="whatsapp" placeholder="+55 DDD NÚMERO" onblur="limparWhatsapp(this)">
+        <select id="plano"></select>
+        <input type="text" id="vencimento" placeholder="Data" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+        <textarea id="obs" placeholder="OBS: dispositivo"></textarea>
+        <button class="btn-add" onclick="adicionarCliente()">✅</button>
+    </div>
 
-    <button
-        class="btn-edit"
-        onclick="togglePesquisa()"
-    >
-        🔎 Pesquisar
-    </button>
+    <div class="topo" id="boxPesquisa" style="display:none;">
+        <input type="text" id="pesquisa" placeholder="Pesquisar cliente..." oninput="pesquisaComDelay()">
+    </div>
 
-</div>
+    <div class="filtros-clientes">
+        <button class="filtro-btn" id="btnTodos" onclick="filtrarClientes('todos')">Todos [0]</button>
+        <button class="filtro-btn" id="btnAtivos" onclick="filtrarClientes('ativo')">Ativos [0]</button>
+        <button class="filtro-btn" id="btnVencendo" onclick="filtrarClientes('vencendo')">Vencendo [0]</button>
+        <button class="filtro-btn" id="btnVencidos" onclick="filtrarClientes('vencido')">Vencidos [0]</button>
+    </div>
 
-<div
-    class="topo"
-    id="boxAdicionar"
-    style="display:none;"
->
-
-    <select id="servidor"></select>
-
-    <input
-        type="text"
-        id="nome"
-        placeholder="Nome"
-    >
-
-    <input
-        type="text"
-        id="usuario"
-        placeholder="Usuário"
-    >
-
-    <input
-        type="text"
-        id="senha"
-        placeholder="Senha"
-    >
-
-    <input
-        type="text"
-        id="whatsapp"
-        placeholder="+55 DDD NÚMERO"
-        onblur="limparWhatsapp(this)"
-    >
-
-    <select id="plano"></select>
-
-    <input 
-        type="text"
-        id="vencimento"
-        placeholder="Data"
-        onfocus="(this.type='date')"
-        onblur="if(!this.value)this.type='text'"
-    >
-
-<textarea
-    id="obs"
-    placeholder="OBS: dispositivo"
-></textarea>
-
-    <button
-        class="btn-add"
-        onclick="adicionarCliente()"
-    >
-        ✅
-    </button>
-
-</div>
-
-    <div
-    class="topo"
-    id="boxPesquisa"
-    style="display:none;"
->
-
-    <input 
-        type="text" 
-        id="pesquisa" 
-        placeholder="Pesquisar cliente..."
-        oninput="pesquisaComDelay()"
-    >
-</div>
-<div class="filtros-clientes">
-    <button
-    class="filtro-btn"
-    id="btnTodos"
-    onclick="filtrarClientes('todos')"
->
-    Todos [0]
-</button>
-    <button
-        class="filtro-btn"
-        id="btnAtivos"
-        onclick="filtrarClientes('ativo')"
-    >
-        Ativos [0]
-    </button>
-
-    <button
-        class="filtro-btn"
-        id="btnVencendo"
-        onclick="filtrarClientes('vencendo')"
-    >
-        Vencendo [0]
-    </button>
-
-    <button
-        class="filtro-btn"
-        id="btnVencidos"
-        onclick="filtrarClientes('vencido')"
-    >
-        Vencidos [0]
-    </button>
-</div>
-<div style="margin-bottom:15px;">
-
-    <select
-        id="ordenacaoClientes"
-        onchange="alterarOrdenacao()"
-    >
-        <option value="adicao">
-            Adição
-        </option>
-
-        <option value="az">
-            A-Z
-        </option>
-
-        <option value="vencimento">
-            Venc.
-        </option>
-    </select>
-</div>
+    <div style="margin-bottom:15px;">
+        <select id="ordenacaoClientes" onchange="alterarOrdenacao()">
+            <option value="adicao">Adição</option>
+            <option value="az">A-Z</option>
+            <option value="vencimento">Venc.</option>
+        </select>
+    </div>
 
     <div class="lista" id="listaClientes"></div>
-
 </div>
 
 <!-- CONFIGURAÇÕES -->
-
 <div id="configuracoes" class="guia">
-
     <h1>⚙️ Configurações</h1>
-
     <div class="config-box">
-    
         <div class="linha-config">
-            <label for="nomeSistema">
-                <strong>● Nome do sistema</strong>
-            </label>
-            <input
-                type="text"
-                id="nomeSistema"
-            >
+            <label for="nomeSistema"><strong>● Nome do sistema</strong></label>
+            <input type="text" id="nomeSistema">
         </div>
         <label><strong>● Logo do sistema</strong></label>
-
-<div class="logo-acoes">
-
-    <button
-        type="button"
-        class="btn-edit"
-        onclick="document.getElementById('logoUpload').click()"
-    >
-        🖼️ Escolher Imagem
-    </button>
-
-    <button
-        type="button"
-        class="btn-delete"
-        onclick="removerLogo()"
-    >
-        🗑️ Remover Imagem
-    </button>
-
-    <input
-        type="file"
-        id="logoUpload"
-        accept="image/*"
-        style="display:none"
-    >
-    
-
-</div>
+        <div class="logo-acoes">
+            <button type="button" class="btn-edit" onclick="document.getElementById('logoUpload').click()">🖼️ Escolher Imagem</button>
+            <button type="button" class="btn-delete" onclick="removerLogo()">🗑️ Remover Imagem</button>
+            <input type="file" id="logoUpload" accept="image/*" style="display:none">
+        </div>
         <hr>
+        <h2>● Servidores</h2>
+        <div class="topo">
+            <button class="btn-add" onclick="toggleServidor()">➕ Servidor</button>
+        </div>
+        <div class="topo" id="boxServidor" style="display:none;">
+            <input type="text" id="novoServidor" placeholder="Nome do servidor">
+            <input type="text" id="custoServidor" placeholder="11,00">
+            <input type="text" id="urlServidor" placeholder="http://aptxu.net"/>
+            <button class="btn-add" onclick="adicionarServidor()">✅</button>
+        </div>
+        <div id="listaServidores"></div>
 
-<h2>● Servidores</h2>
-
-<div class="topo">
-
-    <button
-        class="btn-add"
-        onclick="toggleServidor()"
-    >
-        ➕ Servidor
-    </button>
-
-</div>
-
-<div
-    class="topo"
-    id="boxServidor"
-    style="display:none;"
->
-
-    <input
-        type="text"
-        id="novoServidor"
-        placeholder="Nome do servidor"
-    >
-
-<input
-    type="text"
-    id="custoServidor"
-    placeholder="11,00"
->
-<input
-    type="text"
-    id="urlServidor"
-    placeholder="http://aptxu.net"
-/>
-
-    <button
-        class="btn-add"
-        onclick="adicionarServidor()"
-    >
-        ✅
-    </button>
-
-</div>
-
-<div id="listaServidores"></div>
         <h2>● Planos</h2>
+        <div class="topo">
+            <button class="btn-add" onclick="togglePlano()">➕ Plano</button>
+        </div>
+        <div class="topo" id="boxPlano" style="display:none;">
+            <input type="text" id="novoPlanoNome" placeholder="Nome do plano">
+            <input type="number" id="novoPlanoValor" placeholder="Valor">
+            <button class="btn-add" onclick="adicionarPlano()">✅</button>
+        </div>
+        <div id="listaPlanos"></div>
 
-<div class="topo">
-
-    <button
-        class="btn-add"
-        onclick="togglePlano()"
-    >
-        ➕ Plano
-    </button>
-
-</div>
-
-<div
-    class="topo"
-    id="boxPlano"
-    style="display:none;"
->
-
-    <input
-        type="text"
-        id="novoPlanoNome"
-        placeholder="Nome do plano"
-    >
-
-    <input
-        type="number"
-        id="novoPlanoValor"
-        placeholder="Valor"
-    >
-
-    <button
-        class="btn-add"
-        onclick="adicionarPlano()"
-    >
-        ✅
-    </button>
-
-</div>
-
-<div id="listaPlanos"></div>
-    
-    <hr>
-
-<h2>● Backup Completo</h2>
-
-<div class="backup-acoes">
-
-    <button
-        class="btn-add"
-        onclick="exportarSistema()"
-    >
-        📤 Exportar Sistema
-    </button>
-
-    <button
-        class="btn-edit"
-        onclick="document.getElementById('arquivoSistema').click()"
-    >
-        📥 Importar Sistema
-    </button>
-
-    <input
-        type="file"
-        id="arquivoSistema"
-        accept=".json"
-        style="display:none"
-        onchange="importarSistema(event)"
-    >
-
-</div>
-<hr>
-
-<h2>● Dados PIX</h2>
-
-<label>Chave PIX</label>
-<input
-    type="text"
-    id="pixChave"
-    placeholder="Digite a chave PIX"
->
-
-<label>Nome do Recebedor</label>
-<input
-    type="text"
-    id="pixNome"
-    placeholder="Nome do titular"
->
-
-<label>Banco</label>
-<input
-    type="text"
-    id="pixBanco"
-    placeholder="Banco"
->
-<hr>
-<h2>● Extras</h2>
-<label>Promoção</label>
-<textarea
-    id="textoPromocao"
-    placeholder="Texto promocional enviado nas renovações"
-></textarea>
-
-<label>Rodapé</label>
-<textarea
-    id="textoRodape"
-    placeholder="Mensagem final da empresa"
-></textarea>
-
-        <button
-          id="btnSalvarConfiguracoes"
-          class="btn-vencendo"
-          onclick="salvarConfiguracoes()">
-    
-            Salvar Configurações
-    
-        </button>
+        <hr>
+        <h2>● Backup Completo</h2>
+        <div class="backup-acoes">
+            <button class="btn-add" onclick="exportarSistema()">📤 Exportar Sistema</button>
+            <button class="btn-edit" onclick="document.getElementById('arquivoSistema').click()">📥 Importar Sistema</button>
+            <input type="file" id="arquivoSistema" accept=".json" style="display:none" onchange="importarSistema(event)">
+        </div>
+        <hr>
+        <h2>● Dados PIX</h2>
+        <label>Chave PIX</label>
+        <input type="text" id="pixChave" placeholder="Digite a chave PIX">
+        <label>Nome do Recebedor</label>
+        <input type="text" id="pixNome" placeholder="Nome do titular">
+        <label>Banco</label>
+        <input type="text" id="pixBanco" placeholder="Banco">
+        <hr>
+        <h2>● Extras</h2>
+        <label>Promoção</label>
+        <textarea id="textoPromocao" placeholder="Texto promocional enviado nas renovações"></textarea>
+        <label>Rodapé</label>
+        <textarea id="textoRodape" placeholder="Mensagem final da empresa"></textarea>
+        <button id="btnSalvarConfiguracoes" class="btn-vencendo" onclick="salvarConfiguracoes()">Salvar Configurações</button>
     </div>
 </div>
-  
 
 <script>
-  // JS 
 let configuracaoOriginal = "";
 let filtroAtual = "todos";
 let ordenacaoAtual = "adicao";
 let planoEditando = null;
 let clienteEditando = null;
 let servidorEditando = null;
-let servidores =
-    JSON.parse(
-        localStorage.getItem("servidores")
-    ) || [
+let clienteRenovacao = null;
 
-        {
-            nome:"Genial",
-            custo:"R$11,00",
-            url:"http://aptxu.net"
-        }
+let servidores = JSON.parse(localStorage.getItem("servidores")) || [
+    { nome:"Genial", custo:"R$11,00", url:"http://aptxu.net" }
+];
+servidores = servidores.filter(s => s && s.nome && s.nome.trim() !== "");
 
-    ];
-
-servidores =
-    servidores.filter(s =>
-
-        s &&
-        s.nome &&
-        s.nome.trim() !== ""
-    );
-  
 let planos = JSON.parse(localStorage.getItem("planos")) || [
-    {
-        nome:"Mensal 1 Tela",
-        valor:30
-    },
-
-    {
-        nome:"Mensal Econômico",
-        valor:15
-    },
-
-    {
-        nome:"Mensal 2 Telas",
-        valor:50
-    },
-
-    {
-        nome:"Trimestral",
-        valor:75
-    }
+    { nome:"Mensal 1 Tela", valor:30 },
+    { nome:"Mensal Econômico", valor:15 },
+    { nome:"Mensal 2 Telas", valor:50 },
+    { nome:"Trimestral", valor:75 }
 ];
 
-// FUNCTION //
 let pressTimer;
-
 function iniciarPressao(elemento, texto, event){
-    pressTimer = setTimeout(() => {
-        mostrarTooltip(texto, event);
-    }, 500); // tempo para considerar "segurar"
+    pressTimer = setTimeout(() => { mostrarTooltip(texto, event); }, 500);
 }
-
-function cancelarPressao(){
-    clearTimeout(pressTimer);
-    esconderTooltip();
-}
-
+function cancelarPressao(){ clearTimeout(pressTimer); esconderTooltip(); }
 function mostrarTooltip(texto, event){
     const tooltip = document.getElementById("tooltip");
-
+    if(!tooltip) return;
     tooltip.innerText = texto;
-
-    tooltip.style.left = event.touches 
-        ? event.touches[0].clientX + "px"
-        : event.clientX + "px";
-
-    tooltip.style.top = event.touches 
-        ? (event.touches[0].clientY - 40) + "px"
-        : (event.clientY - 40) + "px";
-
+    tooltip.style.left = event.touches ? event.touches[0].clientX+"px" : event.clientX+"px";
+    tooltip.style.top = event.touches ? (event.touches[0].clientY-40)+"px" : (event.clientY-40)+"px";
     tooltip.classList.add("ativo");
 }
-
 function esconderTooltip(){
-    document.getElementById("tooltip")
-        .classList.remove("ativo");
+    const t = document.getElementById("tooltip");
+    if(t) t.classList.remove("ativo");
 }
+
 let timerPesquisa;
-
 function pesquisaComDelay(){
-
     clearTimeout(timerPesquisa);
-
-    timerPesquisa = setTimeout(() => {
-
-        renderizar();
-
-    }, 250);
+    timerPesquisa = setTimeout(() => { renderizar(); }, 250);
 }
+
 function copiarDadosCliente(){
-
-    let texto =
-        document.getElementById(
-            "dadosClienteTexto"
-        );
-
-    navigator.clipboard.writeText(
-        texto.value
-    );
-
-    mostrarSucesso(
-        "📋 Dados copiados."
-    );
+    let texto = document.getElementById("dadosClienteTexto");
+    navigator.clipboard.writeText(texto.value);
+    mostrarSucesso("📋 Dados copiados.");
 }
-
 function fecharDadosCliente(){
-
-    document
-        .getElementById(
-            "modalDadosCliente"
-        )
-        .classList
-        .remove("ativo");
+    document.getElementById("modalDadosCliente").classList.remove("ativo");
 }
+
 function mostrarDadosCliente(index){
-
     let cliente = clientes[index];
-
-    let servidor = servidores.find(
-    s => s.nome === cliente.servidor
-);
-
-let linkM3U = "";
-
-if(
-    servidor &&
-    servidor.url
-){
-
-    linkM3U =
-`${servidor.url}/get.php?username=${cliente.usuario}&password=${cliente.senha}&type=m3u_plus&output=mpegts`;
-}
-
-let observacoes = "";
-
-if(cliente.obs){
-
-    observacoes =
-        cliente.obs
-        .replace(/\\n/g, "\n");
-
-    observacoes = `📝 Observações:
-${observacoes}`;
-}
-
-document.getElementById(
-    "dadosClienteTexto"
-).value =
-
+    let servidor = servidores.find(s => s.nome === cliente.servidor);
+    let linkM3U = "";
+    if(servidor && servidor.url){
+        linkM3U = `${servidor.url}/get.php?username=${cliente.usuario}&password=${cliente.senha}&type=m3u_plus&output=mpegts`;
+    }
+    let observacoes = "";
+    if(cliente.obs){
+        observacoes = cliente.obs.replace(/\\n/g, "\n");
+        observacoes = `📝 Observações:\n${observacoes}`;
+    }
+    document.getElementById("dadosClienteTexto").value =
 `👤 Nome: ${cliente.nome}
 
 🖥️ Servidor: ${cliente.servidor}
@@ -1180,50 +891,17 @@ document.getElementById(
 📦 Plano: ${cliente.plano}
 
 📅 Vencimento: ${formatarData(cliente.vencimento)}${
-linkM3U
-? `
-
-🔗 Link M3U:
-${linkM3U}`
-: ""
-}${
-observacoes
-? `
-
-${observacoes}`
-: ""
-}`;
-
-    document
-        .getElementById(
-            "modalDadosCliente"
-        )
-        .classList
-        .add("ativo");
+linkM3U ? `\n\n🔗 Link M3U:\n${linkM3U}` : ""
+}${observacoes ? `\n\n${observacoes}` : ""}`;
+    document.getElementById("modalDadosCliente").classList.add("ativo");
 }
+
 function enviarMensagemVencido(cliente){
-
-    let config =
-        JSON.parse(
-            localStorage.getItem("configuracoes")
-        ) || {};
-
-    let chavePix =
-        config.pixChave || "";
-
-    let nomePix =
-        config.pixNome || "";
-
-    let bancoPix =
-        config.pixBanco || "";
-
-    let dias =
-        Math.abs(
-            calcularDiasRestantes(
-                cliente.vencimento
-            )
-        );
-
+    let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+    let chavePix = config.pixChave || "";
+    let nomePix = config.pixNome || "";
+    let bancoPix = config.pixBanco || "";
+    let dias = Math.abs(calcularDiasRestantes(cliente.vencimento));
     let mensagem =
 `🙋🏽‍♂️ Ooi, ${primeiroNome(cliente.nome)}.
 
@@ -1236,273 +914,114 @@ Seu plano venceu há ${dias} dia(s).
 🏦 Banco: ${bancoPix}
 
 Caso deseje a chave PIX separada, me envie a palavra *PIX* ou reaja a esta mensagem.`;
-
-    let url =
-`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`;
-
-    window.open(url, "_blank");
+    window.open(`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
+
 function limparWhatsapp(campo){
-
-    campo.value =
-        campo.value.replace(/\D/g, "");
+    campo.value = campo.value.replace(/\D/g, "");
 }
+
 function normalizarCusto(valor){
-
-    valor = valor
-        .replace("R$","")
-        .trim()
-        .replace(",", ".");
-
+    valor = valor.replace("R$","").trim().replace(",", ".");
     let numero = parseFloat(valor);
-
-    if(isNaN(numero)){
-        return "";
-    }
-
+    if(isNaN(numero)) return "";
     return `R$ ${numero.toFixed(2).replace(".",",")}`;
 }
-function abrirWhatsappSuporte(){
 
-    window.open(
-        "https://wa.me/5584991815446",
-        "_blank"
-    );
-}
+function abrirWhatsappSuporte(){ window.open("https://wa.me/5584991815446","_blank"); }
+function abrirTelegramSuporte(){ window.open("https://t.me/Eduardo_TvS","_blank"); }
 
-function abrirTelegramSuporte(){
-
-    window.open(
-        "https://t.me/Eduardo_TvS",
-        "_blank"
-    );
-}
 function alterarOrdenacao(){
-
-    ordenacaoAtual =
-        document.getElementById(
-            "ordenacaoClientes"
-        ).value;
-
+    ordenacaoAtual = document.getElementById("ordenacaoClientes").value;
     renderizar();
 }
+
 function definirServidorPadrao(nomeServidor){
-
-    localStorage.setItem(
-        "servidorPadrao",
-        nomeServidor
-    );
-
+    localStorage.setItem("servidorPadrao", nomeServidor);
     renderizarServidores();
 }
+
 function editarServidor(index){
-
     servidorEditando = index;
-
-    let servidor =
-        servidores[index];
-
-    document.getElementById(
-        "editServidorNome"
-    ).value = servidor.nome;
-
-    document.getElementById(
-        "editServidorCusto"
-    ).value = servidor.custo;
-    
-    document.getElementById(
-        "editServidorUrl"
-    ).value = servidor.url || "";
-
-    let modal =
-        document.getElementById(
-            "modalServidor"
-        );
-
+    let servidor = servidores[index];
+    document.getElementById("editServidorNome").value = servidor.nome;
+    document.getElementById("editServidorCusto").value = servidor.custo;
+    document.getElementById("editServidorUrl").value = servidor.url || "";
+    let modal = document.getElementById("modalServidor");
     modal.style.display = "flex";
-
     modal.classList.add("ativo");
 }
+
 function salvarEdicaoServidor(){
-
-    let nome =
-        document.getElementById(
-            "editServidorNome"
-        ).value;
-
-    let custo =
-    normalizarCusto(
-        document.getElementById(
-            "editServidorCusto"
-        ).value
-    );
-    
-    let url =
-    document.getElementById(
-        "editServidorUrl"
-    ).value.trim();
-
-    let nomeAntigo =
-        servidores[servidorEditando].nome;
-
-    servidores[servidorEditando] = {
-        nome,
-        custo,
-        url
-    };
-
-    clientes = clientes.map(cliente=>{
-
-        if(cliente.servidor === nomeAntigo){
-
-            return {
-                ...cliente,
-                servidor:nome
-            };
-        }
-
+    let nome = document.getElementById("editServidorNome").value;
+    let custo = normalizarCusto(document.getElementById("editServidorCusto").value);
+    let url = document.getElementById("editServidorUrl").value.trim();
+    let nomeAntigo = servidores[servidorEditando].nome;
+    servidores[servidorEditando] = { nome, custo, url };
+    clientes = clientes.map(cliente => {
+        if(cliente.servidor === nomeAntigo) return { ...cliente, servidor: nome };
         return cliente;
     });
-
     salvar();
-
-    localStorage.setItem(
-        "servidores",
-        JSON.stringify(servidores)
-    );
-
+    localStorage.setItem("servidores", JSON.stringify(servidores));
     renderizarServidores();
-
     renderizar();
-
     atualizarDashboard();
-
     fecharModalServidor();
 }
+
 function fecharModalServidor(){
-
-    let modal =
-        document.getElementById(
-            "modalServidor"
-        );
-
+    let modal = document.getElementById("modalServidor");
     modal.classList.remove("ativo");
-
     modal.style.display = "none";
 }
+
 function removerLogo(){
-
-    let config =
-        JSON.parse(
-            localStorage.getItem("configuracoes")
-        ) || {};
-
+    let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
     delete config.logoSistema;
-
-    localStorage.setItem(
-        "configuracoes",
-        JSON.stringify(config)
-    );
-
+    localStorage.setItem("configuracoes", JSON.stringify(config));
     atualizarCabecalho();
-
-    mostrarSucesso(
-        "🗑️ Logo removida."
-    );
+    mostrarSucesso("🗑️ Logo removida.");
 }
+
 function obterConfiguracoesAtuais(){
-
     return JSON.stringify({
-
-        nomeSistema:
-            document.getElementById("nomeSistema").value,
-
-        pixChave:
-            document.getElementById("pixChave").value,
-
-        pixNome:
-            document.getElementById("pixNome").value,
-
-        pixBanco:
-            document.getElementById("pixBanco").value,
-
-        textoPromocao:
-            document.getElementById("textoPromocao").value,
-
-        textoRodape:
-            document.getElementById("textoRodape").value
+        nomeSistema: document.getElementById("nomeSistema").value,
+        pixChave: document.getElementById("pixChave").value,
+        pixNome: document.getElementById("pixNome").value,
+        pixBanco: document.getElementById("pixBanco").value,
+        textoPromocao: document.getElementById("textoPromocao").value,
+        textoRodape: document.getElementById("textoRodape").value
     });
 }
 
 function verificarAlteracoesConfiguracao(){
-
-    const btn =
-        document.getElementById(
-            "btnSalvarConfiguracoes"
-        );
-
-    const atual =
-        obterConfiguracoesAtuais();
-
+    const btn = document.getElementById("btnSalvarConfiguracoes");
+    const atual = obterConfiguracoesAtuais();
     if(atual === configuracaoOriginal){
-
         btn.disabled = true;
-
-        btn.classList.add(
-            "btn-desabilitado"
-        );
-
-    }else{
-
+        btn.classList.add("btn-desabilitado");
+    } else {
         btn.disabled = false;
-
-        btn.classList.remove(
-            "btn-desabilitado"
-        );
+        btn.classList.remove("btn-desabilitado");
     }
 }
+
 function mostrarSucesso(texto){
-
-    let toast =
-        document.getElementById("toastSucesso");
-
+    let toast = document.getElementById("toastSucesso");
     toast.innerText = texto;
-
     toast.classList.add("ativo");
-
-    setTimeout(()=>{
-
-        toast.classList.remove("ativo");
-
-    },2000);
+    setTimeout(() => { toast.classList.remove("ativo"); }, 2000);
 }
+
 function enviarMensagemAtivacao(cliente){
-
     let valor = "";
-
-    let match =
-        (cliente.plano || "").match(
-            /R\$\s*([\d.,]+)/
-        );
-
-    if(match){
-        valor = match[1];
-    }
-
-    let nomePlano =
-        (cliente.plano || "").split(" - ")[0];
-
-    let config =
-        JSON.parse(
-            localStorage.getItem("configuracoes")
-        ) || {};
-
-    let promocao =
-        (config.textoPromocao || "").trim();
-
-    let rodape =
-        (config.textoRodape || "").trim();
-
+    let match = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
+    if(match) valor = match[1];
+    let nomePlano = (cliente.plano || "").split(" - ")[0];
+    let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+    let promocao = (config.textoPromocao || "").trim();
+    let rodape = (config.textoRodape || "").trim();
     let mensagem =
 `✨ Ativação realizada ✨
 
@@ -1518,301 +1037,118 @@ function enviarMensagemAtivacao(cliente){
 🔸 Valor: R$ ${valor}
 
 🗓️ Vencimento: ${formatarData(cliente.vencimento)}`;
-    if(promocao){
-        mensagem += `
-
-${promocao}`;
-    }
-    if(rodape){
-        mensagem += `
-
-${rodape}`;
-    }
+    if(promocao) mensagem += `\n\n${promocao}`;
+    if(rodape) mensagem += `\n\n${rodape}`;
     if(cliente.obs){
-
-        let obsFormatado =
-            cliente.obs.replace(/\\n/g,"\n");
-        mensagem += `
-~~~~~~~~~~~~~~~~~~
-${obsFormatado}`;
+        let obsFormatado = cliente.obs.replace(/\\n/g,"\n");
+        mensagem += `\n~~~~~~~~~~~~~~~~~~\n${obsFormatado}`;
     }
-
-    let url =
-`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`;
-
-    window.open(url,"_blank");
+    window.open(`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
+
 function exportarSistema(){
-
     const backup = {
-    
         clientes,
-    
         planos,
-    
         servidores,
-    
-        servidorPadrao:
-            localStorage.getItem(
-                "servidorPadrao"
-            ) || "",
-    
-        configuracoes:
-            JSON.parse(
-                localStorage.getItem("configuracoes")
-            ) || {}
-    
+        servidorPadrao: localStorage.getItem("servidorPadrao") || "",
+        configuracoes: JSON.parse(localStorage.getItem("configuracoes")) || {}
     };
-
-    const blob =
-        new Blob(
-            [JSON.stringify(backup,null,2)],
-            {type:"application/json"}
-        );
-
-    const url =
-        URL.createObjectURL(blob);
-
-    const a =
-        document.createElement("a");
-
+    const blob = new Blob([JSON.stringify(backup,null,2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
     a.href = url;
-
-    a.download =
-        "backup_completo_iptv.json";
-
+    a.download = "backup_completo_iptv.json";
     a.click();
-
     URL.revokeObjectURL(url);
 }
+
 function importarSistema(event){
-
-    const arquivo =
-        event.target.files[0];
-
-    if(!arquivo){
-        return;
-    }
-
-    const leitor =
-        new FileReader();
-
+    const arquivo = event.target.files[0];
+    if(!arquivo) return;
+    const leitor = new FileReader();
     leitor.onload = function(e){
-
         try{
-
-            const dados =
-                JSON.parse(
-                    e.target.result
-                );
-
-            if(
-                !confirm(
-                    "Isso substituirá todos os dados atuais. Continuar?"
-                )
-            ){
-                return;
-            }
-
-            clientes =
-                dados.clientes || [];
-
-            planos =
-                dados.planos || [];
-
-            servidores =
-                dados.servidores || [];
-            
-            localStorage.setItem(
-                "servidorPadrao",
-                dados.servidorPadrao || ""
-            );
-
-            localStorage.setItem(
-                "clientes",
-                JSON.stringify(clientes)
-            );
-
-            localStorage.setItem(
-                "planos",
-                JSON.stringify(planos)
-            );
-
-            localStorage.setItem(
-                "servidores",
-                JSON.stringify(servidores)
-            );
-
-            localStorage.setItem(
-                "configuracoes",
-                JSON.stringify(
-                    dados.configuracoes || {}
-                )
-            );
-
+            const dados = JSON.parse(e.target.result);
+            if(!confirm("Isso substituirá todos os dados atuais. Continuar?")) return;
+            clientes = dados.clientes || [];
+            planos = dados.planos || [];
+            servidores = dados.servidores || [];
+            localStorage.setItem("servidorPadrao", dados.servidorPadrao || "");
+            localStorage.setItem("clientes", JSON.stringify(clientes));
+            localStorage.setItem("planos", JSON.stringify(planos));
+            localStorage.setItem("servidores", JSON.stringify(servidores));
+            localStorage.setItem("configuracoes", JSON.stringify(dados.configuracoes || {}));
             carregarConfiguracoes();
-
             renderizarServidores();
-
             renderizarPlanos();
-
             renderizar();
-
             atualizarDashboard();
-
-            alert(
-                "Backup restaurado com sucesso."
-            );
-
-        }catch(erro){
-
-            alert(
-                "Arquivo inválido."
-            );
+            alert("Backup restaurado com sucesso.");
+        } catch(erro){
+            alert("Arquivo inválido.");
         }
     };
-
     leitor.readAsText(arquivo);
 }
+
 function atualizarCabecalho(){
-
-    let config =
-        JSON.parse(
-            localStorage.getItem("configuracoes")
-        ) || {};
-
-    let titulo =
-        document.getElementById("tituloSistema");
-
-    titulo.innerText =
-        config.nomeSistema || "Gestor IPTV";
-
-    let logo =
-        document.getElementById("logoSistema");
-
+    let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+    document.getElementById("tituloSistema").innerText = config.nomeSistema || "Gestor IPTV";
+    let logo = document.getElementById("logoSistema");
     if(config.logoSistema){
-
-        logo.src =
-            config.logoSistema;
-
-        logo.style.display =
-            "block";
-
-    }else{
-
-        logo.style.display =
-            "none";
+        logo.src = config.logoSistema;
+        logo.style.display = "block";
+    } else {
+        logo.style.display = "none";
     }
 }
+
 function abrirModalRenovacao(index){
-
     clienteRenovacao = index;
-
     let cliente = clientes[index];
-
-    document.getElementById("renovacaoNome").innerText =
-        cliente.nome;
-
-    document.getElementById("renovacaoAtual").innerText =
-        formatarData(cliente.vencimento);
-
-    document.getElementById("renovacaoPlano").innerHTML =
-    `<strong>Plano:</strong> ${cliente.plano || "-"}`;
-
-    document.getElementById("modalRenovacao")
-        .classList.add("ativo");
+    document.getElementById("renovacaoNome").innerText = cliente.nome;
+    document.getElementById("renovacaoAtual").innerText = formatarData(cliente.vencimento);
+    document.getElementById("renovacaoPlano").innerHTML = `<strong>Plano:</strong> ${cliente.plano || "-"}`;
+    document.getElementById("modalRenovacao").classList.add("ativo");
 }
 
 function fecharModalRenovacao(){
-
-    document.getElementById("modalRenovacao")
-        .classList.remove("ativo");
+    document.getElementById("modalRenovacao").classList.remove("ativo");
 }
 
 function renovarCliente(){
-
-    if(clienteRenovacao === null){
-        return;
-    }
-
+    if(clienteRenovacao === null) return;
     let cliente = clientes[clienteRenovacao];
-
     let dias = 30;
-
-    let planoTexto =
-        (cliente.plano || "").toLowerCase();
-
-    if(planoTexto.includes("trimestral")){
-        dias = 90;
-    }
-
-    if(planoTexto.includes("semestral")){
-        dias = 180;
-    }
-
-    if(planoTexto.includes("anual")){
-        dias = 365;
-    }
-
+    let planoTexto = (cliente.plano || "").toLowerCase();
+    if(planoTexto.includes("trimestral")) dias = 90;
+    if(planoTexto.includes("semestral")) dias = 180;
+    if(planoTexto.includes("anual")) dias = 365;
     let dataBase;
-
-    if(
-        cliente.vencimento &&
-        new Date(cliente.vencimento) > new Date()
-    ){
+    if(cliente.vencimento && new Date(cliente.vencimento) > new Date()){
         dataBase = new Date(cliente.vencimento);
-    }else{
+    } else {
         dataBase = new Date();
     }
-
-    dataBase.setDate(
-        dataBase.getDate() + dias
-    );
-
-    clientes[clienteRenovacao].vencimento =
-        dataBase.toISOString().split("T")[0];
-
-    clientes[clienteRenovacao].ultimaRenovacao =
-        new Date().toISOString().split("T")[0];
-
+    dataBase.setDate(dataBase.getDate() + dias);
+    clientes[clienteRenovacao].vencimento = dataBase.toISOString().split("T")[0];
+    clientes[clienteRenovacao].ultimaRenovacao = new Date().toISOString().split("T")[0];
     salvar();
-
     renderizar();
-
     atualizarDashboard();
-
-    enviarMensagemRenovacao(
-        clientes[clienteRenovacao]
-    );
-
+    enviarMensagemRenovacao(clientes[clienteRenovacao]);
     fecharModalRenovacao();
 }
+
 function enviarMensagemRenovacao(cliente){
-
     let valor = "";
-    let config =
-    JSON.parse(
-            localStorage.getItem("configuracoes")
-        ) || {};
-    
-    let promocao =
-        config.textoPromocao || "";
-    
-    let rodape =
-        config.textoRodape || "";
-
-    let match =
-        cliente.plano.match(
-            /R\$\s*([\d.,]+)/
-        );
-
-    if(match){
-        valor = match[1];
-    }
-
-    let nomePlano =
-        cliente.plano.split(" - ")[0];
-
+    let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+    let promocao = config.textoPromocao || "";
+    let rodape = config.textoRodape || "";
+    let match = cliente.plano.match(/R\$\s*([\d.,]+)/);
+    if(match) valor = match[1];
+    let nomePlano = cliente.plano.split(" - ")[0];
     let mensagem =
 `*✅ Renovação realizada ✅*
 
@@ -1826,112 +1162,42 @@ function enviarMensagemRenovacao(cliente){
 *🔸 Valor:* R$ ${valor}
 
 *🗓️ Vencimento:* ${formatarData(cliente.vencimento)}`;
-if(promocao && promocao.trim()){
-    mensagem +=
-`\n~~~~~~~~~~~~~~~~~~
-${promocao}`;
-}
-if(rodape && rodape.trim()){
-    mensagem += 
-`\n~~~~~~~~~~~~~~~~~~
-${rodape}`;
-}
-if(cliente.obs){
-
-    let obsFormatado =
-        cliente.obs.replace(/\\n/g, "\n");
-
-    mensagem +=
-`\n~~~~~~~~~~~~~~~~~~
-${obsFormatado}`;
+    if(promocao && promocao.trim()) mensagem += `\n~~~~~~~~~~~~~~~~~~\n${promocao}`;
+    if(rodape && rodape.trim()) mensagem += `\n~~~~~~~~~~~~~~~~~~\n${rodape}`;
+    if(cliente.obs){
+        let obsFormatado = cliente.obs.replace(/\\n/g, "\n");
+        mensagem += `\n~~~~~~~~~~~~~~~~~~\n${obsFormatado}`;
+    }
+    window.open(`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
 
-    let url =
-`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`;
-
-    window.open(url,"_blank");
-}
 function configurarUploadLogo(){
-
-    let campoLogo =
-        document.getElementById("logoUpload");
-
-    if(!campoLogo){
-        return;
-    }
-
-    campoLogo.addEventListener(
-        "change",
-        function(event){
-
-            let arquivo =
-                event.target.files[0];
-
-            if(!arquivo){
-                return;
-            }
-
-            let leitor =
-                new FileReader();
-
-            leitor.onload =
-                function(e){
-
-                    let config =
-                        JSON.parse(
-                            localStorage.getItem(
-                                "configuracoes"
-                            )
-                        ) || {};
-
-                    config.logoSistema =
-                        e.target.result;
-
-                    localStorage.setItem(
-                        "configuracoes",
-                        JSON.stringify(config)
-                    );
-
-                    atualizarCabecalho();
-                };
-
-            leitor.readAsDataURL(
-                arquivo
-            );
-        }
-    );
+    let campoLogo = document.getElementById("logoUpload");
+    if(!campoLogo) return;
+    campoLogo.addEventListener("change", function(event){
+        let arquivo = event.target.files[0];
+        if(!arquivo) return;
+        let leitor = new FileReader();
+        leitor.onload = function(e){
+            let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+            config.logoSistema = e.target.result;
+            localStorage.setItem("configuracoes", JSON.stringify(config));
+            atualizarCabecalho();
+        };
+        leitor.readAsDataURL(arquivo);
+    });
 }
+
 function toggleServidor(){
-
-    let box =
-        document.getElementById("boxServidor");
-
-    if(box.style.display == "none"){
-
-        box.style.display = "flex";
-
-    }else{
-
-        box.style.display = "none";
-    }
+    let box = document.getElementById("boxServidor");
+    box.style.display = box.style.display == "none" ? "flex" : "none";
 }
-
 function togglePlano(){
-
-    let box =
-        document.getElementById("boxPlano");
-
-    if(box.style.display == "none"){
-
-        box.style.display = "flex";
-
-    }else{
-
-        box.style.display = "none";
-    }
+    let box = document.getElementById("boxPlano");
+    box.style.display = box.style.display == "none" ? "flex" : "none";
 }
-function enviarDadosCliente(cliente){
 
+function enviarDadosCliente(cliente){
     let mensagem =
 `Ooi, ${primeiroNome(cliente.nome)}. Segue seus dados de acesso 📺
 
@@ -1942,451 +1208,163 @@ function enviarDadosCliente(cliente){
 📅 Vencimento: ${formatarData(cliente.vencimento)}
 
 📦 Plano: ${cliente.plano}`;
-
-    let url =
-`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`;
-
-    window.open(url,"_blank");
+    window.open(`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
+
 function filtrarClientes(tipo){
-
     filtroAtual = tipo;
-
-    document
-        .querySelectorAll(".filtro-btn")
-        .forEach(btn=>{
-
-            btn.classList.remove("ativo");
-        });
-    if(tipo == "todos")
-    document
-    .getElementById("btnTodos")
-    .classList.add("ativo");
-    
-    if(tipo == "ativo")
-        document
-        .getElementById("btnAtivos")
-        .classList.add("ativo");
-
-    if(tipo == "vencendo")
-        document
-        .getElementById("btnVencendo")
-        .classList.add("ativo");
-
-    if(tipo == "vencido")
-        document
-        .getElementById("btnVencidos")
-        .classList.add("ativo");
-
+    document.querySelectorAll(".filtro-btn").forEach(btn => btn.classList.remove("ativo"));
+    if(tipo == "todos") document.getElementById("btnTodos").classList.add("ativo");
+    if(tipo == "ativo") document.getElementById("btnAtivos").classList.add("ativo");
+    if(tipo == "vencendo") document.getElementById("btnVencendo").classList.add("ativo");
+    if(tipo == "vencido") document.getElementById("btnVencidos").classList.add("ativo");
     renderizar();
 }
+
 function moeda(valor){
-
     valor = Number(valor);
-
-    if(Number.isInteger(valor)){
-
-        return `R$ ${valor}`;
-    }
-
+    if(Number.isInteger(valor)) return `R$ ${valor}`;
     return `R$ ${valor.toFixed(2).replace(".",",")}`;
 }
-function formatarMoeda(input){
 
-    let valor =
-        input.value.replace(/\D/g,'');
-
-    valor =
-        Number(valor) / 100;
-
-    input.value =
-        moeda(valor);
-}
 function renderizarServidores(){
-
-    let lista =
-        document.getElementById("listaServidores");
-
-    let select =
-        document.getElementById("servidor");
-
-    let selectEdit =
-        document.getElementById("editServidor");
-
-    let servidorPadrao =
-    localStorage.getItem(
-        "servidorPadrao"
-    ) || "";
-    
+    let lista = document.getElementById("listaServidores");
+    let select = document.getElementById("servidor");
+    let selectEdit = document.getElementById("editServidor");
+    let servidorPadrao = localStorage.getItem("servidorPadrao") || "";
     lista.innerHTML = "";
+    if(select) select.innerHTML = "";
+    if(selectEdit) selectEdit.innerHTML = "";
 
-    if(select)
-        select.innerHTML = "";
-
-    if(selectEdit)
-        selectEdit.innerHTML = "";
-
-    servidores.forEach((servidor,index)=>{
-
+    servidores.forEach((servidor, index) => {
         lista.innerHTML += `
-
-            <div class="plano-item">
-
-                <div class="plano-info">
-
-                    <div class="plano-nome">
-                        ${servidor.nome}
-                    </div>
-
-                    <div class="plano-valor">
-                        ${servidor.custo}
-                    </div>
-                    ${servidor.url ? `
-                    <div class="plano-valor">
-                    ${servidor.url}
-                    </div>
-                     ` : "🔗 -"}
-
-                </div>
-
-<div style="display:flex; gap:10px;">
-    <button
-        class="btn-add"
-        onclick="definirServidorPadrao('${servidor.nome}')"
-    >
-        ${
-            servidor.nome === servidorPadrao
-            ? "⭐"
-            : "☆"
+<div class="plano-item">
+    <div class="plano-info">
+        <div class="plano-nome">${servidor.nome}</div>
+        <div class="plano-valor">${servidor.custo}</div>
+        ${servidor.url ? `<div class="plano-valor">${servidor.url}</div>` : "🔗 -"}
+    </div>
+    <div style="display:flex; gap:10px;">
+        <button class="btn-add" onclick="definirServidorPadrao('${servidor.nome}')">
+            ${servidor.nome === servidorPadrao ? "⭐" : "☆"}
+        </button>
+        <button class="btn-vencendo" onclick="editarServidor(${index})">✏️</button>
+        <button class="btn-delete" onclick="removerServidor(${index})">🗑️</button>
+    </div>
+</div>`;
+        if(select){
+            let padrao = localStorage.getItem("servidorPadrao");
+            let selected = servidor.nome === padrao ? "selected" : "";
+            select.innerHTML += `<option ${selected}>${servidor.nome}</option>`;
         }
-    </button>
-    <button
-        class="btn-vencendo"
-        onclick="editarServidor(${index})"
-    >
-        ✏️
-    </button>
-
-    <button
-        class="btn-delete"
-        onclick="removerServidor(${index})"
-    >
-        🗑️
-    </button>
-
-</div>
-
-            </div>
-        `;
-
-if(select){
-
-    let padrao =
-        localStorage.getItem(
-            "servidorPadrao"
-        );
-
-    let selected =
-        servidor.nome === padrao
-        ? "selected"
-        : "";
-
-    select.innerHTML += `
-
-        <option ${selected}>
-
-            ${servidor.nome}
-
-        </option>
-
-    `;
-}
-
     });
-
-    localStorage.setItem(
-        "servidores",
-        JSON.stringify(servidores)
-    );
+    localStorage.setItem("servidores", JSON.stringify(servidores));
 }
 
 function adicionarServidor(){
-
-    let nome =
-        document.getElementById("novoServidor").value;
-
-    let custo =
-    normalizarCusto(
-        document.getElementById("custoServidor").value
-    );
-    
-    let url =
-    document.getElementById("urlServidor").value.trim();
-
-    if(!nome || !custo){
-        return;
-    }
-
-    servidores.push({
-        nome,
-        custo,
-        url
-    });
-
+    let nome = document.getElementById("novoServidor").value;
+    let custo = normalizarCusto(document.getElementById("custoServidor").value);
+    let url = document.getElementById("urlServidor").value.trim();
+    if(!nome || !custo) return;
+    servidores.push({ nome, custo, url });
     document.getElementById("novoServidor").value = "";
-
     document.getElementById("custoServidor").value = "";
-
     renderizarServidores();
     document.getElementById("boxServidor").style.display = "none";
 }
 
 function removerServidor(index){
-
-    const servidorRemovido =
-        servidores[index]?.nome;
-
-    servidores.splice(index,1);
-
-    servidores =
-        servidores.filter(s =>
-
-            s.nome &&
-            s.nome.trim() !== ""
-        );
-
-    if(
-        localStorage.getItem("servidorPadrao")
-        === servidorRemovido
-    ){
-
-        localStorage.removeItem(
-            "servidorPadrao"
-        );
+    const servidorRemovido = servidores[index]?.nome;
+    servidores.splice(index, 1);
+    servidores = servidores.filter(s => s.nome && s.nome.trim() !== "");
+    if(localStorage.getItem("servidorPadrao") === servidorRemovido){
+        localStorage.removeItem("servidorPadrao");
     }
-
     renderizarServidores();
 }
+
 function renderizarPlanos(){
-
     let lista = document.getElementById("listaPlanos");
+    let select = document.getElementById("plano");
+    lista.innerHTML = "";
+    if(select) select.innerHTML = "";
 
-    let select =
-    document.getElementById("plano");
-
-lista.innerHTML = "";
-
-if(select){
-    select.innerHTML = "";
-}
-
-    planos.forEach((plano,index)=>{
-
+    planos.forEach((plano, index) => {
         lista.innerHTML += `
-
-            <div class="plano-item">
-
-                <div class="plano-info">
-
-                    <div class="plano-nome">
-                        ${plano.nome}
-                    </div>
-
-                    <div class="plano-valor">
-                        ${moeda(plano.valor)}
-                    </div>
-
-                </div>
-
-                <div style="display:flex; gap:10px;">
-                  <button class="btn-vencendo"
-                      onclick="editarPlano(${index})">
-              
-                      Editar
-                  </button>
-              
-                  <button class="btn-delete"
-                      onclick="removerPlano(${index})">
-              
-                      Excluir
-                  </button>
-              </div>
-
-            </div>
-
-        `;
-
+<div class="plano-item">
+    <div class="plano-info">
+        <div class="plano-nome">${plano.nome}</div>
+        <div class="plano-valor">${moeda(plano.valor)}</div>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <button class="btn-vencendo" onclick="editarPlano(${index})">Editar</button>
+        <button class="btn-delete" onclick="removerPlano(${index})">Excluir</button>
+    </div>
+</div>`;
         if(select){
-
-    select.innerHTML += `
-
-        <option value="${plano.valor}">
-    ${plano.nome} - ${moeda(plano.valor)}
-</option>
-
-    `;
-}
-
+            select.innerHTML += `<option value="${plano.valor}">${plano.nome} - ${moeda(plano.valor)}</option>`;
+        }
     });
-
-    localStorage.setItem(
-        "planos",
-        JSON.stringify(planos)
-    );
+    localStorage.setItem("planos", JSON.stringify(planos));
 }
+
 function editarPlano(index){
-
     planoEditando = index;
-
     let plano = planos[index];
-
-    document.getElementById("editPlanoNome").value =
-        plano.nome;
-
-    document.getElementById("editPlanoValor").value =
-        `R$${Number(plano.valor).toFixed(2).replace(".",",")}`;
-
-    const modal =
-        document.getElementById("modalPlano");
-
+    document.getElementById("editPlanoNome").value = plano.nome;
+    document.getElementById("editPlanoValor").value = `R$${Number(plano.valor).toFixed(2).replace(".",",")}`;
+    const modal = document.getElementById("modalPlano");
     modal.style.display = "flex";
-
     modal.classList.add("ativo");
 }
+
 function adicionarPlano(){
-    let nome =
-        document.getElementById("novoPlanoNome").value;
-    let valor =
-        document.getElementById("novoPlanoValor").value;
-    if(!nome || !valor){
-        alert("Preencha os campos.");
-        return;
-    }
-    planos.push({
-        nome,
-        valor
-    });
+    let nome = document.getElementById("novoPlanoNome").value;
+    let valor = document.getElementById("novoPlanoValor").value;
+    if(!nome || !valor){ alert("Preencha os campos."); return; }
+    planos.push({ nome, valor });
     document.getElementById("novoPlanoNome").value = "";
     document.getElementById("novoPlanoValor").value = "";
-    renderizarPlanos()
+    renderizarPlanos();
     document.getElementById("boxPlano").style.display = "none";
 }
 
 function removerPlano(index){
-
-    planos.splice(index,1);
+    planos.splice(index, 1);
     renderizarPlanos();
 }
 
-let clientes = JSON.parse(
-    localStorage.getItem("clientes")
-) || [];
+let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
 
 function salvar(){
-
-    localStorage.setItem(
-        "clientes",
-        JSON.stringify(clientes)
-    );
-
-    clientes =
-        JSON.parse(
-            localStorage.getItem("clientes")
-        ) || [];
+    localStorage.setItem("clientes", JSON.stringify(clientes));
+    clientes = JSON.parse(localStorage.getItem("clientes")) || [];
 }
 
 function adicionarCliente(){
-
-    let servidor =
-        document.getElementById("servidor").value;
-
-    let nome =
-        document.getElementById("nome").value;
-
-    let usuario =
-        document.getElementById("usuario").value;
-        
-    let clienteExistente =
-    clientes.find(cliente =>
-        (cliente.usuario || "")
-        .trim()
-        .toLowerCase() === usuario.trim().toLowerCase()
-    );
-
-if(clienteExistente){
-    let continuar = confirm(
-        `⚠️ Já existe um cliente com esse usuário (${clienteExistente.nome}). Deseja continuar?`
-    );
-
-    if(!continuar){
-        return;
+    let servidor = document.getElementById("servidor").value;
+    let nome = document.getElementById("nome").value;
+    let usuario = document.getElementById("usuario").value;
+    let clienteExistente = clientes.find(c => (c.usuario||"").trim().toLowerCase() === usuario.trim().toLowerCase());
+    if(clienteExistente){
+        if(!confirm(`⚠️ Já existe um cliente com esse usuário (${clienteExistente.nome}). Deseja continuar?`)) return;
     }
-}
-
-    let senha =
-        document.getElementById("senha").value;
-
-    let whatsapp =
-        document.getElementById("whatsapp").value;
-
-    let vencimento =
-        document.getElementById("vencimento").value;
-
-    let obs =
-        document.getElementById("obs").value;
-
-    let selectPlano =
-        document.getElementById("plano");
-    if(selectPlano.selectedIndex == -1){
-
-    alert("Cadastre um plano primeiro.");
-
-    return;
-}
-    let planoTexto =
-        selectPlano.options[
-            selectPlano.selectedIndex
-        ].text;
-
-    if(
-        !nome ||
-        !usuario ||
-        !senha
-    ){
-        alert("Preencha os campos.");
-        return;
-    }
-
-    clientes.push({
-
-        servidor,
-        nome,
-        usuario,
-        senha,
-        whatsapp,
-        vencimento,
-        plano: planoTexto,
-        obs
-    });
-
+    let senha = document.getElementById("senha").value;
+    let whatsapp = document.getElementById("whatsapp").value;
+    let vencimento = document.getElementById("vencimento").value;
+    let obs = document.getElementById("obs").value;
+    let selectPlano = document.getElementById("plano");
+    if(selectPlano.selectedIndex == -1){ alert("Cadastre um plano primeiro."); return; }
+    let planoTexto = selectPlano.options[selectPlano.selectedIndex].text;
+    if(!nome || !usuario || !senha){ alert("Preencha os campos."); return; }
+    clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs });
     salvar();
-
-const novoCliente =
-    clientes[clientes.length - 1];
-
-enviarMensagemAtivacao(novoCliente);
-
-clientes =
-    JSON.parse(
-        localStorage.getItem("clientes")
-    ) || [];
-
-filtroAtual = "todos";
-
-renderizar();
-
-atualizarDashboard();
-
+    const novoCliente = clientes[clientes.length - 1];
+    enviarMensagemAtivacao(novoCliente);
+    clientes = JSON.parse(localStorage.getItem("clientes")) || [];
+    filtroAtual = "todos";
+    renderizar();
+    atualizarDashboard();
     document.getElementById("nome").value = "";
     document.getElementById("usuario").value = "";
     document.getElementById("senha").value = "";
@@ -2396,1220 +1374,491 @@ atualizarDashboard();
 }
 
 function deletar(index){
-
     let cliente = clientes[index];
-
-    let confirmar = confirm(
-        `⚠️ Deseja realmente excluir o cliente "${cliente.nome}"?`
-    );
-
-    if(!confirmar){
-        return;
-    }
-
-    clientes.splice(index,1);
-
+    if(!confirm(`⚠️ Deseja realmente excluir o cliente "${cliente.nome}"?`)) return;
+    clientes.splice(index, 1);
     salvar();
     renderizar();
     atualizarDashboard();
-}
-
-function ordenarVencimento(){
-
-    clientes.sort((a,b)=>{
-        return new Date(a.vencimento) - new Date(b.vencimento);
-    });
-
-    renderizar();
 }
 
 function statusCliente(data){
-
-    if(!data || !data.includes("-")){
-        return "ativo";
-    }
-
+    if(!data || !data.includes("-")) return "ativo";
     let partes = data.split("-");
-
-    if(partes.length < 3){
-        return "ativo";
-    }
-
-    let venc = new Date(
-        Number(partes[0]),
-        Number(partes[1]) - 1,
-        Number(partes[2])
-    );
-
-    if(isNaN(venc.getTime())){
-        return "ativo";
-    }
-
+    if(partes.length < 3) return "ativo";
+    let venc = new Date(Number(partes[0]), Number(partes[1])-1, Number(partes[2]));
+    if(isNaN(venc.getTime())) return "ativo";
     let hoje = new Date();
-
     hoje.setHours(0,0,0,0);
-
     venc.setHours(0,0,0,0);
-
-    let diff =
-        Math.ceil(
-            (venc - hoje)
-            / (1000 * 60 * 60 * 24)
-        );
-
-    if(diff < 0){
-        return "vencido";
-    }
-
-    if(diff <= 3){
-        return "vencendo";
-    }
-
+    let diff = Math.ceil((venc - hoje) / (1000*60*60*24));
+    if(diff < 0) return "vencido";
+    if(diff <= 3) return "vencendo";
     return "ativo";
 }
 
-function abrirWhats(numero,nome){
-
-    let msg = `Oooi, ${nome}, sua assinatura está próxima do vencimento 📺`;
-
-    let url = `https://wa.me/${numero}?text=${encodeURIComponent(msg)}`;
-
-    window.open(url, "_blank");
+/* ===== TOGGLE DE AÇÕES DO CARD ===== */
+function toggleAcoesCard(id){
+    const acoes = document.getElementById("acoes-" + id);
+    const btn = document.getElementById("btn-acoes-" + id);
+    if(!acoes || !btn) return;
+    const aberto = acoes.classList.contains("visivel");
+    // fecha todos os outros
+    document.querySelectorAll(".card-acoes.visivel").forEach(el => el.classList.remove("visivel"));
+    document.querySelectorAll(".btn-toggle-acoes.aberto").forEach(el => el.classList.remove("aberto"));
+    if(!aberto){
+        acoes.classList.add("visivel");
+        btn.classList.add("aberto");
+        btn.innerText = "✕";
+    } else {
+        btn.innerText = "⋯";
+    }
 }
 
 function renderizar(){
-
     let lista = document.getElementById("listaClientes");
-
-    let campoPesquisa =
-    document.getElementById("pesquisa");
-
-let pesquisa = "";
-
-if(campoPesquisa){
-    pesquisa =
-        campoPesquisa.value.toLowerCase();
-}
-
+    let campoPesquisa = document.getElementById("pesquisa");
+    let pesquisa = campoPesquisa ? campoPesquisa.value.toLowerCase() : "";
     lista.innerHTML = "";
 
-    let qtdAtivos = 0;
-let qtdVencendo = 0;
-let qtdVencidos = 0;
+    let qtdAtivos = 0, qtdVencendo = 0, qtdVencidos = 0;
+    let listaClientes = [...clientes];
 
-let listaClientes =
-    [...clientes];
+    if(ordenacaoAtual === "az"){
+        listaClientes.sort((a,b) => (a.nome||"").localeCompare(b.nome||"","pt-BR"));
+    }
+    if(ordenacaoAtual === "vencimento"){
+        listaClientes.sort((a,b) => new Date(a.vencimento||"9999-12-31") - new Date(b.vencimento||"9999-12-31"));
+    }
+    if(ordenacaoAtual === "adicao"){
+        listaClientes.reverse();
+    }
 
-if(ordenacaoAtual === "az"){
+    let filtrados = listaClientes.filter(c => {
+        let status = statusCliente(c.vencimento || "");
+        if(status == "ativo") qtdAtivos++;
+        if(status == "vencendo") qtdVencendo++;
+        if(status == "vencido") qtdVencidos++;
 
-    listaClientes.sort((a,b)=>
-        (a.nome || "")
-        .localeCompare(
-            b.nome || "",
-            "pt-BR"
-        )
-    );
-}
-
-if(ordenacaoAtual === "vencimento"){
-
-    listaClientes.sort((a,b)=>{
-
-        let dataA =
-            new Date(
-                a.vencimento || "9999-12-31"
-            );
-
-        let dataB =
-            new Date(
-                b.vencimento || "9999-12-31"
-            );
-
-        return dataA - dataB;
+        let textoPesquisa = `${c.nome||""} ${c.usuario||""} ${c.senha||""} ${c.whatsapp||""} ${c.plano||""} ${c.obs||""} ${c.servidor||""}`.toLowerCase();
+        if(!textoPesquisa.includes(pesquisa)) return false;
+        if(filtroAtual == "todos") return true;
+        return status == filtroAtual;
     });
-}
 
-if(ordenacaoAtual === "adicao"){
+    if(filtrados.length === 0){
+        lista.innerHTML = `<div class="lista-vazia"><span>📭</span>Nenhum cliente encontrado</div>`;
+    } else {
+        let html = filtrados.map((cliente) => {
+            let indexReal = clientes.indexOf(cliente);
+            let status = statusCliente(cliente.vencimento);
+            let uid = "c" + indexReal + "_" + Date.now() + Math.random().toString(36).slice(2,5);
 
-    listaClientes.reverse();
-}
-/* APAGAR DAQUI */
-let html = listaClientes
-.filter(c => {
+            let statusTexto = "";
+            if(status == "ativo") statusTexto = `<span class="status ativo">ATIVO</span>`;
+            if(status == "vencendo") statusTexto = `<span class="status vencendo-status">VENCE EM BREVE</span>`;
+            if(status == "vencido") statusTexto = `<span class="status vencido-status">VENCIDO</span>`;
 
-    let status = statusCliente(c.vencimento || "");
+            let diasRestantes = calcularDiasRestantes(cliente.vencimento);
+            let mostrarLembrete = status == "vencendo" && diasRestantes <= 2;
+            let mostrarVencido = status == "vencido";
 
-    if(status == "ativo") qtdAtivos++;
-    if(status == "vencendo") qtdVencendo++;
-    if(status == "vencido") qtdVencidos++;
+            // Botões extras condicionais
+            let botoesExtras = "";
+            if(mostrarLembrete){
+                botoesExtras += `
+<button class="btn-acao lembrete"
+    onclick="enviarLembrete('${primeiroNome(cliente.nome)}','${cliente.whatsapp}','${cliente.plano}','${diasRestantes}')">
+    ⏰ Lembrar
+</button>`;
+            }
+            if(mostrarVencido){
+                botoesExtras += `
+<button class="btn-acao cobranca"
+    onclick='enviarMensagemVencido(${JSON.stringify(cliente)})'>
+    💸 Cobrar
+</button>`;
+            }
 
-    let textoPesquisa = `
-${c.nome || ""}
-${c.usuario || ""}
-${c.senha || ""}
-${c.whatsapp || ""}
-${c.plano || ""}
-${c.obs || ""}
-${c.servidor || ""}
-`.toLowerCase();
-
-    let passouPesquisa = textoPesquisa.includes(pesquisa);
-
-    if(!passouPesquisa) return false;
-
-    if(filtroAtual == "todos") return true;
-
-    return status == filtroAtual;
-
-})
-.map((cliente)=>{
-    
-    let indexReal = clientes.indexOf(cliente);
-
-    let status = statusCliente(cliente.vencimento);
-
-    let statusTexto = "";
-
-    if(status == "ativo"){
-        statusTexto = `<span class="status ativo">ATIVO</span>`;
-    }
-
-    if(status == "vencendo"){
-        statusTexto = `<span class="status vencendo-status">VENCE EM BREVE</span>`;
-    }
-
-    if(status == "vencido"){
-        statusTexto = `<span class="status vencido-status">VENCIDO</span>`;
-    }
-
-    let mostrarLembrete = false;
-    let mostrarVencido = status == "vencido";
-
-    if(status == "vencendo"){
-        let dias = calcularDiasRestantes(cliente.vencimento);
-        if(dias <= 2){
-            mostrarLembrete = true;
-        }
-    }
-
-    return `
+            return `
 <div class="card ${status}">
-    
-    <div class="nome">${cliente.nome}</div>
-
-    ${statusTexto}
-
-    <div class="info">👤 ${cliente.usuario || "-"}</div>
-    <div class="info">📦 ${cliente.plano || "-"}</div>
-    <div class="info">📅 ${formatarData(cliente.vencimento)}</div>
-
-    <div class="acoes">
-
-        <button class="btn-whats btn-icon"
-            onclick='enviarDadosCliente(${JSON.stringify(cliente)})'>
-            📱
-        </button>
-
-        <button class="btn-edit btn-icon"
-            onclick="mostrarDadosCliente(${indexReal})">
-            📄
-        </button>
-
-        <button class="btn-vencendo btn-icon"
-            onclick="editarCliente(${indexReal})">
-            ✏️
-        </button>
-
-        <button class="btn-delete btn-icon"
-            onclick="deletar(${indexReal})">
-            🗑️
-        </button>
-
-        <button class="btn-renovar btn-icon"
-            onclick="abrirModalRenovacao(${indexReal})">
-            🔄
-        </button>
-
-        ${
-            mostrarLembrete
-            ? `<button class="btn-lembrete btn-icon"
-                onclick="enviarLembrete(
-                    '${primeiroNome(cliente.nome)}',
-                    '${cliente.whatsapp}',
-                    '${cliente.plano}',
-                    '${calcularDiasRestantes(cliente.vencimento)}'
-                )">⏰</button>`
-            : ""
-        }
-
-        ${
-            mostrarVencido
-            ? `<button class="btn-cobranca btn-icon"
-                onclick='enviarMensagemVencido(${JSON.stringify(cliente)})'>
-                💸
-              </button>`
-            : ""
-        }
-
+    <div class="card-header">
+        <div class="card-header-left">
+            <div class="nome">${cliente.nome}</div>
+            ${statusTexto}
+        </div>
+        <button class="btn-toggle-acoes" id="btn-acoes-${uid}" onclick="toggleAcoesCard('${uid}')">⋯</button>
     </div>
-</div>
-`;
-})
-.join("");
 
-lista.innerHTML = html;
-/* APAGAR ACIMA */
-  
-document.getElementById("btnTodos")
-.innerHTML =
-`Todos [${clientes.length}]`;
+    <div class="card-body">
+        <div class="card-row">👤 <span>${cliente.usuario || "-"}</span></div>
+        <div class="card-row">📦 <span>${cliente.plano || "-"}</span></div>
+        <div class="card-row">📅 <span>${formatarData(cliente.vencimento)}</span></div>
+    </div>
 
-document.getElementById("btnAtivos")
-.innerHTML =
-`Ativos [${qtdAtivos}]`;
+    <div class="card-acoes" id="acoes-${uid}">
+        <div class="acao-grupo">
+            <button class="btn-acao whats" onclick='enviarDadosCliente(${JSON.stringify(cliente)})'>📱 WhatsApp</button>
+            <button class="btn-acao dados" onclick="mostrarDadosCliente(${indexReal})">📄 Dados</button>
+        </div>
+        <div class="acao-grupo">
+            <button class="btn-acao editar" onclick="editarCliente(${indexReal})">✏️ Editar</button>
+            <button class="btn-acao renovar" onclick="abrirModalRenovacao(${indexReal})">🔄 Renovar</button>
+        </div>
+        <div class="acao-grupo">
+            ${botoesExtras}
+            <button class="btn-acao deletar" onclick="deletar(${indexReal})" style="${botoesExtras ? 'flex:0;min-width:44px;' : ''}">🗑️${botoesExtras ? "" : " Excluir"}</button>
+        </div>
+    </div>
+</div>`;
+        }).join("");
 
-document.getElementById("btnVencendo")
-.innerHTML =
-`Vencendo [${qtdVencendo}]`;
+        lista.innerHTML = html;
+    }
 
-document.getElementById("btnVencidos")
-.innerHTML =
-`Vencidos [${qtdVencidos}]`;
+    document.getElementById("btnTodos").innerHTML = `Todos [${clientes.length}]`;
+    document.getElementById("btnAtivos").innerHTML = `Ativos [${qtdAtivos}]`;
+    document.getElementById("btnVencendo").innerHTML = `Vencendo [${qtdVencendo}]`;
+    document.getElementById("btnVencidos").innerHTML = `Vencidos [${qtdVencidos}]`;
 }
+
 function editarCliente(index){
-
     clienteEditando = index;
-
     let cliente = clientes[index];
+    document.getElementById("editNome").value = cliente.nome || "";
+    document.getElementById("editUsuario").value = cliente.usuario || "";
+    document.getElementById("editSenha").value = cliente.senha || "";
+    document.getElementById("editWhatsapp").value = cliente.whatsapp || "";
+    document.getElementById("editVencimento").value = cliente.vencimento || "";
+    document.getElementById("editObs").value = cliente.obs || "";
 
-    document.getElementById("editNome").value =
-        cliente.nome || "";
-
-    document.getElementById("editUsuario").value =
-        cliente.usuario || "";
-
-    document.getElementById("editSenha").value =
-        cliente.senha || "";
-
-    document.getElementById("editWhatsapp").value =
-        cliente.whatsapp || "";
-
-    document.getElementById("editVencimento").value =
-        cliente.vencimento || "";
-
-    document.getElementById("editObs").value =
-        cliente.obs || "";
-
-    let selectServidor =
-        document.getElementById("editServidor");
-
+    let selectServidor = document.getElementById("editServidor");
     selectServidor.innerHTML = "";
-
-    servidores.forEach(servidor=>{
-
-        let selected =
-            cliente.servidor == servidor.nome
-            ? "selected"
-            : "";
-
-        selectServidor.innerHTML += `
-
-            <option ${selected}>
-                ${servidor.nome}
-            </option>
-
-        `;
+    servidores.forEach(servidor => {
+        let selected = cliente.servidor == servidor.nome ? "selected" : "";
+        selectServidor.innerHTML += `<option ${selected}>${servidor.nome}</option>`;
     });
 
-    let selectPlano =
-        document.getElementById("editPlano");
-
+    let selectPlano = document.getElementById("editPlano");
     selectPlano.innerHTML = "";
-
-    planos.forEach(plano=>{
-
-        let textoPlano =
-    `${plano.nome} - ${moeda(plano.valor)}`;
-
-        let selected =
-            cliente.plano == textoPlano
-            ? "selected"
-            : "";
-
-        selectPlano.innerHTML += `
-
-            <option ${selected}>
-                ${textoPlano}
-            </option>
-
-        `;
+    planos.forEach(plano => {
+        let textoPlano = `${plano.nome} - ${moeda(plano.valor)}`;
+        let selected = cliente.plano == textoPlano ? "selected" : "";
+        selectPlano.innerHTML += `<option ${selected}>${textoPlano}</option>`;
     });
 
-    let modal =
-        document.getElementById("modalEditar");
-
+    let modal = document.getElementById("modalEditar");
     modal.style.display = "flex";
-
     modal.classList.add("ativo");
 }
+
 function salvarEdicaoPlano(){
-
-    let nome =
-        document.getElementById("editPlanoNome").value;
-
-    let valorTexto =
-        document.getElementById("editPlanoValor").value;
-
-    let valor =
-    parseFloat(
-        valorTexto
-        .replace("R$","")
-        .replace(",",".")
-        .trim()
-    );
-
-    let nomePlanoAntigo =
-        planos[planoEditando].nome;
-
-    planos[planoEditando] = {
-
-        nome,
-        valor
-    };
-
-    clientes = clientes.map(cliente=>{
-
-        if(
-            cliente.plano &&
-            cliente.plano.includes(nomePlanoAntigo)
-        ){
-
-            return {
-
-                ...cliente,
-
-                plano:
-    `${nome} - ${moeda(valor)}`
-            };
+    let nome = document.getElementById("editPlanoNome").value;
+    let valorTexto = document.getElementById("editPlanoValor").value;
+    let valor = parseFloat(valorTexto.replace("R$","").replace(",",".").trim());
+    let nomePlanoAntigo = planos[planoEditando].nome;
+    planos[planoEditando] = { nome, valor };
+    clientes = clientes.map(cliente => {
+        if(cliente.plano && cliente.plano.includes(nomePlanoAntigo)){
+            return { ...cliente, plano: `${nome} - ${moeda(valor)}` };
         }
-
         return cliente;
     });
-
-    localStorage.setItem(
-        "planos",
-        JSON.stringify(planos)
-    );
-
+    localStorage.setItem("planos", JSON.stringify(planos));
     salvar();
-
     renderizar();
     renderizarServidores();
     renderizarPlanos();
-
     atualizarDashboard();
-
     fecharModalPlano();
 }
+
 function salvarEdicaoCliente(){
-
     clientes[clienteEditando] = {
-
         ...clientes[clienteEditando],
-
-        servidor:
-            document.getElementById("editServidor").value,
-
-        nome:
-            document.getElementById("editNome").value,
-
-        usuario:
-            document.getElementById("editUsuario").value,
-
-        senha:
-            document.getElementById("editSenha").value,
-
-        whatsapp:
-            document.getElementById("editWhatsapp").value,
-
-        vencimento:
-            document.getElementById("editVencimento").value,
-
-        plano:
-            document.getElementById("editPlano").value,
-
-        obs:
-            document.getElementById("editObs").value
+        servidor: document.getElementById("editServidor").value,
+        nome: document.getElementById("editNome").value,
+        usuario: document.getElementById("editUsuario").value,
+        senha: document.getElementById("editSenha").value,
+        whatsapp: document.getElementById("editWhatsapp").value,
+        vencimento: document.getElementById("editVencimento").value,
+        plano: document.getElementById("editPlano").value,
+        obs: document.getElementById("editObs").value
     };
-
     salvar();
-
     renderizar();
-
     atualizarDashboard();
-
     fecharModal();
 }
+
 function fecharModal(){
-
-    const modal =
-    document.getElementById("modalEditar");
-
-modal.classList.remove("ativo");
-
-modal.style.display = "none";
+    const modal = document.getElementById("modalEditar");
+    modal.classList.remove("ativo");
+    modal.style.display = "none";
 }
 
 function fecharModalPlano(){
-
-    const modal =
-        document.getElementById("modalPlano");
-
+    const modal = document.getElementById("modalPlano");
     modal.classList.remove("ativo");
-
     modal.style.display = "none";
 }
+
 function toggleMenu(){
-
-    document
-    .getElementById("sidebar")
-    .classList
-    .toggle("ativo");
+    document.getElementById("sidebar").classList.toggle("ativo");
 }
+
 function primeiroNome(nome){
-
-    if(!nome){
-        return "";
-    }
-
+    if(!nome) return "";
     return nome.trim().split(" ")[0];
 }
+
 function abrirGuia(id){
-
-    document
-    .querySelectorAll(".guia")
-    .forEach(g => g.classList.remove("ativa"));
-
-    document
-    .getElementById(id)
-    .classList
-    .add("ativa");
-
-    localStorage.setItem(
-        "guiaAtual",
-        id
-    );
-
-    document
-    .getElementById("sidebar")
-    .classList
-    .remove("ativo");
+    document.querySelectorAll(".guia").forEach(g => g.classList.remove("ativa"));
+    document.getElementById(id).classList.add("ativa");
+    localStorage.setItem("guiaAtual", id);
+    document.getElementById("sidebar").classList.remove("ativo");
 }
 
 function formatarData(data){
-
-    if(!data || !data.includes("-")){
-        return "-";
-    }
-
+    if(!data || !data.includes("-")) return "-";
     let partes = data.split("-");
-
-    if(partes.length < 3){
-        return "-";
-    }
-
-    let ano = partes[0];
-    let mes = partes[1];
-    let dia = partes[2];
-
-    return `${dia}/${mes}/${ano}`;
+    if(partes.length < 3) return "-";
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
 function atualizarDashboard(){
-
     let lucro = 0;
-      const hoje = new Date();
-      const mesAtual = hoje.getMonth();
-      const anoAtual = hoje.getFullYear();
-
-    let ativos = 0;
-
-    let vencendo = 0;
-
-    let lista =
-        document.getElementById("listaVencendo");
-
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
+    let ativos = 0, vencendo = 0;
+    let lista = document.getElementById("listaVencendo");
     lista.innerHTML = "";
 
-    clientes.forEach(cliente=>{
-
-        let status =
-            statusCliente(cliente.vencimento);
-
+    clientes.forEach(cliente => {
+        let status = statusCliente(cliente.vencimento);
         let valor = 0;
-
-if(
-    cliente.plano &&
-    typeof cliente.plano === "string"
-){
-
-    let match =
-        cliente.plano.match(
-            /R\$\s*([\d.,]+)/
-        );
-
-    if(match){
-
-        let textoValor =
-            match[1];
-
-        textoValor =
-            textoValor.replace(",", ".");
-
-        valor =
-            parseFloat(textoValor) || 0;
-    }
-}
+        if(cliente.plano && typeof cliente.plano === "string"){
+            let match = cliente.plano.match(/R\$\s*([\d.,]+)/);
+            if(match){
+                let textoValor = match[1].replace(",", ".");
+                valor = parseFloat(textoValor) || 0;
+            }
+        }
 
         let servidorCliente = servidores.find(s =>
-    (cliente.servidor || "").toLowerCase()
-    .includes((s.nome || "").toLowerCase())
-);
-/* BLINDAGEM */
-if(!servidorCliente){
-
-    let opcoes = servidores
-        .map((s, i) => `${i} - ${s.nome}`)
-        .join("\n");
-
-    let escolha = prompt(
-`⚠️ Servidor não encontrado para ${cliente.nome}
-
-Escolha o servidor digitando o número:
-
-${opcoes}`
-    );
-
-    if(escolha !== null){
-
-        let index = Number(escolha);
-
-        if(!isNaN(index) && servidores[index]){
-
-            servidorCliente = servidores[index];
-
-            // 🔥 já atualiza o cliente pra não dar erro de novo
-            cliente.servidor = servidorCliente.nome;
-
-            salvar();
-
-        }else{
-
-            alert("Servidor inválido. Custo será considerado 0.");
-        }
-    }
-}
-
-let custoServidor = 0;
-
-if(servidorCliente){
-
-    custoServidor =
-        Number(
-            servidorCliente.custo
-            .replace("R$","")
-            .replace(".","")
-            .replace(",",".")
+            (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
         );
-}
-if(cliente.ultimaRenovacao){
 
-    let renovacao =
-        new Date(cliente.ultimaRenovacao);
-
-    if(
-        renovacao.getMonth() === mesAtual &&
-        renovacao.getFullYear() === anoAtual
-    ){
-
-        let lucroCliente =
-            valor - custoServidor;
-
-        if(!isNaN(lucroCliente)){
-          
-            lucro += lucroCliente;
+        if(!servidorCliente && servidores.length > 0){
+            servidorCliente = servidores[0];
+            cliente.servidor = servidorCliente.nome;
+            salvar();
         }
-    }
-}
 
-        if(status == "ativo"){
-            ativos++;
+        let custoServidor = 0;
+        if(servidorCliente){
+            custoServidor = Number(servidorCliente.custo.replace("R$","").replace(".","").replace(",","."));
         }
-        let diasRestantes =
-            calcularDiasRestantes(
-                cliente.vencimento
-            );
-        
-if(diasRestantes === 0 || diasRestantes === 1){
 
-    vencendo++;
+        if(cliente.ultimaRenovacao){
+            let renovacao = new Date(cliente.ultimaRenovacao);
+            if(renovacao.getMonth() === mesAtual && renovacao.getFullYear() === anoAtual){
+                let lucroCliente = valor - custoServidor;
+                if(!isNaN(lucroCliente)) lucro += lucroCliente;
+            }
+        }
 
-    let textoVencimento =
-        diasRestantes === 0
-        ? "🔥 Vence Hoje"
-        : "⚠️ Vence Amanhã";
+        if(status == "ativo") ativos++;
 
-    lista.innerHTML += `
-
-    <div class="card vencendo">
-
-        <div class="nome">
-            ${cliente.nome}
-        </div>
-
-        <div class="info">
-            ${textoVencimento}
-        </div>
-
-        <div class="info">
-            📅 ${formatarData(cliente.vencimento)}
-        </div>
-
-        <div class="info">
-            📦 ${cliente.plano}
-        </div>
-
-        <div class="acoes">
-
-            <button
-                class="btn-lembrete"
-                onclick="
-                    enviarLembrete(
-                        '${primeiroNome(cliente.nome)}',
-                        '${cliente.whatsapp}',
-                        '${cliente.plano}',
-                        '${diasRestantes}'
-                    )
-                "
-            >
-                Lembrar
-            </button>
-            <button
-                class="btn-renovar"
-                onclick="abrirModalRenovacao(${clientes.indexOf(cliente)})"
-            >
-                🔄 Renovar
-            </button>
-
-        </div>
-
+        let diasRestantes = calcularDiasRestantes(cliente.vencimento);
+        if(diasRestantes === 0 || diasRestantes === 1){
+            vencendo++;
+            let textoVencimento = diasRestantes === 0 ? "🔥 Vence Hoje" : "⚠️ Vence Amanhã";
+            lista.innerHTML += `
+<div class="card vencendo">
+    <div class="nome">${cliente.nome}</div>
+    <div class="info">${textoVencimento}</div>
+    <div class="info">📅 ${formatarData(cliente.vencimento)}</div>
+    <div class="info">📦 ${cliente.plano}</div>
+    <div class="acoes" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn-lembrete"
+            onclick="enviarLembrete('${primeiroNome(cliente.nome)}','${cliente.whatsapp}','${cliente.plano}','${diasRestantes}')">
+            Lembrar
+        </button>
+        <button class="btn-renovar" style="background:#22c55e;color:white;padding:10px 15px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;"
+            onclick="abrirModalRenovacao(${clientes.indexOf(cliente)})">
+            🔄 Renovar
+        </button>
     </div>
-`;
-}
-
+</div>`;
+        }
     });
 
-    document.getElementById("lucroTotal")
-        .innerHTML =
-        `R$ ${lucro.toFixed(2).replace(".",",")}`;
-
-    document.getElementById("clientesAtivos")
-        .innerHTML =
-        ativos;
-
-    document.getElementById("clientesVencendo")
-        .innerHTML =
-        vencendo;
+    document.getElementById("lucroTotal").innerHTML = `R$ ${lucro.toFixed(2).replace(".",",")}`;
+    document.getElementById("clientesAtivos").innerHTML = ativos;
+    document.getElementById("clientesVencendo").innerHTML = vencendo;
 }
+
 function calcularDiasRestantes(data){
-
     let partes = data.split("-");
-
-    let venc = new Date(
-        partes[0],
-        partes[1] - 1,
-        partes[2]
-    );
-
+    let venc = new Date(partes[0], partes[1]-1, partes[2]);
     let hoje = new Date();
-
     hoje.setHours(0,0,0,0);
-
     venc.setHours(0,0,0,0);
-
-    let diff =
-        Math.ceil(
-            (venc - hoje)
-            / (1000 * 60 * 60 * 24)
-        );
-
-    return diff;
-}
-function enviarLembrete(
-    nome,
-    whatsapp,
-    plano,
-    dias
-){
-
-    let config =
-        JSON.parse(
-            localStorage.getItem("configuracoes")
-        ) || {};
-
-    let chavePix =
-        config.pixChave || "";
-
-    let nomePix =
-        config.pixNome || "";
-
-    let bancoPix =
-        config.pixBanco || "";
-        
-let textoExpiracao = "";
-let emoji = "";
-
-if(dias < 0){
-
-    let diasAtraso = Math.abs(dias);
-
-    emoji = "😱";
-    textoExpiracao = `venceu há ${diasAtraso} dia(s)`;
-
-}else if(dias == 0){
-
-    emoji = "🔴";
-    textoExpiracao = "vence hoje";
-
-}else if(dias == 1){
-
-    emoji = "🟡";
-    textoExpiracao = "vence amanhã";
-
-}else{
-
-    emoji = "🟢";
-    textoExpiracao = `vence em ${dias} dias`;
+    return Math.ceil((venc - hoje) / (1000*60*60*24));
 }
 
-    let mensagem = `*${emoji} 🙋🏽‍♂️ Ooi, ${nome}*. 
-Passando para lembrar que seu plano ${plano} *${textoExpiracao}*.
+function enviarLembrete(nome, whatsapp, plano, dias){
+    let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+    let chavePix = config.pixChave || "";
+    let nomePix = config.pixNome || "";
+    let bancoPix = config.pixBanco || "";
+    let textoExpiracao = "", emoji = "";
+    if(dias < 0){ emoji = "😱"; textoExpiracao = `venceu há ${Math.abs(dias)} dia(s)`; }
+    else if(dias == 0){ emoji = "🔴"; textoExpiracao = "vence hoje"; }
+    else if(dias == 1){ emoji = "🟡"; textoExpiracao = "vence amanhã"; }
+    else { emoji = "🟢"; textoExpiracao = `vence em ${dias} dias`; }
 
-> ❌️ NÃO FIQUE SEM SUA PROGRAMAÇÃO
-
-*🔑 Chave pix:* ${chavePix}
-*👤 Nome:* ${nomePix}
-*🏦 Banco:* ${bancoPix}
-
-📄 Favor enviar o comprovante ao efetuar a transferência.
-
-Nosso sistema leva até 30 minutos para checar e confirmar o pagamento para liberação.
-
-Assim que confirmado, enviarei a mensagem de renovação 😉`;
-
-    let url =
-        `https://wa.me/${whatsapp}?text=${encodeURIComponent(mensagem)}`;
-
-    window.open(url, "_blank");
+    let mensagem = `*${emoji} 🙋🏽‍♂️ Ooi, ${nome}*. \nPassando para lembrar que seu plano ${plano} *${textoExpiracao}*.\n\n> ❌️ NÃO FIQUE SEM SUA PROGRAMAÇÃO\n\n*🔑 Chave pix:* ${chavePix}\n*👤 Nome:* ${nomePix}\n*🏦 Banco:* ${bancoPix}\n\n📄 Favor enviar o comprovante ao efetuar a transferência.\n\nNosso sistema leva até 30 minutos para checar e confirmar o pagamento para liberação.\n\nAssim que confirmado, enviarei a mensagem de renovação 😉`;
+    window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
+
 function salvarConfiguracoes(){
-
-    let config =
-        JSON.parse(
-            localStorage.getItem("configuracoes")
-        ) || {};
-    config.pixChave =
-        document.getElementById("pixChave").value;
-    
-    config.pixNome =
-        document.getElementById("pixNome").value;
-    
-    config.pixBanco =
-        document.getElementById("pixBanco").value;
-        
-    config.nomeSistema =
-        document.getElementById("nomeSistema").value;
-    config.textoPromocao =
-        document.getElementById("textoPromocao").value;
-    
-    config.textoRodape =
-        document.getElementById("textoRodape").value;
-
-    localStorage.setItem(
-        "configuracoes",
-        JSON.stringify(config)
-    );
-
+    let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+    config.pixChave = document.getElementById("pixChave").value;
+    config.pixNome = document.getElementById("pixNome").value;
+    config.pixBanco = document.getElementById("pixBanco").value;
+    config.nomeSistema = document.getElementById("nomeSistema").value;
+    config.textoPromocao = document.getElementById("textoPromocao").value;
+    config.textoRodape = document.getElementById("textoRodape").value;
+    localStorage.setItem("configuracoes", JSON.stringify(config));
     atualizarCabecalho();
-    mostrarSucesso(
-        "✅ Configurações salvas com sucesso!"
-    );
-    configuracaoOriginal =
-    obterConfiguracoesAtuais();
+    mostrarSucesso("✅ Configurações salvas com sucesso!");
+    configuracaoOriginal = obterConfiguracoesAtuais();
     verificarAlteracoesConfiguracao();
 }
+
 function carregarConfiguracoes(){
-
-    let config =
-        JSON.parse(
-            localStorage.getItem("configuracoes")
-        ) || {};
-document.getElementById("textoPromocao").value =
-    config.textoPromocao || "";
-
-document.getElementById("textoRodape").value =
-    config.textoRodape || "";
-    
-document.getElementById("pixChave").value =
-    config.pixChave || "";
-
-document.getElementById("pixNome").value =
-    config.pixNome || "";
-
-document.getElementById("pixBanco").value =
-    config.pixBanco || "";
-    
-    let nomeSistema =
-        document.getElementById("nomeSistema");
-
-    if(nomeSistema){
-
-        nomeSistema.value =
-            config.nomeSistema || "";
-    }
-
+    let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+    document.getElementById("textoPromocao").value = config.textoPromocao || "";
+    document.getElementById("textoRodape").value = config.textoRodape || "";
+    document.getElementById("pixChave").value = config.pixChave || "";
+    document.getElementById("pixNome").value = config.pixNome || "";
+    document.getElementById("pixBanco").value = config.pixBanco || "";
+    let nomeSistema = document.getElementById("nomeSistema");
+    if(nomeSistema) nomeSistema.value = config.nomeSistema || "";
     atualizarCabecalho();
 }
+
 function toggleAdicionar(){
-
-    let box =
-        document.getElementById("boxAdicionar");
-
-    if(box.style.display == "none"){
-
-        box.style.display = "flex";
-
-    }else{
-
-        box.style.display = "none";
-    }
+    let box = document.getElementById("boxAdicionar");
+    box.style.display = box.style.display == "none" ? "flex" : "none";
 }
-
 function togglePesquisa(){
-
-    let box =
-        document.getElementById("boxPesquisa");
-
-    if(box.style.display == "none"){
-
-        box.style.display = "flex";
-
-    }else{
-
-        box.style.display = "none";
-    }
+    let box = document.getElementById("boxPesquisa");
+    box.style.display = box.style.display == "none" ? "flex" : "none";
 }
-document.addEventListener(
-    "DOMContentLoaded",
-    function(){
 
-        try{
-
-            carregarConfiguracoes();
-            configurarUploadLogo();
-            [
-                "nomeSistema",
-                "pixChave",
-                "pixNome",
-                "pixBanco",
-                "textoPromocao",
-                "textoRodape"
-            ].forEach(id=>{
-            
-                const campo =
-                    document.getElementById(id);
-            
-                if(campo){
-            
-                    campo.addEventListener(
-                        "input",
-                        verificarAlteracoesConfiguracao
-                    );
-                }
-            });
-            let guiaSalva =
-                localStorage.getItem("guiaAtual") || "dashboard";
-            
-            abrirGuia(guiaSalva);
-            
-            if(guiaSalva){
-                abrirGuia(guiaSalva);
-            }
-            
-            renderizarServidores();
-            renderizarPlanos();
-            filtroAtual = "todos";
-            renderizar();
-            atualizarDashboard();
-            configuracaoOriginal =
-    obterConfiguracoesAtuais();
-
-verificarAlteracoesConfiguracao();
-
-        }catch(erro){
-
-            console.log(erro);
-
-            alert(
-                "Erro ao carregar sistema: "
-                + erro.message
-            );
-        }
+document.addEventListener("DOMContentLoaded", function(){
+    try{
+        carregarConfiguracoes();
+        configurarUploadLogo();
+        ["nomeSistema","pixChave","pixNome","pixBanco","textoPromocao","textoRodape"].forEach(id => {
+            const campo = document.getElementById(id);
+            if(campo) campo.addEventListener("input", verificarAlteracoesConfiguracao);
+        });
+        let guiaSalva = localStorage.getItem("guiaAtual") || "dashboard";
+        abrirGuia(guiaSalva);
+        renderizarServidores();
+        renderizarPlanos();
+        filtroAtual = "todos";
+        renderizar();
+        atualizarDashboard();
+        configuracaoOriginal = obterConfiguracoesAtuais();
+        verificarAlteracoesConfiguracao();
+    } catch(erro){
+        console.log(erro);
+        alert("Erro ao carregar sistema: " + erro.message);
     }
-);
-
+});
 </script>
+
 <!-- MODAL EDITAR CLIENTE -->
-
 <div class="modal" id="modalEditar">
-
     <div class="modal-box">
-
         <div class="modal-topo">
-
             <h2>Editar Cliente</h2>
-
-            <button
-                class="fechar-modal"
-                onclick="fecharModal()"
-            >
-                ✕
-            </button>
-
+            <button class="fechar-modal" onclick="fecharModal()">✕</button>
         </div>
-
         <select id="editServidor"></select>
-
-        <input
-            type="text"
-            id="editNome"
-            placeholder="Nome"
-        >
-
-        <input
-            type="text"
-            id="editUsuario"
-            placeholder="Usuário"
-        >
-
-        <input
-            type="text"
-            id="editSenha"
-            placeholder="Senha"
-        >
-
-        <input
-            type="text"
-            id="editWhatsapp"
-            placeholder="WhatsApp"
-            onblur="limparWhatsapp(this)"
-        >
-
+        <input type="text" id="editNome" placeholder="Nome">
+        <input type="text" id="editUsuario" placeholder="Usuário">
+        <input type="text" id="editSenha" placeholder="Senha">
+        <input type="text" id="editWhatsapp" placeholder="WhatsApp" onblur="limparWhatsapp(this)">
         <select id="editPlano"></select>
-
-        <input
-            type="date"
-            id="editVencimento"
-        >
-
-<textarea
-    id="editObs"
-    placeholder="Dispositivo"
-></textarea>
-
-        <button
-            class="btn-add"
-            onclick="salvarEdicaoCliente()"
-        >
-            Salvar Alterações
-        </button>
-
+        <input type="date" id="editVencimento">
+        <textarea id="editObs" placeholder="Dispositivo"></textarea>
+        <button class="btn-add" onclick="salvarEdicaoCliente()">Salvar Alterações</button>
     </div>
-
 </div>
+
 <!-- MODAL EDITAR PLANO -->
-
 <div class="modal" id="modalPlano">
-
     <div class="modal-box">
-
         <div class="modal-topo">
-
             <h2>Editar Plano</h2>
-
-            <button class="fechar-modal"
-                onclick="fecharModalPlano()">
-
-                ✕
-
-            </button>
-
+            <button class="fechar-modal" onclick="fecharModalPlano()">✕</button>
         </div>
-
-        <input
-            type="text"
-            id="editPlanoNome"
-            placeholder="Nome do plano"
-        >
-
-        <input
-            type="text"
-            id="editPlanoValor"
-            placeholder="R$0,00"
-            
-        >
-
-        <button class="btn-add"
-            onclick="salvarEdicaoPlano()">
-
-            Salvar Alterações
-
-        </button>
-
+        <input type="text" id="editPlanoNome" placeholder="Nome do plano">
+        <input type="text" id="editPlanoValor" placeholder="R$0,00">
+        <button class="btn-add" onclick="salvarEdicaoPlano()">Salvar Alterações</button>
     </div>
-
 </div>
+
+<!-- MODAL RENOVAÇÃO -->
 <div class="modal" id="modalRenovacao">
-
     <div class="modal-box">
-
         <div class="modal-topo">
-
             <h2>Renovar Cliente</h2>
-
-            <button
-                class="fechar-modal"
-                onclick="fecharModalRenovacao()"
-            >
-                ✕
-            </button>
-
+            <button class="fechar-modal" onclick="fecharModalRenovacao()">✕</button>
         </div>
-
         <strong id="renovacaoNome"></strong>
-
-        <div>
-            Vencimento atual:
-            <span id="renovacaoAtual"></span>
-        </div>
-
+        <div>Vencimento atual: <span id="renovacaoAtual"></span></div>
         <div id="renovacaoPlano"></div>
-
-        <button
-            class="btn-add"
-            onclick="renovarCliente()"
-        >
-            ✅ Confirmar Renovação
-        </button>
+        <button class="btn-add" onclick="renovarCliente()">✅ Confirmar Renovação</button>
     </div>
 </div>
-<div id="toastSucesso" class="toast-sucesso">
-    ✅ Configurações salvas com sucesso!
-</div>
+
+<!-- MODAL SERVIDOR -->
 <div class="modal" id="modalServidor">
-
     <div class="modal-box">
-
         <div class="modal-topo">
-
             <h2>Editar Servidor</h2>
-
-            <button
-                class="fechar-modal"
-                onclick="fecharModalServidor()"
-            >
-                ✕
-            </button>
-
+            <button class="fechar-modal" onclick="fecharModalServidor()">✕</button>
         </div>
-
-        <input
-            type="text"
-            id="editServidorNome"
-            placeholder="Nome do servidor"
-        >
-
-<input
-    type="text"
-    id="editServidorCusto"
-    placeholder="11,00"
->
-<input
-    type="text"
-    id="editServidorUrl"
-    placeholder="URL do servidor"
-/>
-
-        <button
-            class="btn-add"
-            onclick="salvarEdicaoServidor()"
-        >
-            Salvar Alterações
-        </button>
-
+        <input type="text" id="editServidorNome" placeholder="Nome do servidor">
+        <input type="text" id="editServidorCusto" placeholder="11,00">
+        <input type="text" id="editServidorUrl" placeholder="URL do servidor"/>
+        <button class="btn-add" onclick="salvarEdicaoServidor()">Salvar Alterações</button>
     </div>
-
 </div>
-<div
-    class="modal"
-    id="modalDadosCliente"
->
 
+<!-- MODAL DADOS DO CLIENTE -->
+<div class="modal" id="modalDadosCliente">
     <div class="modal-box">
-
         <div class="modal-topo">
-
-            <h2>
-                Dados do Cliente
-            </h2>
-
-            <button
-                class="fechar-modal"
-                onclick="fecharDadosCliente()"
-            >
-                ✕
-            </button>
-
+            <h2>Dados do Cliente</h2>
+            <button class="fechar-modal" onclick="fecharDadosCliente()">✕</button>
         </div>
-
-        <textarea
-            id="dadosClienteTexto"
-            readonly
-            style="min-height:260px;"
-        ></textarea>
-
-        <div
-            style="
-                display:flex;
-                gap:10px;
-            "
-        >
-
-            <button
-                class="btn-add"
-                onclick="copiarDadosCliente()"
-            >
-                📋 Copiar
-            </button>
-
-            <button
-                class="btn-delete"
-                onclick="fecharDadosCliente()"
-            >
-                ❌ Fechar
-            </button>
+        <textarea id="dadosClienteTexto" readonly style="min-height:260px;"></textarea>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-add" onclick="copiarDadosCliente()">📋 Copiar</button>
+            <button class="btn-delete" onclick="fecharDadosCliente()">❌ Fechar</button>
         </div>
     </div>
 </div>
+
+<div id="toastSucesso" class="toast-sucesso">✅ Configurações salvas com sucesso!</div>
 </body>
 </html>
