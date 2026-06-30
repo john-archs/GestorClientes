@@ -1844,6 +1844,14 @@ function enviarLembreteComMarca(nome, whatsapp, plano, dias){
     atualizarDashboard();
 }
 
+function saudacaoBrasileira(){
+    const hora = new Date().toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", hour:"numeric", hour12:false });
+    const h = parseInt(hora);
+    if(h >= 1 && h < 12)  return "Bom dia";
+    if(h >= 12 && h < 18) return "Boa tarde";
+    return "Boa noite";
+}
+
 function enviarLembrete(nome, whatsapp, plano, dias){
     let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
     let chavePix = config.pixChave || "";
@@ -1855,7 +1863,8 @@ function enviarLembrete(nome, whatsapp, plano, dias){
     else if(dias == 1){ emoji = "🟡"; textoExpiracao = "vence amanhã"; }
     else { emoji = "🟢"; textoExpiracao = `vence em ${dias} dias`; }
 
-    let mensagem = `*${emoji} 🙋🏽‍♂️ Ooi, ${nome}*. \nPassando para lembrar que seu plano ${plano} *${textoExpiracao}*.\n\n> ❌️ NÃO FIQUE SEM SUA PROGRAMAÇÃO\n\n*🔑 Chave pix:* ${chavePix}\n*👤 Nome:* ${nomePix}\n*🏦 Banco:* ${bancoPix}\n\n📄 Favor enviar o comprovante ao efetuar a transferência.\n\nNosso sistema leva até 30 minutos para checar e confirmar o pagamento para liberação.\n\nAssim que confirmado, enviarei a mensagem de renovação 😉`;
+    const saudacao = saudacaoBrasileira();
+    let mensagem = `*${emoji} 🙋🏽‍♂️ Ooi, ${nome}*. ${saudacao}!\nPassando para lembrar que seu plano ${plano} *${textoExpiracao}*.\n\n> ❌️ NÃO FIQUE SEM SUA PROGRAMAÇÃO\n\n*🔑 Chave pix:* ${chavePix}\n*👤 Nome:* ${nomePix}\n*🏦 Banco:* ${bancoPix}\n\n📄 Favor enviar o comprovante ao efetuar a transferência.\n\nNosso sistema leva até 30 minutos para checar e confirmar o pagamento para liberação.\n\nAssim que confirmado, enviarei a mensagem de renovação 😉`;
     window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
 
