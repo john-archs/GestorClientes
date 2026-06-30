@@ -1694,10 +1694,12 @@ function atualizarDashboard(){
     <div class="info">📅 ${formatarData(cliente.vencimento)}</div>
     <div class="info">📦 ${cliente.plano}</div>
     <div class="acoes" style="margin-top:15px; padding-bottom:8px; display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn-lembrete"
-            onclick="enviarLembrete('${primeiroNome(cliente.nome)}','${cliente.whatsapp}','${cliente.plano}','${diasRestantes}')">
+        ${foiLembrado(cliente.whatsapp)
+            ? `<button class="btn-lembrete" style="background:#475569;cursor:default;opacity:.85;" disabled>✅️ Lembrado ✅️</button>`
+            : `<button class="btn-lembrete"
+            onclick="enviarLembreteComMarca('${primeiroNome(cliente.nome)}','${cliente.whatsapp}','${cliente.plano}','${diasRestantes}')">
             Lembrar
-        </button>
+        </button>`}
         <button class="btn-renovar" style="background:#22c55e;color:white;padding:10px 15px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;"
             onclick="abrirModalRenovacao(${clientes.indexOf(cliente)})">
             🔄 Renovar
@@ -1719,6 +1721,22 @@ function calcularDiasRestantes(data){
     hoje.setHours(0,0,0,0);
     venc.setHours(0,0,0,0);
     return Math.ceil((venc - hoje) / (1000*60*60*24));
+}
+
+function registrarLembrete(whatsapp){
+    const hoje = new Date().toISOString().split("T")[0];
+    localStorage.setItem("lembrete_" + whatsapp, hoje);
+}
+
+function foiLembrado(whatsapp){
+    const hoje = new Date().toISOString().split("T")[0];
+    return localStorage.getItem("lembrete_" + whatsapp) === hoje;
+}
+
+function enviarLembreteComMarca(nome, whatsapp, plano, dias){
+    enviarLembrete(nome, whatsapp, plano, dias);
+    registrarLembrete(whatsapp);
+    atualizarDashboard();
 }
 
 function enviarLembrete(nome, whatsapp, plano, dias){
@@ -1780,7 +1798,10 @@ document.addEventListener("DOMContentLoaded", function(){
             const campo = document.getElementById(id);
             if(campo) campo.addEventListener("input", verificarAlteracoesConfiguracao);
         });
-        let guiaSalva = localStorage.getItem("guiaAtual") || "dashboard";
+        let guiaSalva = sessionStorage.getItem("sessaoIniciada")
+            ? (localStorage.getItem("guiaAtual") || "dashboard")
+            : "dashboard";
+        sessionStorage.setItem("sessaoIniciada", "1");
         abrirGuia(guiaSalva);
         renderizarServidores();
         renderizarPlanos();
