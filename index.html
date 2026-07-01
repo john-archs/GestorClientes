@@ -681,24 +681,6 @@ textarea{
     margin-bottom:12px;
 }
 
-/* ===== GRÁFICO DE LUCRO ===== */
-.grafico-box{
-    margin-top:20px;
-    background:#1e293b;
-    padding:20px;
-    border-radius:16px;
-}
-.grafico-box h2{
-    margin-bottom:16px;
-    font-size:16px;
-    color:#94a3b8;
-}
-#graficoLucro{
-    width:100%;
-    display:block;
-    border-radius:8px;
-}
-
 /* ===== MODAL RESUMO DIÁRIO ===== */
 .modal-resumo-overlay{
     position:fixed;
@@ -753,14 +735,6 @@ textarea{
     cursor:pointer;
     margin-top:4px;
 }
-
-/* ===== SYNC LINK ===== */
-.sync-acoes{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-}
-.sync-acoes button{ flex:1; }
 </style>
 </head>
 <body>
@@ -800,10 +774,6 @@ textarea{
     <div class="vencimentos-box">
         <h2>Clientes vencendo nos próximos 2 dias</h2>
         <div id="listaVencendo"></div>
-    </div>
-    <div class="grafico-box">
-        <h2>📈 Lucro dos últimos 12 meses</h2>
-        <canvas id="graficoLucro" height="200"></canvas>
     </div>
 </div>
 
@@ -895,11 +865,6 @@ textarea{
             <button class="btn-edit" onclick="document.getElementById('arquivoSistema').click()">📥 Importar Sistema</button>
             <input type="file" id="arquivoSistema" accept=".json" style="display:none" onchange="importarSistema(event)">
         </div>
-        <h2>● Sync entre Dispositivos</h2>
-        <div class="sync-acoes">
-            <button class="btn-edit" onclick="gerarLinkSync()">🔗 Gerar Link de Sync</button>
-            <button class="btn-vencendo" onclick="importarPorLink()">📲 Importar por Link</button>
-        </div>
         <hr>
         <h2>● Dados PIX</h2>
         <label>Chave PIX</label>
@@ -965,8 +930,26 @@ function pesquisaComDelay(){
 
 function copiarDadosCliente(){
     let texto = document.getElementById("dadosClienteTexto");
-    navigator.clipboard.writeText(texto.value);
-    mostrarSucesso("📋 Dados copiados.");
+    texto.focus();
+    texto.select();
+
+    let respondido = false;
+    const finalizar = (sucesso) => {
+        if(respondido) return;
+        respondido = true;
+        if(sucesso) mostrarSucesso("📋 Dados copiados.");
+        else tentarCopiaAntiga(texto);
+    };
+
+    setTimeout(() => finalizar(false), 600);
+
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(texto.value)
+            .then(() => finalizar(true))
+            .catch(() => finalizar(false));
+    } else {
+        finalizar(false);
+    }
 }
 function fecharDadosCliente(){
     document.getElementById("modalDadosCliente").classList.remove("ativo");
@@ -1237,14 +1220,6 @@ function renovarCliente(){
     clientes[clienteRenovacao].vencimento = dataBase.toISOString().split("T")[0];
     clientes[clienteRenovacao].ultimaRenovacao = new Date().toISOString().split("T")[0];
 
-    // Registra lucro no histórico mensal
-    const cli = clientes[clienteRenovacao];
-    let valorPlano = 0;
-    if(cli.plano){ const m = cli.plano.match(/R\$\s*([\d.,]+)/); if(m) valorPlano = parseFloat(m[1].replace(",",".")) || 0; }
-    const srv = servidores.find(s => (cli.servidor||"").toLowerCase().includes((s.nome||"").toLowerCase()));
-    const custoSrv = srv ? Number((srv.custo||"0").replace("R$","").replace(".","").replace(",",".")) : 0;
-    registrarLucroHistorico(valorPlano - custoSrv);
-
     salvar();
     renderizar();
     atualizarDashboard();
@@ -1468,9 +1443,11 @@ function adicionarCliente(){
     if(selectPlano.selectedIndex == -1){ alert("Cadastre um plano primeiro."); return; }
     let planoTexto = selectPlano.options[selectPlano.selectedIndex].text;
     if(!nome || !usuario || !senha){ alert("Preencha os campos."); return; }
-    clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs });
+    const hojeISO = new Date().toISOString().split("T")[0];
+    clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO });
     salvar();
     const novoCliente = clientes[clientes.length - 1];
+
     enviarMensagemAtivacao(novoCliente);
     clientes = JSON.parse(localStorage.getItem("clientes")) || [];
     filtroAtual = "todos";
@@ -1728,12 +1705,7 @@ function abrirGuia(id){
     document.getElementById(id).classList.add("ativa");
     localStorage.setItem("guiaAtual", id);
     document.getElementById("sidebar").classList.remove("ativo");
-    if(id === "dashboard") setTimeout(renderizarGrafico, 50);
 }
-
-window.addEventListener("resize", () => {
-    if(document.getElementById("dashboard").classList.contains("ativa")) renderizarGrafico();
-});
 
 function formatarData(data){
     if(!data || !data.includes("-")) return "-";
@@ -1816,7 +1788,6 @@ function atualizarDashboard(){
     document.getElementById("lucroTotal").innerHTML = `R$ ${lucro.toFixed(2).replace(".",",")}`;
     document.getElementById("clientesAtivos").innerHTML = ativos;
     document.getElementById("clientesVencendo").innerHTML = vencendo;
-    renderizarGrafico();
 }
 
 function calcularDiasRestantes(data){
@@ -1847,7 +1818,7 @@ function enviarLembreteComMarca(nome, whatsapp, plano, dias){
 function saudacaoBrasileira(){
     const hora = new Date().toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", hour:"numeric", hour12:false });
     const h = parseInt(hora);
-    if(h >= 1 && h < 12)  return "Bom dia";
+    if(h >= 5 && h < 12)  return "Bom dia";
     if(h >= 12 && h < 18) return "Boa tarde";
     return "Boa noite";
 }
@@ -1905,142 +1876,6 @@ function togglePesquisa(){
 }
 
 /* ══════════════════════════════════════════════
-   HISTÓRICO DE LUCRO MENSAL
-══════════════════════════════════════════════ */
-function calcularLucroMesAtual(){
-    const hoje  = new Date();
-    const mes   = hoje.getMonth();
-    const ano   = hoje.getFullYear();
-    let lucro   = 0;
-    clientes.forEach(c => {
-        if(!c.ultimaRenovacao) return;
-        const r = new Date(c.ultimaRenovacao);
-        if(r.getMonth() !== mes || r.getFullYear() !== ano) return;
-        let valor = 0;
-        if(c.plano){ const m = c.plano.match(/R\$\s*([\d.,]+)/); if(m) valor = parseFloat(m[1].replace(",",".")) || 0; }
-        const srv = servidores.find(s => (c.servidor||"").toLowerCase().includes((s.nome||"").toLowerCase()));
-        const custo = srv ? Number((srv.custo||"0").replace("R$","").replace(".","").replace(",",".")) : 0;
-        if(!isNaN(valor - custo)) lucro += valor - custo;
-    });
-    return lucro;
-}
-
-function registrarLucroHistorico(valorLucro){
-    if(isNaN(valorLucro) || valorLucro === 0) return;
-    const chave = new Date().toISOString().slice(0, 7);
-    try{
-        let historico = JSON.parse(localStorage.getItem("historicoProfito")) || {};
-        historico[chave] = (historico[chave] || 0) + valorLucro;
-        localStorage.setItem("historicoProfito", JSON.stringify(historico));
-    }catch(e){}
-}
-
-/* ══════════════════════════════════════════════
-   GRÁFICO DE BARRAS — LUCRO 12 MESES
-══════════════════════════════════════════════ */
-function renderizarGrafico(){
-    const canvas = document.getElementById("graficoLucro");
-    if(!canvas) return;
-
-    // Se o canvas ainda estiver oculto (guia display:none), agenda nova tentativa
-    const w = canvas.getBoundingClientRect().width
-           || canvas.parentElement?.getBoundingClientRect().width
-           || (window.innerWidth - 60);
-    if(w < 10){ setTimeout(renderizarGrafico, 200); return; }
-
-    const ctx = canvas.getContext("2d");
-    const hoje = new Date();
-    const mesAtualChave = hoje.toISOString().slice(0, 7);
-
-    // Gera array dos últimos 12 meses (mais antigo → mais recente)
-    const meses = [];
-    for(let i = 11; i >= 0; i--){
-        const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-        meses.push({
-            chave: d.toISOString().slice(0, 7),
-            label: d.toLocaleString("pt-BR", { month:"short" }).replace(".","") + "/" + String(d.getFullYear()).slice(2)
-        });
-    }
-
-    let historico = {};
-    try{ historico = JSON.parse(localStorage.getItem("historicoProfito")) || {}; }catch(e){}
-
-    // Garante que o mês atual aparece com o lucro recalculado em tempo real
-    historico[mesAtualChave] = calcularLucroMesAtual();
-
-    const valores = meses.map(m => historico[m.chave] || 0);
-    const maxVal  = Math.max(...valores, 1);
-
-    // Dimensões
-    const dpr = window.devicePixelRatio || 1;
-    const h   = 200;
-    canvas.width  = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width  = w + "px";
-    canvas.style.height = h + "px";
-    ctx.scale(dpr, dpr);
-
-    const padL = 8, padR = 8, padT = 28, padB = 36;
-    const areaW = w - padL - padR;
-    const areaH = h - padT - padB;
-    const slot  = areaW / meses.length;
-    const barW  = Math.max(6, Math.floor(slot) - 5);
-
-    ctx.clearRect(0, 0, w, h);
-
-    // Linhas de grade sutis
-    ctx.strokeStyle = "rgba(255,255,255,.06)";
-    ctx.lineWidth = 1;
-    [1,2,3,4].forEach(g => {
-        const y = padT + areaH - (areaH * g / 4);
-        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
-    });
-
-    meses.forEach((mes, i) => {
-        const val     = valores[i];
-        const ehAtual = mes.chave === mesAtualChave;
-        // Barra mínima de 3px para meses sem dados (apenas para o mês atual)
-        const barH    = val > 0
-            ? Math.max(6, Math.round((val / maxVal) * areaH))
-            : (ehAtual ? 3 : 0);
-        const x = padL + i * slot + (slot - barW) / 2;
-        const y = padT + areaH - barH;
-
-        if(barH === 0) {
-            // Apenas label do mês
-        } else {
-            const cor = ehAtual ? "#38bdf8" : "#334155";
-            const r   = Math.min(4, barW / 2);
-            ctx.fillStyle = cor;
-            ctx.beginPath();
-            ctx.moveTo(x + r, y);
-            ctx.lineTo(x + barW - r, y);
-            ctx.arcTo(x + barW, y, x + barW, y + r, r);
-            ctx.lineTo(x + barW, y + barH);
-            ctx.lineTo(x, y + barH);
-            ctx.arcTo(x, y, x + r, y, r);
-            ctx.closePath();
-            ctx.fill();
-        }
-
-        // Valor acima (só se tiver valor)
-        if(val > 0){
-            ctx.fillStyle = ehAtual ? "#e0f2fe" : "#94a3b8";
-            ctx.font = `bold ${barW < 24 ? 9 : 10}px Arial`;
-            ctx.textAlign = "center";
-            const lbl = val >= 1000 ? (val/1000).toFixed(1)+"k" : Math.round(val).toString();
-            ctx.fillText(lbl, x + barW/2, y - 5);
-        }
-
-        // Label do mês
-        ctx.fillStyle = ehAtual ? "#38bdf8" : "#475569";
-        ctx.font = `${barW < 24 ? 8 : 9}px Arial`;
-        ctx.textAlign = "center";
-        ctx.fillText(mes.label, x + barW/2, h - 6);
-    });
-}
-
-/* ══════════════════════════════════════════════
    RESUMO DIÁRIO AUTOMÁTICO
 ══════════════════════════════════════════════ */
 function verificarResumoDiario(){
@@ -2049,7 +1884,6 @@ function verificarResumoDiario(){
 
     const vencemHoje    = clientes.filter(c => calcularDiasRestantes(c.vencimento) === 0).length;
     const vencemAmanha  = clientes.filter(c => calcularDiasRestantes(c.vencimento) === 1).length;
-    const jaVencidos    = clientes.filter(c => calcularDiasRestantes(c.vencimento) < 0).length;
 
     let receber = 0;
     clientes.forEach(c => {
@@ -2066,8 +1900,6 @@ function verificarResumoDiario(){
         linhas.push(`<div class="resumo-linha aviso"><span>🔥 Vencem hoje</span><span>${vencemHoje} cliente${vencemHoje>1?"s":""}</span></div>`);
     if(vencemAmanha > 0)
         linhas.push(`<div class="resumo-linha aviso"><span>⚠️ Vencem amanhã</span><span>${vencemAmanha} cliente${vencemAmanha>1?"s":""}</span></div>`);
-    if(jaVencidos > 0)
-        linhas.push(`<div class="resumo-linha alerta"><span>❌ Já vencidos</span><span>${jaVencidos} cliente${jaVencidos>1?"s":""}</span></div>`);
     if(receber > 0)
         linhas.push(`<div class="resumo-linha ok"><span>💰 A receber hoje/amanhã</span><span>R$ ${receber.toFixed(2).replace(".",",")}</span></div>`);
 
@@ -2083,68 +1915,18 @@ function fecharResumoDiario(){
     document.getElementById("modalResumoDiario").style.display = "none";
 }
 
-/* ══════════════════════════════════════════════
-   SYNC ENTRE DISPOSITIVOS VIA LINK
-══════════════════════════════════════════════ */
-function gerarLinkSync(){
+function tentarCopiaAntiga(campo){
+    campo.focus();
+    campo.select();
     try{
-        const dados = {
-            clientes,
-            planos,
-            servidores,
-            servidorPadrao: localStorage.getItem("servidorPadrao") || "",
-            configuracoes: JSON.parse(localStorage.getItem("configuracoes")) || {},
-            historicoProfito: JSON.parse(localStorage.getItem("historicoProfito")) || {}
-        };
-        const json   = JSON.stringify(dados);
-        const base64 = btoa(unescape(encodeURIComponent(json)));
-        const url    = location.href.split("#")[0] + "#sync=" + base64;
-
-        if(navigator.clipboard && navigator.clipboard.writeText){
-            navigator.clipboard.writeText(url).then(() => {
-                mostrarSucesso("🔗 Link copiado! Cole em outro dispositivo.");
-            }).catch(() => {
-                prompt("Copie o link abaixo:", url);
-            });
-        } else {
-            prompt("Copie o link abaixo:", url);
+        const ok = document.execCommand("copy");
+        if(ok){
+            mostrarSucesso("📋 Copiado!");
         }
+        // Se não conseguiu, não mostra nenhum alerta/erro — o texto já
+        // fica selecionado no campo, e dá pra copiar na mão (pressione e segure > Copiar).
     }catch(e){
-        alert("Erro ao gerar link: " + e.message);
-    }
-}
-
-function importarPorLink(){
-    const raw = prompt("Cole o link de sync aqui:");
-    if(!raw) return;
-    processarLinkSync(raw);
-}
-
-function processarLinkSync(url){
-    try{
-        const match = url.match(/[#&]sync=([^&]+)/);
-        if(!match){ alert("Link inválido ou sem dados de sync."); return; }
-        const json  = decodeURIComponent(escape(atob(match[1])));
-        const dados = JSON.parse(json);
-        if(!confirm("Isso substituirá todos os dados deste dispositivo. Continuar?")) return;
-        clientes   = dados.clientes   || [];
-        planos     = dados.planos     || [];
-        servidores = dados.servidores || [];
-        localStorage.setItem("clientes",        JSON.stringify(clientes));
-        localStorage.setItem("planos",          JSON.stringify(planos));
-        localStorage.setItem("servidores",      JSON.stringify(servidores));
-        localStorage.setItem("servidorPadrao",  dados.servidorPadrao || "");
-        localStorage.setItem("configuracoes",   JSON.stringify(dados.configuracoes || {}));
-        localStorage.setItem("historicoProfito",JSON.stringify(dados.historicoProfito || {}));
-        carregarConfiguracoes();
-        renderizarServidores();
-        renderizarPlanos();
-        renderizar();
-        atualizarDashboard();
-        history.replaceState(null, "", location.pathname);
-        mostrarSucesso("✅ Dados sincronizados com sucesso!");
-    }catch(e){
-        alert("Erro ao importar: " + e.message);
+        // Mesma coisa: falha silenciosa, o texto continua selecionado.
     }
 }
 
@@ -2168,8 +1950,6 @@ document.addEventListener("DOMContentLoaded", function(){
         atualizarDashboard();
         configuracaoOriginal = obterConfiguracoesAtuais();
         verificarAlteracoesConfiguracao();
-        // Verifica sync por link na URL
-        if(location.hash.includes("sync=")) processarLinkSync(location.href);
         // Resumo diário (leve atraso para dados já estarem prontos)
         setTimeout(verificarResumoDiario, 400);
     } catch(erro){
