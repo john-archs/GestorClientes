@@ -1818,7 +1818,7 @@ function enviarLembreteComMarca(nome, whatsapp, plano, dias){
 function saudacaoBrasileira(){
     const hora = new Date().toLocaleString("pt-BR", { timeZone:"America/Sao_Paulo", hour:"numeric", hour12:false });
     const h = parseInt(hora);
-    if(h >= 5 && h < 12)  return "Bom dia";
+    if(h >= 1 && h < 12)  return "Bom dia";
     if(h >= 12 && h < 18) return "Boa tarde";
     return "Boa noite";
 }
