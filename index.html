@@ -123,7 +123,6 @@ button{
 /* ===== CARD NOVO ===== */
 .card{
     background:#1e293b;
-    padding:15px;
     border-radius:16px;
     border-left:4px solid #38bdf8;
     overflow:hidden;
@@ -305,6 +304,65 @@ button{
 .btn-acao.renovar{ background:#22c55e; color:white; }
 .btn-acao.lembrete{ background:#06b6d4; color:white; }
 .btn-acao.cobranca{ background:#c084fc; color:white; }
+.btn-acao.historico{ background:#8b5cf6; color:white; }
+
+/* ===== Destaque de termo pesquisado ===== */
+.destaque-busca{
+    background:#38bdf8;
+    color:#0f172a;
+    padding:0 2px;
+    border-radius:3px;
+}
+
+/* ===== Modo compacto ===== */
+.lista.compacto{
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap:10px;
+}
+.lista.compacto .card{
+    padding:0;
+}
+.lista.compacto .card-header{
+    padding:10px 12px 4px 12px;
+}
+.lista.compacto .nome{
+    font-size:14px;
+}
+.lista.compacto .status{
+    padding:2px 7px;
+    font-size:10px;
+}
+.lista.compacto .card-body{
+    display:none;
+}
+.lista.compacto .btn-toggle-acoes{
+    display:none;
+}
+.lista.compacto .card-acoes{
+    display:flex !important;
+    flex-wrap:wrap;
+    border-top:none;
+    padding:2px 12px 12px 12px;
+    animation:none;
+    gap:5px;
+    background:transparent;
+}
+.lista.compacto .acao-grupo{
+    display:contents;
+}
+.lista.compacto .btn-acao{
+    min-width:0 !important;
+    width:26px;
+    height:26px;
+    padding:0;
+    flex:0 0 auto !important;
+    font-size:12px;
+    border-radius:7px;
+    gap:0;
+}
+.lista.compacto .btn-label{
+    display:none;
+}
 
 /* ===== resto do layout original ===== */
 .menu-btn{
@@ -681,6 +739,106 @@ textarea{
     margin-bottom:12px;
 }
 
+/* ===== FADE-IN DOS CARDS ===== */
+@keyframes cardFadeIn{
+    from{ opacity:0; transform:translateY(10px); }
+    to{ opacity:1; transform:translateY(0); }
+}
+
+.card{
+    animation: cardFadeIn .4s ease both;
+}
+
+/* ===== SKELETON LOADING ===== */
+@keyframes skeletonShimmer{
+    0%{ background-position: 100% 50%; }
+    100%{ background-position: 0 50%; }
+}
+
+.card.skeleton{
+    animation:none;
+    gap:10px;
+    padding:16px;
+}
+
+.skeleton-linha{
+    height:14px;
+    border-radius:6px;
+    background:linear-gradient(90deg, #1e293b 25%, #2a3d5c 37%, #1e293b 63%);
+    background-size:400% 100%;
+    animation:skeletonShimmer 1.4s ease infinite;
+}
+
+.skeleton-linha.titulo{
+    height:18px;
+    width:55%;
+}
+
+.skeleton-linha.pequena{
+    width:70%;
+}
+
+.skeleton-linha.curta{
+    width:40%;
+}
+
+/* ===== FILTRO / ORDENAÇÃO / PAGINAÇÃO ===== */
+.linha-filtros{
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:15px;
+}
+
+.filtro-label{
+    color:#94a3b8;
+    font-weight:bold;
+    font-size:13px;
+}
+
+.paginacao-clientes{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:20px;
+}
+
+.pagina-btn{
+    background:#1e293b;
+    color:#cbd5e1;
+    border:none;
+    min-width:36px;
+    height:36px;
+    padding:0 10px;
+    border-radius:8px;
+    font-weight:bold;
+    font-size:13px;
+    cursor:pointer;
+}
+
+.pagina-btn:hover{
+    background:#1e3a5f;
+}
+
+.pagina-btn.ativa{
+    background:#38bdf8;
+    color:black;
+}
+
+.pagina-btn:disabled{
+    opacity:.4;
+    cursor:default;
+}
+
+.pagina-reticencias{
+    color:#475569;
+    padding:0 4px;
+    font-weight:bold;
+}
+
 /* ===== MODAL RESUMO DIÁRIO ===== */
 .modal-resumo-overlay{
     position:fixed;
@@ -784,6 +942,7 @@ textarea{
     <div class="topo topo-clientes">
         <button class="btn-add" onclick="toggleAdicionar()">➕ Adicionar</button>
         <button class="btn-edit" onclick="togglePesquisa()">🔎 Pesquisar</button>
+        <button class="btn-vencendo" id="btnModoCompacto" onclick="toggleModoCompacto()">🧩 Compacto</button>
     </div>
 
     <div class="topo" id="boxAdicionar" style="display:none;">
@@ -809,15 +968,24 @@ textarea{
         <button class="filtro-btn" id="btnVencidos" onclick="filtrarClientes('vencido')">Vencidos [0]</button>
     </div>
 
-    <div style="margin-bottom:15px;">
+    <div class="linha-filtros">
+        <span class="filtro-label">Filtro:</span>
         <select id="ordenacaoClientes" onchange="alterarOrdenacao()">
             <option value="adicao">Adição</option>
             <option value="az">A-Z</option>
             <option value="vencimento">Venc.</option>
         </select>
+        <select id="itensPorPaginaSelect" onchange="alterarItensPorPagina()">
+            <option value="10">10 por página</option>
+            <option value="30">30 por página</option>
+            <option value="50">50 por página</option>
+            <option value="70">70 por página</option>
+            <option value="100">100 por página</option>
+        </select>
     </div>
 
     <div class="lista" id="listaClientes"></div>
+    <div class="paginacao-clientes" id="paginacaoClientes"></div>
 </div>
 
 <!-- CONFIGURAÇÕES -->
@@ -887,6 +1055,9 @@ textarea{
 let configuracaoOriginal = "";
 let filtroAtual = "todos";
 let ordenacaoAtual = "adicao";
+let itensPorPagina = parseInt(localStorage.getItem("itensPorPagina")) || 30;
+let paginaAtual = 1;
+let idRenderizacao = 0;
 let planoEditando = null;
 let clienteEditando = null;
 let servidorEditando = null;
@@ -925,7 +1096,7 @@ function esconderTooltip(){
 let timerPesquisa;
 function pesquisaComDelay(){
     clearTimeout(timerPesquisa);
-    timerPesquisa = setTimeout(() => { renderizar(); }, 250);
+    timerPesquisa = setTimeout(() => { paginaAtual = 1; renderizar(); }, 250);
 }
 
 function copiarDadosCliente(){
@@ -1018,7 +1189,22 @@ function abrirTelegramSuporte(){ window.open("https://t.me/Eduardo_TvS","_blank"
 
 function alterarOrdenacao(){
     ordenacaoAtual = document.getElementById("ordenacaoClientes").value;
+    paginaAtual = 1;
     renderizar();
+}
+
+function alterarItensPorPagina(){
+    itensPorPagina = parseInt(document.getElementById("itensPorPaginaSelect").value);
+    localStorage.setItem("itensPorPagina", itensPorPagina);
+    paginaAtual = 1;
+    renderizar();
+}
+
+function irParaPagina(pagina){
+    paginaAtual = pagina;
+    renderizar();
+    let lista = document.getElementById("listaClientes");
+    if(lista) lista.scrollIntoView({ behavior:"smooth", block:"start" });
 }
 
 function definirServidorPadrao(nomeServidor){
@@ -1217,8 +1403,18 @@ function renovarCliente(){
         dataBase = new Date();
     }
     dataBase.setDate(dataBase.getDate() + dias);
-    clientes[clienteRenovacao].vencimento = dataBase.toISOString().split("T")[0];
+    let vencimentoAnterior = cliente.vencimento || "";
+    let vencimentoNovo = dataBase.toISOString().split("T")[0];
+    clientes[clienteRenovacao].vencimento = vencimentoNovo;
     clientes[clienteRenovacao].ultimaRenovacao = new Date().toISOString().split("T")[0];
+
+    if(!Array.isArray(clientes[clienteRenovacao].historico)) clientes[clienteRenovacao].historico = [];
+    clientes[clienteRenovacao].historico.push({
+        data: new Date().toISOString().split("T")[0],
+        vencimentoAnterior,
+        vencimentoNovo,
+        plano: cliente.plano || ""
+    });
 
     salvar();
     renderizar();
@@ -1299,6 +1495,7 @@ function enviarDadosCliente(cliente){
 
 function filtrarClientes(tipo){
     filtroAtual = tipo;
+    paginaAtual = 1;
     document.querySelectorAll(".filtro-btn").forEach(btn => btn.classList.remove("ativo"));
     if(tipo == "todos") document.getElementById("btnTodos").classList.add("ativo");
     if(tipo == "ativo") document.getElementById("btnAtivos").classList.add("ativo");
@@ -1360,13 +1557,17 @@ function adicionarServidor(){
 }
 
 function removerServidor(index){
-    const servidorRemovido = servidores[index]?.nome;
-    servidores.splice(index, 1);
-    servidores = servidores.filter(s => s.nome && s.nome.trim() !== "");
-    if(localStorage.getItem("servidorPadrao") === servidorRemovido){
-        localStorage.removeItem("servidorPadrao");
-    }
-    renderizarServidores();
+    const servidor = servidores[index];
+    if(!servidor) return;
+    pedirConfirmacao(`Deseja realmente excluir o servidor "${servidor.nome}"?`, () => {
+        const servidorRemovido = servidor.nome;
+        servidores.splice(index, 1);
+        servidores = servidores.filter(s => s.nome && s.nome.trim() !== "");
+        if(localStorage.getItem("servidorPadrao") === servidorRemovido){
+            localStorage.removeItem("servidorPadrao");
+        }
+        renderizarServidores();
+    }, "🗑️ Excluir servidor");
 }
 
 function renderizarPlanos(){
@@ -1416,11 +1617,83 @@ function adicionarPlano(){
 }
 
 function removerPlano(index){
-    planos.splice(index, 1);
-    renderizarPlanos();
+    const plano = planos[index];
+    if(!plano) return;
+    pedirConfirmacao(`Deseja realmente excluir o plano "${plano.nome}"?`, () => {
+        planos.splice(index, 1);
+        renderizarPlanos();
+    }, "🗑️ Excluir plano");
 }
 
 let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
+let modoCompacto = localStorage.getItem("modoCompacto") === "1";
+let acaoConfirmacaoPendente = null;
+
+/* ===== MODAL DE CONFIRMAÇÃO GENÉRICO ===== */
+function pedirConfirmacao(mensagem, callback, titulo){
+    document.getElementById("confirmacaoTitulo").innerText = titulo || "⚠️ Confirmar ação";
+    document.getElementById("confirmacaoMensagem").innerText = mensagem;
+    acaoConfirmacaoPendente = callback;
+    document.getElementById("modalConfirmacao").classList.add("ativo");
+}
+
+function fecharModalConfirmacao(){
+    document.getElementById("modalConfirmacao").classList.remove("ativo");
+    acaoConfirmacaoPendente = null;
+}
+
+function confirmarAcaoModal(){
+    const callback = acaoConfirmacaoPendente;
+    fecharModalConfirmacao();
+    if(typeof callback === "function") callback();
+}
+
+/* ===== DESTAQUE DE TERMO PESQUISADO ===== */
+function destacar(texto, termo){
+    texto = texto === undefined || texto === null ? "" : String(texto);
+    if(!termo || !termo.trim()) return texto;
+    const escapado = termo.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`(${escapado})`, "ig");
+    return texto.replace(regex, '<mark class="destaque-busca">$1</mark>');
+}
+
+/* ===== MODO COMPACTO ===== */
+function toggleModoCompacto(){
+    modoCompacto = !modoCompacto;
+    localStorage.setItem("modoCompacto", modoCompacto ? "1" : "0");
+    aplicarModoCompacto();
+}
+
+function aplicarModoCompacto(){
+    let lista = document.getElementById("listaClientes");
+    let btn = document.getElementById("btnModoCompacto");
+    if(lista) lista.classList.toggle("compacto", modoCompacto);
+    if(btn) btn.innerHTML = modoCompacto ? "🧩 Normal" : "🧩 Compacto";
+}
+
+/* ===== HISTÓRICO DE RENOVAÇÕES ===== */
+function mostrarHistorico(index){
+    let cliente = clientes[index];
+    if(!cliente) return;
+    document.getElementById("historicoNome").innerText = cliente.nome || "";
+    let historico = cliente.historico || [];
+    let conteudo = document.getElementById("historicoConteudo");
+    if(historico.length === 0){
+        conteudo.innerHTML = `<div style="color:#94a3b8;">Nenhuma renovação registrada ainda.</div>`;
+    } else {
+        conteudo.innerHTML = [...historico].reverse().map(item => `
+<div style="background:#1e293b; border-radius:10px; padding:10px 14px; color:#cbd5e1;">
+    <div style="color:#38bdf8; font-weight:bold;">${formatarData(item.data)}</div>
+    <div>De: <span>${formatarData(item.vencimentoAnterior)}</span> → Para: <span>${formatarData(item.vencimentoNovo)}</span></div>
+    ${item.plano ? `<div>📦 ${item.plano}</div>` : ""}
+</div>`).join("");
+    }
+    document.getElementById("modalHistorico").classList.add("ativo");
+}
+
+function fecharHistorico(){
+    document.getElementById("modalHistorico").classList.remove("ativo");
+}
 
 function salvar(){
     localStorage.setItem("clientes", JSON.stringify(clientes));
@@ -1463,11 +1736,13 @@ function adicionarCliente(){
 
 function deletar(index){
     let cliente = clientes[index];
-    if(!confirm(`⚠️ Deseja realmente excluir o cliente "${cliente.nome}"?`)) return;
-    clientes.splice(index, 1);
-    salvar();
-    renderizar();
-    atualizarDashboard();
+    if(!cliente) return;
+    pedirConfirmacao(`Deseja realmente excluir o cliente "${cliente.nome}"?`, () => {
+        clientes.splice(index, 1);
+        salvar();
+        renderizar();
+        atualizarDashboard();
+    }, "🗑️ Excluir cliente");
 }
 
 function statusCliente(data){
@@ -1503,11 +1778,54 @@ function toggleAcoesCard(id){
     }
 }
 
+function renderizarSkeleton(lista, quantidade){
+    let blocos = [];
+    for(let i=0; i<quantidade; i++){
+        blocos.push(`
+<div class="card skeleton">
+    <div class="skeleton-linha titulo"></div>
+    <div class="skeleton-linha pequena"></div>
+    <div class="skeleton-linha pequena"></div>
+    <div class="skeleton-linha curta"></div>
+</div>`);
+    }
+    lista.innerHTML = blocos.join("");
+}
+
+function gerarBotoesPaginacao(totalPaginas, pagina){
+    let paginacaoEl = document.getElementById("paginacaoClientes");
+    if(!paginacaoEl) return;
+    if(totalPaginas <= 1){
+        paginacaoEl.innerHTML = "";
+        return;
+    }
+
+    let numeros = new Set([1, totalPaginas, pagina, pagina-1, pagina+1]);
+    let paginasValidas = [...numeros].filter(n => n >= 1 && n <= totalPaginas).sort((a,b) => a-b);
+
+    let html = `<button class="pagina-btn" ${pagina===1?"disabled":""} onclick="irParaPagina(${pagina-1})">‹</button>`;
+
+    let anterior = 0;
+    paginasValidas.forEach(n => {
+        if(anterior && n - anterior > 1){
+            html += `<span class="pagina-reticencias">…</span>`;
+        }
+        html += `<button class="pagina-btn ${n===pagina?"ativa":""}" onclick="irParaPagina(${n})">${n}</button>`;
+        anterior = n;
+    });
+
+    html += `<button class="pagina-btn" ${pagina===totalPaginas?"disabled":""} onclick="irParaPagina(${pagina+1})">›</button>`;
+
+    paginacaoEl.innerHTML = html;
+}
+
 function renderizar(){
     let lista = document.getElementById("listaClientes");
     let campoPesquisa = document.getElementById("pesquisa");
     let pesquisa = campoPesquisa ? campoPesquisa.value.toLowerCase() : "";
-    lista.innerHTML = "";
+
+    let seletorItens = document.getElementById("itensPorPaginaSelect");
+    if(seletorItens) seletorItens.value = itensPorPagina;
 
     let qtdAtivos = 0, qtdVencendo = 0, qtdVencidos = 0;
     let listaClientes = [...clientes];
@@ -1534,10 +1852,24 @@ function renderizar(){
         return status == filtroAtual;
     });
 
-    if(filtrados.length === 0){
-        lista.innerHTML = `<div class="lista-vazia"><span>📭</span>Nenhum cliente encontrado</div>`;
-    } else {
-        let html = filtrados.map((cliente) => {
+    let totalPaginas = Math.max(1, Math.ceil(filtrados.length / itensPorPagina));
+    if(paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+    if(paginaAtual < 1) paginaAtual = 1;
+
+    let inicio = (paginaAtual - 1) * itensPorPagina;
+    let paginaClientes = filtrados.slice(inicio, inicio + itensPorPagina);
+
+    // Skeleton loading enquanto os cards são preparados
+    let minhaRenderizacao = ++idRenderizacao;
+    renderizarSkeleton(lista, Math.min(paginaClientes.length || 1, itensPorPagina));
+
+    setTimeout(() => {
+        if(minhaRenderizacao !== idRenderizacao) return; // uma renderização mais nova já começou
+
+        if(filtrados.length === 0){
+            lista.innerHTML = `<div class="lista-vazia"><span>📭</span>Nenhum cliente encontrado</div>`;
+        } else {
+        let html = paginaClientes.map((cliente, indiceNaPagina) => {
             let indexReal = clientes.indexOf(cliente);
             let status = statusCliente(cliente.vencimento);
             let uid = "c" + indexReal + "_" + Date.now() + Math.random().toString(36).slice(2,5);
@@ -1557,57 +1889,66 @@ function renderizar(){
                 botoesExtras += `
 <button class="btn-acao lembrete"
     onclick="enviarLembrete('${primeiroNome(cliente.nome)}','${cliente.whatsapp}','${cliente.plano}','${diasRestantes}')">
-    ⏰ Lembrar
+    ⏰<span class="btn-label"> Lembrar</span>
 </button>`;
             }
             if(mostrarVencido){
                 botoesExtras += `
 <button class="btn-acao cobranca"
     onclick='enviarMensagemVencido(${JSON.stringify(cliente)})'>
-    💸 Cobrar
+    💸<span class="btn-label"> Cobrar</span>
 </button>`;
             }
 
+            let atraso = Math.min(indiceNaPagina * 0.04, 0.4);
+
             return `
-<div class="card ${status}">
+<div class="card ${status}" style="animation-delay:${atraso}s">
     <div class="card-header">
         <div class="card-header-left">
-            <div class="nome">${cliente.nome}</div>
+            <div class="nome">${destacar(cliente.nome, pesquisa)}</div>
             ${statusTexto}
         </div>
         <button class="btn-toggle-acoes" id="btn-acoes-${uid}" onclick="toggleAcoesCard('${uid}')">⋯</button>
     </div>
 
     <div class="card-body">
-        <div class="card-row">👤 <span>${cliente.usuario || "-"}</span></div>
-        <div class="card-row">📦 <span>${cliente.plano || "-"}</span></div>
+        <div class="card-row">👤 <span>${destacar(cliente.usuario || "-", pesquisa)}</span></div>
+        <div class="card-row">📦 <span>${destacar(cliente.plano || "-", pesquisa)}</span></div>
         <div class="card-row">📅 <span>${formatarData(cliente.vencimento)}</span></div>
     </div>
 
     <div class="card-acoes" id="acoes-${uid}">
         <div class="acao-grupo">
-            <button class="btn-acao whats" onclick='enviarDadosCliente(${JSON.stringify(cliente)})'>📱 WhatsApp</button>
-            <button class="btn-acao dados" onclick="mostrarDadosCliente(${indexReal})">📄 Dados</button>
+            <button class="btn-acao whats" onclick='enviarDadosCliente(${JSON.stringify(cliente)})'>📱<span class="btn-label"> WhatsApp</span></button>
+            <button class="btn-acao dados" onclick="mostrarDadosCliente(${indexReal})">📄<span class="btn-label"> Dados</span></button>
         </div>
         <div class="acao-grupo">
-            <button class="btn-acao editar" onclick="editarCliente(${indexReal})">✏️ Editar</button>
-            <button class="btn-acao renovar" onclick="abrirModalRenovacao(${indexReal})">🔄 Renovar</button>
+            <button class="btn-acao editar" onclick="editarCliente(${indexReal})">✏️<span class="btn-label"> Editar</span></button>
+            <button class="btn-acao renovar" onclick="abrirModalRenovacao(${indexReal})">🔄<span class="btn-label"> Renovar</span></button>
+        </div>
+        <div class="acao-grupo">
+            <button class="btn-acao historico" onclick="mostrarHistorico(${indexReal})">📜<span class="btn-label"> Histórico</span></button>
         </div>
         <div class="acao-grupo">
             ${botoesExtras}
-            <button class="btn-acao deletar" onclick="deletar(${indexReal})" style="${botoesExtras ? 'flex:0;min-width:44px;' : ''}">🗑️${botoesExtras ? "" : " Excluir"}</button>
+            <button class="btn-acao deletar" onclick="deletar(${indexReal})" style="${botoesExtras ? 'flex:0;min-width:44px;' : ''}">🗑️<span class="btn-label">${botoesExtras ? "" : " Excluir"}</span></button>
         </div>
     </div>
 </div>`;
         }).join("");
 
         lista.innerHTML = html;
-    }
+        }
 
-    document.getElementById("btnTodos").innerHTML = `Todos [${clientes.length}]`;
-    document.getElementById("btnAtivos").innerHTML = `Ativos [${qtdAtivos}]`;
-    document.getElementById("btnVencendo").innerHTML = `Vencendo [${qtdVencendo}]`;
-    document.getElementById("btnVencidos").innerHTML = `Vencidos [${qtdVencidos}]`;
+        gerarBotoesPaginacao(totalPaginas, paginaAtual);
+        aplicarModoCompacto();
+
+        document.getElementById("btnTodos").innerHTML = `Todos [${clientes.length}]`;
+        document.getElementById("btnAtivos").innerHTML = `Ativos [${qtdAtivos}]`;
+        document.getElementById("btnVencendo").innerHTML = `Vencendo [${qtdVencendo}]`;
+        document.getElementById("btnVencidos").innerHTML = `Vencidos [${qtdVencidos}]`;
+    }, 150);
 }
 
 function editarCliente(index){
@@ -1946,6 +2287,7 @@ document.addEventListener("DOMContentLoaded", function(){
         renderizarServidores();
         renderizarPlanos();
         filtroAtual = "todos";
+        aplicarModoCompacto();
         renderizar();
         atualizarDashboard();
         configuracaoOriginal = obterConfiguracoesAtuais();
@@ -2031,6 +2373,34 @@ document.addEventListener("DOMContentLoaded", function(){
             <button class="btn-add" onclick="copiarDadosCliente()">📋 Copiar</button>
             <button class="btn-delete" onclick="fecharDadosCliente()">❌ Fechar</button>
         </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMAÇÃO -->
+<div class="modal" id="modalConfirmacao">
+    <div class="modal-box">
+        <div class="modal-topo">
+            <h2 id="confirmacaoTitulo">⚠️ Confirmar ação</h2>
+            <button class="fechar-modal" onclick="fecharModalConfirmacao()">✕</button>
+        </div>
+        <p id="confirmacaoMensagem" style="color:#cbd5e1;"></p>
+        <div style="display:flex; gap:10px;">
+            <button class="btn-delete" style="flex:1;" onclick="confirmarAcaoModal()">🗑️ Confirmar</button>
+            <button class="btn-edit" style="flex:1;" onclick="fecharModalConfirmacao()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL HISTÓRICO DE RENOVAÇÕES -->
+<div class="modal" id="modalHistorico">
+    <div class="modal-box">
+        <div class="modal-topo">
+            <h2>📜 Histórico de Renovações</h2>
+            <button class="fechar-modal" onclick="fecharHistorico()">✕</button>
+        </div>
+        <strong id="historicoNome" style="color:white;"></strong>
+        <div id="historicoConteudo" style="display:flex; flex-direction:column; gap:10px; max-height:50vh; overflow-y:auto;"></div>
+        <button class="btn-edit" onclick="fecharHistorico()">Fechar</button>
     </div>
 </div>
 
