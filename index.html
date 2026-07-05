@@ -2055,14 +2055,15 @@ function paraNumero(valorTexto){
     return isNaN(n) ? 0 : n;
 }
 
-// Considera revenda tanto quem foi marcado internamente (tipoCliente)
-// quanto quem tem o plano começando com "Revenda" (ex: clientes antigos,
-// cadastrados manualmente, ou importados de um backup anterior a este
-// recurso) — assim a renovação e o dashboard funcionam mesmo sem a marcação.
+// IMPORTANTE: só considera revenda (créditos) quem foi explicitamente marcado
+// como tal (tipoCliente ou já tem histórico de créditos). O app já tinha um
+// plano chamado "Revenda" para assinaturas sem vencimento — isso NÃO tem
+// relação com o sistema de créditos, então não pode entrar nessa checagem
+// (isso quebrava a renovação normal desses clientes).
 function ehClienteRevenda(cliente){
     if(!cliente) return false;
     if(cliente.tipoCliente === "revenda") return true;
-    return typeof cliente.plano === "string" && cliente.plano.trim().toLowerCase().startsWith("revenda");
+    return Array.isArray(cliente.historicoCreditos) && cliente.historicoCreditos.length > 0;
 }
 
 function alternarTipoCliente(){
