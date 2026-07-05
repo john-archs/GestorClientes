@@ -1042,6 +1042,10 @@ textarea{
         <label>Banco</label>
         <input type="text" id="pixBanco" placeholder="Banco">
         <hr>
+        <h2>● Suporte</h2>
+        <label>WhatsApp Suporte (com código do país + DDD, só números)</label>
+        <input type="text" id="whatsappSuporte" placeholder="Ex: 5584991815446" onblur="limparWhatsapp(this)">
+        <hr>
         <h2>● Extras</h2>
         <label>Promoção</label>
         <textarea id="textoPromocao" placeholder="Texto promocional enviado nas renovações"></textarea>
@@ -1138,7 +1142,7 @@ function mostrarDadosCliente(index){
         observacoes = cliente.obs.replace(/\\n/g, "\n");
         observacoes = `📝 Observações:\n${observacoes}`;
     }
-    document.getElementById("dadosClienteTexto").value =
+    const montarTexto = (linkCliente) =>
 `👤 Nome: ${cliente.nome}
 
 🖥️ Servidor: ${cliente.servidor}
@@ -1148,8 +1152,21 @@ function mostrarDadosCliente(index){
 
 📅 Vencimento: ${formatarData(cliente.vencimento)}${
 linkM3U ? `\n\n🔗 Link M3U:\n${linkM3U}` : ""
+}${linkCliente ? `\n\n🔗 Área do cliente:\n${linkCliente}` : ""
 }${observacoes ? `\n\n${observacoes}` : ""}`;
+
+    document.getElementById("dadosClienteTexto").value = montarTexto("");
     document.getElementById("modalDadosCliente").classList.add("ativo");
+
+    if(URL_PORTAL_CLIENTE.trim()){
+        document.getElementById("dadosClienteTexto").value = montarTexto("Gerando link...");
+        gerarLinkEncurtadoCliente(cliente).then(linkCliente => {
+            // Só atualiza se o modal ainda estiver aberto no mesmo cliente
+            if(document.getElementById("modalDadosCliente").classList.contains("ativo")){
+                document.getElementById("dadosClienteTexto").value = montarTexto(linkCliente);
+            }
+        });
+    }
 }
 
 function enviarMensagemVencido(cliente){
@@ -1261,6 +1278,7 @@ function obterConfiguracoesAtuais(){
         pixChave: document.getElementById("pixChave").value,
         pixNome: document.getElementById("pixNome").value,
         pixBanco: document.getElementById("pixBanco").value,
+        whatsappSuporte: document.getElementById("whatsappSuporte").value,
         textoPromocao: document.getElementById("textoPromocao").value,
         textoRodape: document.getElementById("textoRodape").value
     });
@@ -1423,7 +1441,65 @@ function renovarCliente(){
     fecharModalRenovacao();
 }
 
-function enviarMensagemRenovacao(cliente){
+/* ══════════════════════════════════════════════
+   GERADOR DE LINK AUTOMÁTICO (encurtado)
+   Gera e encurta o link do portal do cliente automaticamente
+   ao renovar ou enviar dados, sem precisar tocar em "Gerar".
+
+   ⚠️ Configure aqui embaixo a URL do seu portal-cliente.html
+   e, se tiver, o token da API TinyURL. Esses dados ficam fixos
+   no código (não são preenchidos manualmente na tela).
+══════════════════════════════════════════════ */
+const URL_PORTAL_CLIENTE = "https://john-archs.github.io/Usuario/";
+const TINYURL_TOKEN = ""; // opcional — deixe "" para usar o is.gd como encurtador
+
+function extrairPlanoValorParaLink(planoCompleto){
+    // Ex: "Mensal 1 Tela - R$ 30,00"  ->  { planoNome: "Mensal 1 Tela", valor: "R$ 30,00" }
+    const match = (planoCompleto || "").match(/^(.*?)\s*-\s*(R\$\s*[\d.,]+)\s*$/);
+    if(match) return { planoNome: match[1].trim(), valor: match[2].trim() };
+    return { planoNome: (planoCompleto || "").trim(), valor: "" };
+}
+
+function codificarLinkCliente(nome, plano, valor, vencimento){
+    // Mesmo formato compacto usado no Gerador de Link: nome|plano|valor|vencimento
+    const texto = [nome, plano, valor, vencimento].join("|");
+    return btoa(unescape(encodeURIComponent(texto)));
+}
+
+async function gerarLinkEncurtadoCliente(cliente){
+    const urlPortal = URL_PORTAL_CLIENTE.trim();
+    if(!urlPortal) return ""; // sem URL do portal definida no código, não há como gerar o link
+
+    const { planoNome, valor } = extrairPlanoValorParaLink(cliente.plano);
+    const codigo = codificarLinkCliente(cliente.nome, planoNome, valor, cliente.vencimento);
+    const linkCompleto = `${urlPortal}?d=${codigo}`;
+    const token = TINYURL_TOKEN.trim();
+
+    if(token){
+        try{
+            const resp = await fetch("https://api.tinyurl.com/create", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ url: linkCompleto })
+            });
+            const dados = await resp.json();
+            if(dados.data && dados.data.tiny_url) return dados.data.tiny_url;
+        }catch(erro){ /* segue para o fallback abaixo */ }
+    }
+
+    try{
+        const resp = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(linkCompleto)}`);
+        const dados = await resp.json();
+        if(dados.shorturl) return dados.shorturl;
+    }catch(erro){ /* segue para o retorno abaixo */ }
+
+    return linkCompleto; // não foi possível encurtar: usa o link completo mesmo assim
+}
+
+async function enviarMensagemRenovacao(cliente){
     let valor = "";
     let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
     let promocao = config.textoPromocao || "";
@@ -1431,6 +1507,7 @@ function enviarMensagemRenovacao(cliente){
     let match = cliente.plano.match(/R\$\s*([\d.,]+)/);
     if(match) valor = match[1];
     let nomePlano = cliente.plano.split(" - ")[0];
+    let linkCliente = await gerarLinkEncurtadoCliente(cliente);
     let mensagem =
 `*✅ Renovação realizada ✅*
 
@@ -1444,6 +1521,7 @@ function enviarMensagemRenovacao(cliente){
 *🔸 Valor:* R$ ${valor}
 
 *🗓️ Vencimento:* ${formatarData(cliente.vencimento)}`;
+    if(linkCliente) mensagem += `\n\n*🔗 Sua área do cliente:*\n${linkCliente}`;
     if(promocao && promocao.trim()) mensagem += `\n~~~~~~~~~~~~~~~~~~\n${promocao}`;
     if(rodape && rodape.trim()) mensagem += `\n~~~~~~~~~~~~~~~~~~\n${rodape}`;
     if(cliente.obs){
@@ -1479,7 +1557,8 @@ function togglePlano(){
     box.style.display = box.style.display == "none" ? "flex" : "none";
 }
 
-function enviarDadosCliente(cliente){
+async function enviarDadosCliente(cliente){
+    let linkCliente = await gerarLinkEncurtadoCliente(cliente);
     let mensagem =
 `Ooi, ${primeiroNome(cliente.nome)}. Segue seus dados de acesso 📺
 
@@ -1490,6 +1569,7 @@ function enviarDadosCliente(cliente){
 📅 Vencimento: ${formatarData(cliente.vencimento)}
 
 📦 Plano: ${cliente.plano}`;
+    if(linkCliente) mensagem += `\n\n🔗 Sua área do cliente:\n${linkCliente}`;
     window.open(`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
 
@@ -2185,6 +2265,7 @@ function salvarConfiguracoes(){
     config.pixChave = document.getElementById("pixChave").value;
     config.pixNome = document.getElementById("pixNome").value;
     config.pixBanco = document.getElementById("pixBanco").value;
+    config.whatsappSuporte = document.getElementById("whatsappSuporte").value.replace(/\D/g,"");
     config.nomeSistema = document.getElementById("nomeSistema").value;
     config.textoPromocao = document.getElementById("textoPromocao").value;
     config.textoRodape = document.getElementById("textoRodape").value;
@@ -2202,6 +2283,7 @@ function carregarConfiguracoes(){
     document.getElementById("pixChave").value = config.pixChave || "";
     document.getElementById("pixNome").value = config.pixNome || "";
     document.getElementById("pixBanco").value = config.pixBanco || "";
+    document.getElementById("whatsappSuporte").value = config.whatsappSuporte || "";
     let nomeSistema = document.getElementById("nomeSistema");
     if(nomeSistema) nomeSistema.value = config.nomeSistema || "";
     atualizarCabecalho();
@@ -2275,7 +2357,7 @@ document.addEventListener("DOMContentLoaded", function(){
     try{
         carregarConfiguracoes();
         configurarUploadLogo();
-        ["nomeSistema","pixChave","pixNome","pixBanco","textoPromocao","textoRodape"].forEach(id => {
+        ["nomeSistema","pixChave","pixNome","pixBanco","whatsappSuporte","textoPromocao","textoRodape"].forEach(id => {
             const campo = document.getElementById(id);
             if(campo) campo.addEventListener("input", verificarAlteracoesConfiguracao);
         });
