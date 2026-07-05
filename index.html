@@ -620,6 +620,16 @@ select{
 }
 #renovacaoNome,
 #renovacaoAtual,
+.plano-duracao{
+    font-size:12px;
+    color:#94a3b8;
+    margin-top:2px;
+}
+
+.plano-revenda .plano-duracao{
+    color:#38bdf8;
+}
+
 #renovacaoPlano{
     color:white;
 }
@@ -946,13 +956,19 @@ textarea{
     </div>
 
     <div class="topo" id="boxAdicionar" style="display:none;">
-        <select id="servidor"></select>
+        <select id="tipoCliente" onchange="alternarTipoCliente()">
+            <option value="normal">Cliente Normal</option>
+            <option value="revenda">Revenda (créditos)</option>
+        </select>
+        <select id="servidor" onchange="atualizarValorRevendaAdicionar()"></select>
         <input type="text" id="nome" placeholder="Nome">
         <input type="text" id="usuario" placeholder="Usuário">
         <input type="text" id="senha" placeholder="Senha">
         <input type="text" id="whatsapp" placeholder="+55 DDD NÚMERO" onblur="limparWhatsapp(this)">
-        <select id="plano"></select>
+        <select id="plano" onchange="sugerirVencimentoPlano()"></select>
         <input type="text" id="vencimento" placeholder="Data" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+        <input type="number" id="creditosRevenda" min="1" placeholder="Quantidade de créditos" oninput="atualizarValorRevendaAdicionar()" style="display:none;">
+        <input type="text" id="valorRevendaCalculado" placeholder="Valor (calculado automaticamente)" readonly style="display:none;">
         <textarea id="obs" placeholder="OBS: dispositivo"></textarea>
         <button class="btn-add" onclick="adicionarCliente()">✅</button>
     </div>
@@ -1022,6 +1038,18 @@ textarea{
         <div class="topo" id="boxPlano" style="display:none;">
             <input type="text" id="novoPlanoNome" placeholder="Nome do plano">
             <input type="number" id="novoPlanoValor" placeholder="Valor">
+            <select id="novoPlanoDuracao" onchange="alternarDuracaoPersonalizada('novoPlanoDuracao','novoPlanoDuracaoPersonalizada')">
+                <option value="7d">7 dias</option>
+                <option value="15d">15 dias</option>
+                <option value="1m" selected>1 mês (Mensal)</option>
+                <option value="2m">2 meses</option>
+                <option value="3m">3 meses (Trimestral)</option>
+                <option value="6m">6 meses (Semestral)</option>
+                <option value="12m">12 meses (Anual)</option>
+                <option value="personalizado">Personalizado (dias)</option>
+                <option value="revenda">Revenda (sem duração definida)</option>
+            </select>
+            <input type="number" id="novoPlanoDuracaoPersonalizada" placeholder="Nº de dias" style="display:none;">
             <button class="btn-add" onclick="adicionarPlano()">✅</button>
         </div>
         <div id="listaPlanos"></div>
@@ -1073,11 +1101,44 @@ let servidores = JSON.parse(localStorage.getItem("servidores")) || [
 servidores = servidores.filter(s => s && s.nome && s.nome.trim() !== "");
 
 let planos = JSON.parse(localStorage.getItem("planos")) || [
-    { nome:"Mensal 1 Tela", valor:30 },
-    { nome:"Mensal Econômico", valor:15 },
-    { nome:"Mensal 2 Telas", valor:50 },
-    { nome:"Trimestral", valor:75 }
+    { nome:"Mensal 1 Tela", valor:30, duracao:{unidade:"meses", valor:1} },
+    { nome:"Mensal Econômico", valor:15, duracao:{unidade:"meses", valor:1} },
+    { nome:"Mensal 2 Telas", valor:50, duracao:{unidade:"meses", valor:1} },
+    { nome:"Trimestral", valor:75, duracao:{unidade:"meses", valor:3} }
 ];
+
+// Migração: converte formatos antigos de duração (campo "duracaoDias" em
+// dias corridos, ou planos sem nenhuma informação de duração) para o
+// formato atual { unidade:"meses"|"dias", valor }, que passa a vencer no
+// mesmo dia do mês seguinte para planos mensais/trimestrais/etc.
+const MESES_PADRAO_MIGRACAO = {30:1, 60:2, 90:3, 180:6, 365:12};
+planos = planos.map(p => {
+    if(p.duracao !== undefined) return p; // já está no formato atual
+
+    let duracao;
+    if(Object.prototype.hasOwnProperty.call(p, "duracaoDias")){
+        if(p.duracaoDias === null || p.duracaoDias === undefined || p.duracaoDias === ""){
+            duracao = null;
+        } else {
+            let dias = Number(p.duracaoDias);
+            duracao = MESES_PADRAO_MIGRACAO[dias]
+                ? { unidade:"meses", valor:MESES_PADRAO_MIGRACAO[dias] }
+                : { unidade:"dias", valor:dias };
+        }
+    } else {
+        let nome = (p.nome || "").toLowerCase();
+        if(nome.includes("revenda")) duracao = null;
+        else if(nome.includes("trimestral")) duracao = { unidade:"meses", valor:3 };
+        else if(nome.includes("semestral")) duracao = { unidade:"meses", valor:6 };
+        else if(nome.includes("anual")) duracao = { unidade:"meses", valor:12 };
+        else duracao = { unidade:"meses", valor:1 };
+    }
+
+    let copia = { ...p };
+    delete copia.duracaoDias;
+    copia.duracao = duracao;
+    return copia;
+});
 
 let pressTimer;
 function iniciarPressao(elemento, texto, event){
@@ -1158,7 +1219,7 @@ linkM3U ? `\n\n🔗 Link M3U:\n${linkM3U}` : ""
     document.getElementById("dadosClienteTexto").value = montarTexto("");
     document.getElementById("modalDadosCliente").classList.add("ativo");
 
-    if(URL_PORTAL_CLIENTE.trim()){
+    if(URL_PORTAL_CLIENTE.trim() && temWhatsappSuporte()){
         document.getElementById("dadosClienteTexto").value = montarTexto("Gerando link...");
         gerarLinkEncurtadoCliente(cliente).then(linkCliente => {
             // Só atualiza se o modal ainda estiver aberto no mesmo cliente
@@ -1397,8 +1458,22 @@ function abrirModalRenovacao(index){
     clienteRenovacao = index;
     let cliente = clientes[index];
     document.getElementById("renovacaoNome").innerText = cliente.nome;
-    document.getElementById("renovacaoAtual").innerText = formatarData(cliente.vencimento);
-    document.getElementById("renovacaoPlano").innerHTML = `<strong>Plano:</strong> ${cliente.plano || "-"}`;
+
+    if(ehClienteRevenda(cliente)){
+        document.getElementById("renovacaoInfoNormal").style.display = "none";
+        document.getElementById("renovacaoInfoRevenda").style.display = "block";
+        document.getElementById("renovacaoCreditos").value = "";
+        document.getElementById("renovacaoValorRevenda").value = "";
+    } else {
+        document.getElementById("renovacaoInfoNormal").style.display = "block";
+        document.getElementById("renovacaoInfoRevenda").style.display = "none";
+        let duracaoDias = obterDuracaoPlano(cliente.plano);
+        document.getElementById("renovacaoAtual").innerText = duracaoDias === null
+            ? "Sem vencimento (revenda)"
+            : formatarData(cliente.vencimento);
+        document.getElementById("renovacaoPlano").innerHTML =
+            `<strong>Plano:</strong> ${cliente.plano || "-"}<br><strong>Duração:</strong> ${formatarDuracaoPlano(duracaoDias)}`;
+    }
     document.getElementById("modalRenovacao").classList.add("ativo");
 }
 
@@ -1406,24 +1481,55 @@ function fecharModalRenovacao(){
     document.getElementById("modalRenovacao").classList.remove("ativo");
 }
 
+function atualizarValorRenovacaoRevenda(){
+    let creditos = parseInt(document.getElementById("renovacaoCreditos").value) || 0;
+    document.getElementById("renovacaoValorRevenda").value = moeda(creditos * VALOR_CREDITO_REVENDA);
+}
+
 function renovarCliente(){
     if(clienteRenovacao === null) return;
     let cliente = clientes[clienteRenovacao];
-    let dias = 30;
-    let planoTexto = (cliente.plano || "").toLowerCase();
-    if(planoTexto.includes("trimestral")) dias = 90;
-    if(planoTexto.includes("semestral")) dias = 180;
-    if(planoTexto.includes("anual")) dias = 365;
-    let dataBase;
-    if(cliente.vencimento && new Date(cliente.vencimento) > new Date()){
-        dataBase = new Date(cliente.vencimento);
-    } else {
-        dataBase = new Date();
+
+    if(ehClienteRevenda(cliente)){
+        let creditos = parseInt(document.getElementById("renovacaoCreditos").value) || 0;
+        if(creditos <= 0){ alert("Informe a quantidade de créditos."); return; }
+        let valorTotal = creditos * VALOR_CREDITO_REVENDA;
+        let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - CUSTO_CREDITO_REVENDA);
+        const hojeISORenovacao = new Date().toISOString().split("T")[0];
+
+        if(!Array.isArray(cliente.historicoCreditos)) cliente.historicoCreditos = [];
+        cliente.tipoCliente = "revenda";
+        cliente.historicoCreditos.push({ data:hojeISORenovacao, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:CUSTO_CREDITO_REVENDA, valorTotal, lucro:lucroOperacao });
+        cliente.ultimaRenovacao = hojeISORenovacao;
+        cliente.plano = `Revenda - ${creditos} créditos - ${moeda(valorTotal)}`;
+
+        if(!Array.isArray(cliente.historico)) cliente.historico = [];
+        cliente.historico.push({ data:hojeISORenovacao, vencimentoAnterior:"Revenda", vencimentoNovo:"Revenda", plano:cliente.plano });
+
+        salvar();
+        renderizar();
+        atualizarDashboard();
+        enviarMensagemRenovacaoRevenda(cliente, creditos, valorTotal);
+        fecharModalRenovacao();
+        return;
     }
-    dataBase.setDate(dataBase.getDate() + dias);
+
+    let duracao = obterDuracaoPlano(cliente.plano);
     let vencimentoAnterior = cliente.vencimento || "";
-    let vencimentoNovo = dataBase.toISOString().split("T")[0];
-    clientes[clienteRenovacao].vencimento = vencimentoNovo;
+    let vencimentoNovo = vencimentoAnterior;
+
+    // Planos sem duração definida (ex: revenda) não têm vencimento: a
+    // renovação apenas registra a data e fica no histórico, sem alterar
+    // (ou exigir) uma data de vencimento.
+    if(duracao){
+        let dataBase = (cliente.vencimento && paraDataLocal(cliente.vencimento) > new Date())
+            ? paraDataLocal(cliente.vencimento)
+            : new Date();
+        let novaData = adicionarPeriodoData(dataBase, duracao);
+        vencimentoNovo = novaData.toISOString().split("T")[0];
+        clientes[clienteRenovacao].vencimento = vencimentoNovo;
+    }
+
     clientes[clienteRenovacao].ultimaRenovacao = new Date().toISOString().split("T")[0];
 
     if(!Array.isArray(clientes[clienteRenovacao].historico)) clientes[clienteRenovacao].historico = [];
@@ -1451,7 +1557,16 @@ function renovarCliente(){
    no código (não são preenchidos manualmente na tela).
 ══════════════════════════════════════════════ */
 const URL_PORTAL_CLIENTE = "https://john-archs.github.io/Usuario/";
-const TINYURL_TOKEN = ""; // opcional — deixe "" para usar o is.gd como encurtador
+const TINYURL_TOKEN = "BupOEFtUf5r0pIwdI8gx66wHP1TZ5bOVuFTCVkcrS7Gk4IqFhAqMDw4AZ3FE"; // opcional — deixe "" para usar o is.gd como encurtador
+
+/* ══════════════════════════════════════════════
+   CLIENTES REVENDA — custo e valor por crédito
+   Fixos aqui no código (não aparecem em Configurações)
+   porque essa mesma tela pode ser usada por revendas
+   com os próprios clientes, e esse número é sensível.
+══════════════════════════════════════════════ */
+const CUSTO_CREDITO_REVENDA = 9.00;  // quanto você paga por crédito
+const VALOR_CREDITO_REVENDA = 11.00; // quanto você cobra do seu revenda por crédito
 
 function extrairPlanoValorParaLink(planoCompleto){
     // Ex: "Mensal 1 Tela - R$ 30,00"  ->  { planoNome: "Mensal 1 Tela", valor: "R$ 30,00" }
@@ -1466,9 +1581,18 @@ function codificarLinkCliente(nome, plano, valor, vencimento, usuario, senha){
     return btoa(unescape(encodeURIComponent(texto)));
 }
 
+// Só faz sentido oferecer a "área do cliente" quando o Gestor tiver um
+// WhatsApp de suporte cadastrado nas configurações — é o número usado
+// para contato caso o cliente tenha dúvidas ao acessar o painel.
+function temWhatsappSuporte(){
+    let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+    return !!((config.whatsappSuporte || "").trim());
+}
+
 async function gerarLinkEncurtadoCliente(cliente){
     const urlPortal = URL_PORTAL_CLIENTE.trim();
     if(!urlPortal) return ""; // sem URL do portal definida no código, não há como gerar o link
+    if(!temWhatsappSuporte()) return ""; // sem WhatsApp de suporte cadastrado, não exibe área do cliente
 
     const { planoNome, valor } = extrairPlanoValorParaLink(cliente.plano);
     const codigo = codificarLinkCliente(cliente.nome, planoNome, valor, cliente.vencimento, cliente.usuario, cliente.senha);
@@ -1590,6 +1714,141 @@ function moeda(valor){
     return `R$ ${valor.toFixed(2).replace(".",",")}`;
 }
 
+/* ══════════════════════════════════════════════
+   DURAÇÃO DOS PLANOS
+   Cada plano tem uma duração no formato { unidade, valor }:
+   - unidade "meses": soma meses de calendário (vence no mesmo
+     dia do mês seguinte, como assinaturas normais).
+   - unidade "dias": soma dias corridos (usado para durações
+     curtas ou personalizadas, ex: 7 dias, 15 dias).
+   - null: plano sem duração definida (ex: revenda).
+══════════════════════════════════════════════ */
+
+// Converte uma string "AAAA-MM-DD" em Date no fuso local, evitando o bug
+// de o JS interpretar "AAAA-MM-DD" como UTC (o que pode voltar 1 dia
+// em fusos atrás de UTC, como o horário de Brasília).
+function paraDataLocal(dataISO){
+    if(!dataISO || !dataISO.includes("-")) return new Date();
+    let partes = dataISO.split("-");
+    if(partes.length < 3) return new Date();
+    let d = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]));
+    return isNaN(d.getTime()) ? new Date() : d;
+}
+
+// Soma a duração de um plano a uma data-base (objeto Date), respeitando
+// meses de calendário quando a unidade for "meses" (em vez de somar um
+// número fixo de dias), para vencer sempre no mesmo dia do mês seguinte.
+function adicionarPeriodoData(dataBase, duracao){
+    let d = new Date(dataBase.getTime());
+    if(duracao.unidade === "meses"){
+        d.setMonth(d.getMonth() + duracao.valor);
+    } else {
+        d.setDate(d.getDate() + duracao.valor);
+    }
+    return d;
+}
+
+function extrairNomePlano(planoCompleto){
+    return (planoCompleto || "").split(" - ")[0].trim();
+}
+
+function obterPlanoPorNome(nomePlano){
+    return planos.find(p => p.nome === nomePlano);
+}
+
+// Retorna a duração { unidade, valor } configurada para o plano do texto
+// informado. Retorna null quando o plano não tem duração definida (ex:
+// revenda) ou quando o plano não é encontrado na lista configurada.
+function obterDuracaoPlano(planoTexto){
+    let plano = obterPlanoPorNome(extrairNomePlano(planoTexto));
+    if(!plano) return null;
+    return plano.duracao || null;
+}
+
+function formatarDuracaoPlano(duracao){
+    if(!duracao) return "Revenda (sem tempo definido)";
+    if(duracao.unidade === "meses"){
+        if(duracao.valor === 1) return "1 mês";
+        if(duracao.valor === 3) return "3 meses (Trimestral)";
+        if(duracao.valor === 6) return "6 meses (Semestral)";
+        if(duracao.valor === 12) return "12 meses (Anual)";
+        return `${duracao.valor} meses`;
+    }
+    return `${duracao.valor} dia${duracao.valor === 1 ? "" : "s"}`;
+}
+
+// Lê o select de duração (e o campo personalizado, se aplicável) e retorna
+// { unidade, valor } a ser gravado no plano, ou null para "revenda".
+function obterDuracaoSelecionada(idSelect, idPersonalizado){
+    let select = document.getElementById(idSelect);
+    if(!select) return { unidade:"meses", valor:1 };
+    let valor = select.value;
+    if(valor === "revenda") return null;
+    if(valor === "personalizado"){
+        let dias = parseInt(document.getElementById(idPersonalizado).value);
+        return { unidade:"dias", valor: (dias > 0 ? dias : 30) };
+    }
+    if(valor.endsWith("m")) return { unidade:"meses", valor: parseInt(valor) };
+    return { unidade:"dias", valor: parseInt(valor) };
+}
+
+// Ajusta a exibição do campo de dias personalizados conforme a opção
+// escolhida no select de duração.
+function alternarDuracaoPersonalizada(idSelect, idPersonalizado){
+    let select = document.getElementById(idSelect);
+    let campo = document.getElementById(idPersonalizado);
+    if(!select || !campo) return;
+    campo.style.display = select.value === "personalizado" ? "block" : "none";
+}
+
+// Preenche o select (e o campo personalizado) de acordo com a duração já
+// configurada em um plano existente, usado ao abrir a edição.
+function preencherSelectDuracao(idSelect, idPersonalizado, duracao){
+    let select = document.getElementById(idSelect);
+    let campo = document.getElementById(idPersonalizado);
+    if(!select || !campo) return;
+    if(!duracao){
+        select.value = "revenda";
+        campo.style.display = "none";
+        campo.value = "";
+        return;
+    }
+    if(duracao.unidade === "meses" && [1,2,3,6,12].includes(duracao.valor)){
+        select.value = `${duracao.valor}m`;
+        campo.style.display = "none";
+        campo.value = "";
+        return;
+    }
+    if(duracao.unidade === "dias" && [7,15].includes(duracao.valor)){
+        select.value = `${duracao.valor}d`;
+        campo.style.display = "none";
+        campo.value = "";
+        return;
+    }
+    select.value = "personalizado";
+    campo.style.display = "block";
+    campo.value = duracao.unidade === "dias" ? duracao.valor : duracao.valor * 30;
+}
+
+// Ao escolher um plano no cadastro de cliente, sugere automaticamente o
+// vencimento com base na duração configurada do plano. Planos sem duração
+// definida (revenda) deixam o campo de vencimento em branco.
+function sugerirVencimentoPlano(){
+    let selectPlano = document.getElementById("plano");
+    let campoVencimento = document.getElementById("vencimento");
+    if(!selectPlano || !campoVencimento || selectPlano.selectedIndex === -1) return;
+    let planoTexto = selectPlano.options[selectPlano.selectedIndex].text;
+    let duracao = obterDuracaoPlano(planoTexto);
+    if(!duracao){
+        campoVencimento.value = "";
+        campoVencimento.type = "text";
+        return;
+    }
+    let data = adicionarPeriodoData(new Date(), duracao);
+    campoVencimento.type = "date";
+    campoVencimento.value = data.toISOString().split("T")[0];
+}
+
 function renderizarServidores(){
     let lista = document.getElementById("listaServidores");
     let select = document.getElementById("servidor");
@@ -1657,11 +1916,13 @@ function renderizarPlanos(){
     if(select) select.innerHTML = "";
 
     planos.forEach((plano, index) => {
+        let semDuracao = !plano.duracao;
         lista.innerHTML += `
-<div class="plano-item">
+<div class="plano-item ${semDuracao ? "plano-revenda" : ""}">
     <div class="plano-info">
         <div class="plano-nome">${plano.nome}</div>
         <div class="plano-valor">${moeda(plano.valor)}</div>
+        <div class="plano-duracao">⏱️ ${formatarDuracaoPlano(plano.duracao)}</div>
     </div>
     <div style="display:flex; gap:10px;">
         <button class="btn-vencendo" onclick="editarPlano(${index})">Editar</button>
@@ -1680,6 +1941,7 @@ function editarPlano(index){
     let plano = planos[index];
     document.getElementById("editPlanoNome").value = plano.nome;
     document.getElementById("editPlanoValor").value = `R$${Number(plano.valor).toFixed(2).replace(".",",")}`;
+    preencherSelectDuracao("editPlanoDuracao", "editPlanoDuracaoPersonalizada", plano.duracao);
     const modal = document.getElementById("modalPlano");
     modal.style.display = "flex";
     modal.classList.add("ativo");
@@ -1689,9 +1951,13 @@ function adicionarPlano(){
     let nome = document.getElementById("novoPlanoNome").value;
     let valor = document.getElementById("novoPlanoValor").value;
     if(!nome || !valor){ alert("Preencha os campos."); return; }
-    planos.push({ nome, valor });
+    let duracao = obterDuracaoSelecionada("novoPlanoDuracao", "novoPlanoDuracaoPersonalizada");
+    planos.push({ nome, valor, duracao });
     document.getElementById("novoPlanoNome").value = "";
     document.getElementById("novoPlanoValor").value = "";
+    document.getElementById("novoPlanoDuracao").value = "1m";
+    document.getElementById("novoPlanoDuracaoPersonalizada").value = "";
+    document.getElementById("novoPlanoDuracaoPersonalizada").style.display = "none";
     renderizarPlanos();
     document.getElementById("boxPlano").style.display = "none";
 }
@@ -1780,22 +2046,128 @@ function salvar(){
     clientes = JSON.parse(localStorage.getItem("clientes")) || [];
 }
 
+/* ══════════════════════════════════════════════
+   CLIENTES REVENDA (venda de créditos)
+══════════════════════════════════════════════ */
+function paraNumero(valorTexto){
+    if(valorTexto === undefined || valorTexto === null) return 0;
+    let n = parseFloat(String(valorTexto).replace("R$","").trim().replace(/\./g,"").replace(",", "."));
+    return isNaN(n) ? 0 : n;
+}
+
+// Considera revenda tanto quem foi marcado internamente (tipoCliente)
+// quanto quem tem o plano começando com "Revenda" (ex: clientes antigos,
+// cadastrados manualmente, ou importados de um backup anterior a este
+// recurso) — assim a renovação e o dashboard funcionam mesmo sem a marcação.
+function ehClienteRevenda(cliente){
+    if(!cliente) return false;
+    if(cliente.tipoCliente === "revenda") return true;
+    return typeof cliente.plano === "string" && cliente.plano.trim().toLowerCase().startsWith("revenda");
+}
+
+function alternarTipoCliente(){
+    let campoTipo = document.getElementById("tipoCliente");
+    let ehRevenda = campoTipo && campoTipo.value === "revenda";
+    document.getElementById("usuario").style.display = ehRevenda ? "none" : "block";
+    document.getElementById("senha").style.display = ehRevenda ? "none" : "block";
+    document.getElementById("plano").style.display = ehRevenda ? "none" : "block";
+    document.getElementById("vencimento").style.display = ehRevenda ? "none" : "block";
+    document.getElementById("creditosRevenda").style.display = ehRevenda ? "block" : "none";
+    document.getElementById("valorRevendaCalculado").style.display = ehRevenda ? "block" : "none";
+    if(ehRevenda) atualizarValorRevendaAdicionar();
+}
+
+function atualizarValorRevendaAdicionar(){
+    let creditos = parseInt(document.getElementById("creditosRevenda").value) || 0;
+    document.getElementById("valorRevendaCalculado").value = moeda(creditos * VALOR_CREDITO_REVENDA);
+}
+
+function enviarMensagemAtivacaoRevenda(cliente){
+    if(!cliente.whatsapp) return;
+    let ultimo = (cliente.historicoCreditos||[]).slice(-1)[0] || {};
+    let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+    let rodape = (config.textoRodape || "").trim();
+    let mensagem =
+`✨ Ativação realizada (Revenda) ✨
+
+👤 Cliente: ${primeiroNome(cliente.nome)}
+🖥️ Servidor: ${cliente.servidor}
+🔸 Créditos: ${ultimo.creditos || 0}
+🔸 Valor: ${moeda(ultimo.valorTotal || 0)}`;
+    if(rodape) mensagem += `\n\n${rodape}`;
+    window.open(`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
+}
+
+function enviarMensagemRenovacaoRevenda(cliente, creditos, valorTotal){
+    if(!cliente.whatsapp) return;
+    let mensagem =
+`*✅ Créditos renovados (Revenda) ✅*
+
+👤 Cliente: ${primeiroNome(cliente.nome)}
+🔸 Créditos adicionados: ${creditos}
+🔸 Valor: ${moeda(valorTotal)}`;
+    window.open(`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
+}
+
 function adicionarCliente(){
+    let tipoCliente = document.getElementById("tipoCliente") ? document.getElementById("tipoCliente").value : "normal";
     let servidor = document.getElementById("servidor").value;
     let nome = document.getElementById("nome").value;
+    let whatsapp = document.getElementById("whatsapp").value;
+    let obs = document.getElementById("obs").value;
+
+    if(tipoCliente === "revenda"){
+        if(!nome){ alert("Preencha o nome do cliente."); return; }
+        let creditos = parseInt(document.getElementById("creditosRevenda").value) || 0;
+        if(creditos <= 0){ alert("Informe a quantidade de créditos."); return; }
+        let valorTotal = creditos * VALOR_CREDITO_REVENDA;
+        let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - CUSTO_CREDITO_REVENDA);
+        const hojeISO = new Date().toISOString().split("T")[0];
+
+        clientes.push({
+            servidor, nome, usuario:"-", senha:"-", whatsapp,
+            vencimento:"", plano:`Revenda - ${creditos} créditos - ${moeda(valorTotal)}`,
+            obs, tipoCliente:"revenda", ultimaRenovacao: hojeISO,
+            historicoCreditos:[{ data:hojeISO, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:CUSTO_CREDITO_REVENDA, valorTotal, lucro:lucroOperacao }]
+        });
+        salvar();
+        const novoClienteRevenda = clientes[clientes.length - 1];
+        enviarMensagemAtivacaoRevenda(novoClienteRevenda);
+        clientes = JSON.parse(localStorage.getItem("clientes")) || [];
+        filtroAtual = "todos";
+        renderizar();
+        atualizarDashboard();
+        document.getElementById("nome").value = "";
+        document.getElementById("whatsapp").value = "";
+        document.getElementById("creditosRevenda").value = "";
+        document.getElementById("valorRevendaCalculado").value = "";
+        document.getElementById("obs").value = "";
+        return;
+    }
+
     let usuario = document.getElementById("usuario").value;
     let clienteExistente = clientes.find(c => (c.usuario||"").trim().toLowerCase() === usuario.trim().toLowerCase());
     if(clienteExistente){
         if(!confirm(`⚠️ Já existe um cliente com esse usuário (${clienteExistente.nome}). Deseja continuar?`)) return;
     }
     let senha = document.getElementById("senha").value;
-    let whatsapp = document.getElementById("whatsapp").value;
     let vencimento = document.getElementById("vencimento").value;
-    let obs = document.getElementById("obs").value;
     let selectPlano = document.getElementById("plano");
     if(selectPlano.selectedIndex == -1){ alert("Cadastre um plano primeiro."); return; }
     let planoTexto = selectPlano.options[selectPlano.selectedIndex].text;
     if(!nome || !usuario || !senha){ alert("Preencha os campos."); return; }
+
+    // Se o vencimento não foi preenchido manualmente, calcula automaticamente
+    // com base na duração configurada do plano. Planos sem duração definida
+    // (ex: revenda) ficam sem vencimento.
+    if(!vencimento){
+        let duracao = obterDuracaoPlano(planoTexto);
+        if(duracao){
+            let data = adicionarPeriodoData(new Date(), duracao);
+            vencimento = data.toISOString().split("T")[0];
+        }
+    }
+
     const hojeISO = new Date().toISOString().split("T")[0];
     clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO });
     salvar();
@@ -1995,7 +2367,7 @@ function renderizar(){
     <div class="card-body">
         <div class="card-row">👤 <span>${destacar(cliente.usuario || "-", pesquisa)}</span></div>
         <div class="card-row">📦 <span>${destacar(cliente.plano || "-", pesquisa)}</span></div>
-        <div class="card-row">📅 <span>${formatarData(cliente.vencimento)}</span></div>
+        <div class="card-row">📅 <span>${obterDuracaoPlano(cliente.plano) === null ? "Revenda (sem vencimento)" : formatarData(cliente.vencimento)}</span></div>
     </div>
 
     <div class="card-acoes" id="acoes-${uid}">
@@ -2065,8 +2437,9 @@ function salvarEdicaoPlano(){
     let nome = document.getElementById("editPlanoNome").value;
     let valorTexto = document.getElementById("editPlanoValor").value;
     let valor = parseFloat(valorTexto.replace("R$","").replace(",",".").trim());
+    let duracao = obterDuracaoSelecionada("editPlanoDuracao", "editPlanoDuracaoPersonalizada");
     let nomePlanoAntigo = planos[planoEditando].nome;
-    planos[planoEditando] = { nome, valor };
+    planos[planoEditando] = { nome, valor, duracao };
     clientes = clientes.map(cliente => {
         if(cliente.plano && cliente.plano.includes(nomePlanoAntigo)){
             return { ...cliente, plano: `${nome} - ${moeda(valor)}` };
@@ -2146,6 +2519,21 @@ function atualizarDashboard(){
 
     clientes.forEach(cliente => {
         let status = statusCliente(cliente.vencimento);
+
+        // Clientes revenda têm lucro calculado por operação de crédito
+        // (créditos × valor de venda − créditos × custo por crédito),
+        // registrado no histórico de créditos a cada compra/renovação.
+        if(ehClienteRevenda(cliente)){
+            (cliente.historicoCreditos || []).forEach(operacao => {
+                let dataOperacao = new Date(operacao.data);
+                if(dataOperacao.getMonth() === mesAtual && dataOperacao.getFullYear() === anoAtual){
+                    lucro += Number(operacao.lucro) || 0;
+                }
+            });
+            if(status == "ativo") ativos++;
+            return;
+        }
+
         let valor = 0;
         if(cliente.plano && typeof cliente.plano === "string"){
             let match = cliente.plano.match(/R\$\s*([\d.,]+)/);
@@ -2292,6 +2680,10 @@ function carregarConfiguracoes(){
 function toggleAdicionar(){
     let box = document.getElementById("boxAdicionar");
     box.style.display = box.style.display == "none" ? "flex" : "none";
+    if(box.style.display !== "none"){
+        document.getElementById("tipoCliente").value = "normal";
+        alternarTipoCliente();
+    }
 }
 function togglePesquisa(){
     let box = document.getElementById("boxPesquisa");
@@ -2411,6 +2803,18 @@ document.addEventListener("DOMContentLoaded", function(){
         </div>
         <input type="text" id="editPlanoNome" placeholder="Nome do plano">
         <input type="text" id="editPlanoValor" placeholder="R$0,00">
+        <select id="editPlanoDuracao" onchange="alternarDuracaoPersonalizada('editPlanoDuracao','editPlanoDuracaoPersonalizada')">
+            <option value="7d">7 dias</option>
+            <option value="15d">15 dias</option>
+            <option value="1m">1 mês (Mensal)</option>
+            <option value="2m">2 meses</option>
+            <option value="3m">3 meses (Trimestral)</option>
+            <option value="6m">6 meses (Semestral)</option>
+            <option value="12m">12 meses (Anual)</option>
+            <option value="personalizado">Personalizado (dias)</option>
+            <option value="revenda">Revenda (sem duração definida)</option>
+        </select>
+        <input type="number" id="editPlanoDuracaoPersonalizada" placeholder="Nº de dias" style="display:none;">
         <button class="btn-add" onclick="salvarEdicaoPlano()">Salvar Alterações</button>
     </div>
 </div>
@@ -2423,8 +2827,14 @@ document.addEventListener("DOMContentLoaded", function(){
             <button class="fechar-modal" onclick="fecharModalRenovacao()">✕</button>
         </div>
         <strong id="renovacaoNome"></strong>
-        <div>Vencimento atual: <span id="renovacaoAtual"></span></div>
-        <div id="renovacaoPlano"></div>
+        <div id="renovacaoInfoNormal">
+            <div>Vencimento atual: <span id="renovacaoAtual"></span></div>
+            <div id="renovacaoPlano"></div>
+        </div>
+        <div id="renovacaoInfoRevenda" style="display:none;">
+            <input type="number" id="renovacaoCreditos" min="1" placeholder="Quantidade de créditos" oninput="atualizarValorRenovacaoRevenda()">
+            <input type="text" id="renovacaoValorRevenda" placeholder="Valor (calculado automaticamente)" readonly>
+        </div>
         <button class="btn-add" onclick="renovarCliente()">✅ Confirmar Renovação</button>
     </div>
 </div>
