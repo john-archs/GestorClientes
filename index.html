@@ -1460,9 +1460,9 @@ function extrairPlanoValorParaLink(planoCompleto){
     return { planoNome: (planoCompleto || "").trim(), valor: "" };
 }
 
-function codificarLinkCliente(nome, plano, valor, vencimento){
-    // Mesmo formato compacto usado no Gerador de Link: nome|plano|valor|vencimento
-    const texto = [nome, plano, valor, vencimento].join("|");
+function codificarLinkCliente(nome, plano, valor, vencimento, usuario, senha){
+    // Formato compacto: nome|plano|valor|vencimento|usuario|senha
+    const texto = [nome, plano, valor, vencimento, usuario || "", senha || ""].join("|");
     return btoa(unescape(encodeURIComponent(texto)));
 }
 
@@ -1471,7 +1471,7 @@ async function gerarLinkEncurtadoCliente(cliente){
     if(!urlPortal) return ""; // sem URL do portal definida no código, não há como gerar o link
 
     const { planoNome, valor } = extrairPlanoValorParaLink(cliente.plano);
-    const codigo = codificarLinkCliente(cliente.nome, planoNome, valor, cliente.vencimento);
+    const codigo = codificarLinkCliente(cliente.nome, planoNome, valor, cliente.vencimento, cliente.usuario, cliente.senha);
     const linkCompleto = `${urlPortal}?d=${codigo}`;
     const token = TINYURL_TOKEN.trim();
 
