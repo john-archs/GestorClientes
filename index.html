@@ -1430,6 +1430,7 @@ function importarSistema(event){
             localStorage.setItem("servidores", JSON.stringify(servidores));
             localStorage.setItem("configuracoes", JSON.stringify(dados.configuracoes || {}));
             carregarConfiguracoes();
+            sincronizarPlanosFaltantes();
             renderizarServidores();
             renderizarPlanos();
             renderizar();
@@ -1754,6 +1755,67 @@ function extrairNomePlano(planoCompleto){
 
 function obterPlanoPorNome(nomePlano){
     return planos.find(p => p.nome === nomePlano);
+}
+
+// Tenta adivinhar a duração de um plano só pelo nome, usada apenas como
+// fallback ao recadastrar automaticamente um plano órfão (ver
+// sincronizarPlanosFaltantes). Se não achar nenhuma palavra-chave
+// reconhecida, assume 1 mês por segurança (o valor pode ser corrigido
+// depois em Configurações → Planos).
+function inferirDuracaoPorNome(nomePlano){
+    let nome = (nomePlano || "").toLowerCase();
+    if(nome.includes("anual")) return { unidade:"meses", valor:12 };
+    if(nome.includes("semestral")) return { unidade:"meses", valor:6 };
+    if(nome.includes("trimestral")) return { unidade:"meses", valor:3 };
+    if(nome.includes("bimestral")) return { unidade:"meses", valor:2 };
+    if(nome.includes("mensal")) return { unidade:"meses", valor:1 };
+    return { unidade:"meses", valor:1 };
+}
+
+// ══════════════════════════════════════════════
+// AUTO-CURA DE PLANOS ÓRFÃOS
+// Alguns clientes podem ter um "plano" (texto) que não existe mais na
+// lista de planos cadastrados — geralmente porque o plano foi apagado
+// ou renomeado depois que o cliente já tinha sido criado com ele. Isso
+// fazia a renovação desses clientes travar silenciosamente: o sistema
+// registrava a renovação e o lucro, mas NUNCA atualizava a data de
+// vencimento, porque não achava a duração do plano.
+//
+// Essa função roda no carregamento do sistema (e após importar um
+// backup) e cadastra automaticamente, em Configurações → Planos,
+// qualquer plano que algum cliente esteja usando mas que não exista na
+// lista — assim a renovação nunca mais falha em silêncio. O valor é
+// extraído do texto do plano do cliente (ex: "R$ 30") e a duração é uma
+// estimativa (ver inferirDuracaoPorNome); vale a pena conferir/ajustar
+// esses planos recém-criados em Configurações → Planos.
+function sincronizarPlanosFaltantes(){
+    let adicionados = [];
+
+    clientes.forEach(cliente => {
+        if(ehClienteRevenda(cliente)) return; // revenda não usa a lista de planos
+        let nomePlano = extrairNomePlano(cliente.plano);
+        if(!nomePlano) return;
+        if(obterPlanoPorNome(nomePlano)) return; // já cadastrado
+        if(adicionados.includes(nomePlano)) return; // já tratado nesta mesma varredura
+
+        let valor = 0;
+        let match = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
+        if(match) valor = parseFloat(match[1].replace(",", ".")) || 0;
+
+        planos.push({ nome: nomePlano, valor, duracao: inferirDuracaoPorNome(nomePlano) });
+        adicionados.push(nomePlano);
+    });
+
+    if(adicionados.length > 0){
+        localStorage.setItem("planos", JSON.stringify(planos));
+        alert(
+            `⚠️ ${adicionados.length} plano(s) que seus clientes usam não estavam cadastrados ` +
+            `e foram adicionados automaticamente em Configurações → Planos:\n\n` +
+            adicionados.join("\n") +
+            `\n\nAs renovações desses clientes estavam travadas (a data de vencimento não avançava). ` +
+            `Confira o valor e a duração desses planos em Configurações → Planos para garantir que estão certos.`
+        );
+    }
 }
 
 // Retorna a duração { unidade, valor } configurada para o plano do texto
@@ -2759,6 +2821,7 @@ document.addEventListener("DOMContentLoaded", function(){
             : "dashboard";
         sessionStorage.setItem("sessaoIniciada", "1");
         abrirGuia(guiaSalva);
+        sincronizarPlanosFaltantes();
         renderizarServidores();
         renderizarPlanos();
         filtroAtual = "todos";
