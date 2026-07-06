@@ -463,6 +463,79 @@ button{
     margin-bottom:5px;
 }
 
+.lucro-linha{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.btn-historico-lucro{
+    background:#334155;
+    color:#e2e8f0;
+    border:none;
+    padding:5px 10px;
+    border-radius:8px;
+    font-size:11px;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.btn-historico-lucro:hover{
+    background:#475569;
+}
+
+.historico-lucro-box{
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid #334155;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    max-height:200px;
+    overflow-y:auto;
+}
+
+.historico-lucro-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:11px;
+    color:#94a3b8;
+    line-height:1.3;
+}
+
+.historico-lucro-item .historico-lucro-total{
+    font-size:11px;
+    font-weight:normal;
+    color:#94a3b8;
+    flex-shrink:0;
+}
+
+.historico-lucro-item .historico-lucro-valor{
+    font-size:11px;
+    font-weight:bold;
+    color:#22c55e;
+    flex-shrink:0;
+}
+
+.historico-lucro-item .historico-lucro-nome{
+    font-size:11px;
+    font-weight:normal;
+    color:#cbd5e1;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    flex:1;
+    min-width:0;
+}
+
+.historico-lucro-vazio{
+    font-size:11px;
+    color:#64748b;
+}
+
 .config-box{
     background:#1e293b;
     padding:20px;
@@ -971,7 +1044,13 @@ textarea{
     <div class="cards-dashboard">
         <div class="dash-card">
             <h3>💰 Lucro Mensal</h3>
-            <span id="lucroTotal">R$ 0,00</span>
+            <div class="lucro-linha">
+                <span id="lucroTotal">R$ 0,00</span>
+                <button class="btn-historico-lucro" onclick="toggleHistoricoLucro()">📜 Histórico</button>
+            </div>
+            <div id="historicoLucroBox" class="historico-lucro-box" style="display:none;">
+                <div id="historicoLucroLista"></div>
+            </div>
         </div>
         <div class="dash-card">
             <h3>✅ Clientes Ativos</h3>
@@ -1547,6 +1626,7 @@ function renovarCliente(){
         cliente.historicoCreditos.push({ data:hojeISORenovacao, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:CUSTO_CREDITO_REVENDA, valorTotal, lucro:lucroOperacao });
         cliente.ultimaRenovacao = hojeISORenovacao;
         cliente.plano = `Revenda - ${creditos} créditos - ${moeda(valorTotal)}`;
+        registrarMovimentoLucro(cliente.nome, lucroOperacao);
 
         if(!Array.isArray(cliente.historico)) cliente.historico = [];
         cliente.historico.push({ data:hojeISORenovacao, vencimentoAnterior:"Revenda", vencimentoNovo:"Revenda", plano:cliente.plano });
@@ -1576,6 +1656,18 @@ function renovarCliente(){
     }
 
     clientes[clienteRenovacao].ultimaRenovacao = new Date().toISOString().split("T")[0];
+
+    {
+        let matchValorRenov = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
+        let valorPlanoRenov = matchValorRenov ? parseFloat(matchValorRenov[1].replace(",",".")) || 0 : 0;
+        let servidorClienteRenov = servidores.find(s =>
+            (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
+        );
+        let custoServidorRenov = servidorClienteRenov
+            ? Number((servidorClienteRenov.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
+            : 0;
+        registrarMovimentoLucro(cliente.nome, valorPlanoRenov - custoServidorRenov);
+    }
 
     if(!Array.isArray(clientes[clienteRenovacao].historico)) clientes[clienteRenovacao].historico = [];
     clientes[clienteRenovacao].historico.push({
@@ -2082,6 +2174,30 @@ let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
 let modoCompacto = localStorage.getItem("modoCompacto") === "1";
 let acaoConfirmacaoPendente = null;
 
+/* ===== HISTÓRICO DE MOVIMENTOS DO LUCRO MENSAL ===== */
+let historicoLucro = JSON.parse(localStorage.getItem("historicoLucro")) || [];
+
+function registrarMovimentoLucro(nomeCliente, valor){
+    valor = Number(valor) || 0;
+    if(valor === 0) return;
+
+    // Captura o valor ATUAL do lucro mensal exibido no Dashboard (ainda não
+    // atualizado com este movimento, pois atualizarDashboard() só roda depois
+    // de registrarMovimentoLucro nos fluxos de renovação/novo cliente).
+    // Esse é o "valor antigo" real, e não um acumulado recalculado do zero.
+    let saldoAnterior = 0;
+    let elLucroTotal = document.getElementById("lucroTotal");
+    if(elLucroTotal){
+        let textoLucro = (elLucroTotal.innerText || elLucroTotal.textContent || "")
+            .replace("R$", "").trim().replace(/\./g, "").replace(",", ".");
+        saldoAnterior = parseFloat(textoLucro) || 0;
+    }
+
+    historicoLucro.push({ data: new Date().toISOString(), cliente: nomeCliente || "", valor, saldoAnterior });
+    if(historicoLucro.length > 300) historicoLucro = historicoLucro.slice(-300);
+    localStorage.setItem("historicoLucro", JSON.stringify(historicoLucro));
+}
+
 /* ===== MODAL DE CONFIRMAÇÃO GENÉRICO ===== */
 function pedirConfirmacao(mensagem, callback, titulo){
     document.getElementById("confirmacaoTitulo").innerText = titulo || "⚠️ Confirmar ação";
@@ -2257,6 +2373,7 @@ function adicionarCliente(){
             obs, tipoCliente:"revenda", ultimaRenovacao: hojeISO,
             historicoCreditos:[{ data:hojeISO, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:CUSTO_CREDITO_REVENDA, valorTotal, lucro:lucroOperacao }]
         });
+        registrarMovimentoLucro(nome, lucroOperacao);
         salvar();
         const novoClienteRevenda = clientes[clientes.length - 1];
         enviarMensagemAtivacaoRevenda(novoClienteRevenda);
@@ -2297,6 +2414,19 @@ function adicionarCliente(){
 
     const hojeISO = new Date().toISOString().split("T")[0];
     clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO });
+
+    {
+        let matchValorNovo = (planoTexto || "").match(/R\$\s*([\d.,]+)/);
+        let valorPlanoNovo = matchValorNovo ? parseFloat(matchValorNovo[1].replace(",",".")) || 0 : 0;
+        let servidorClienteNovo = servidores.find(s =>
+            (servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
+        );
+        let custoServidorNovo = servidorClienteNovo
+            ? Number((servidorClienteNovo.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
+            : 0;
+        registrarMovimentoLucro(nome, valorPlanoNovo - custoServidorNovo);
+    }
+
     salvar();
     const novoCliente = clientes[clientes.length - 1];
 
@@ -2724,6 +2854,67 @@ function atualizarDashboard(){
     document.getElementById("lucroTotal").innerHTML = `R$ ${lucro.toFixed(2).replace(".",",")}`;
     document.getElementById("clientesAtivos").innerHTML = ativos;
     document.getElementById("clientesVencendo").innerHTML = vencendo;
+
+    // Se o histórico estiver aberto, mantém a lista atualizada em tempo real
+    let boxHistoricoLucro = document.getElementById("historicoLucroBox");
+    if(boxHistoricoLucro && boxHistoricoLucro.style.display !== "none"){
+        renderizarHistoricoLucro();
+    }
+}
+
+/* ===== HISTÓRICO DE MOVIMENTOS DO LUCRO MENSAL (dashboard) ===== */
+function toggleHistoricoLucro(){
+    const box = document.getElementById("historicoLucroBox");
+    const abrindo = box.style.display === "none";
+    box.style.display = abrindo ? "flex" : "none";
+    if(abrindo) renderizarHistoricoLucro();
+}
+
+function renderizarHistoricoLucro(){
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
+
+    let movimentosMes = historicoLucro.filter(mov => {
+        let data = new Date(mov.data);
+        return data.getMonth() === mesAtual && data.getFullYear() === anoAtual;
+    });
+
+    // ordena do mais antigo para o mais novo, para exibição consistente
+    movimentosMes.sort((a,b) => new Date(a.data) - new Date(b.data));
+
+    // Usa o saldoAnterior já capturado no momento do movimento (valor real do
+    // Dashboard antes da operação). Isso evita que o "valor antigo" comece do
+    // zero para movimentos antigos que não tinham esse campo salvo, nesses
+    // casos calculamos como fallback (acumulado a partir das entradas do mês).
+    let acumuladoFallback = 0;
+    let comSaldo = movimentosMes.map(mov => {
+        let valorMov = Number(mov.valor) || 0;
+        let saldoAnterior = (typeof mov.saldoAnterior === "number")
+            ? mov.saldoAnterior
+            : acumuladoFallback;
+        acumuladoFallback += valorMov;
+        return { cliente: mov.cliente, valor: valorMov, saldoAnterior };
+    });
+
+    // exibe os 10 últimos, do mais recente para o mais antigo
+    let ultimos = comSaldo.slice(-10).reverse();
+
+    let lista = document.getElementById("historicoLucroLista");
+    if(ultimos.length === 0){
+        lista.innerHTML = `<div class="historico-lucro-vazio">Nenhum movimento registrado este mês.</div>`;
+        return;
+    }
+
+    lista.innerHTML = ultimos.map(mov => {
+        let sinal = mov.valor >= 0 ? "+" : "-";
+        return `
+<div class="historico-lucro-item">
+    <span class="historico-lucro-total">R$ ${mov.saldoAnterior.toFixed(2).replace(".",",")}</span>
+    <span class="historico-lucro-valor">${sinal}R$ ${Math.abs(mov.valor).toFixed(2).replace(".",",")}</span>
+    <span class="historico-lucro-nome">${mov.cliente || ""}</span>
+</div>`;
+    }).join("");
 }
 
 function calcularDiasRestantes(data){
