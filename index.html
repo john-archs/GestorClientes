@@ -560,6 +560,49 @@ select{
     padding:0;
 }
 
+/* ===== MODAL DE ALERTA ===== */
+.modal-alerta-box{
+    align-items:center;
+    text-align:center;
+}
+
+.modal-alerta-box h2{
+    margin:0;
+}
+
+.alerta-icone{
+    width:64px;
+    height:64px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:30px;
+    flex-shrink:0;
+}
+
+.alerta-icone.aviso{
+    background:rgba(245,158,11,.15);
+}
+
+.alerta-icone.erro{
+    background:rgba(239,68,68,.15);
+}
+
+.alerta-icone.sucesso{
+    background:rgba(34,197,94,.15);
+}
+
+.alerta-mensagem{
+    color:#cbd5e1;
+    white-space:pre-line;
+    line-height:1.5;
+}
+
+.modal-alerta-box button{
+    width:100%;
+}
+
 .filtros-clientes{
     display:flex;
     gap:10px;
@@ -1420,24 +1463,25 @@ function importarSistema(event){
     leitor.onload = function(e){
         try{
             const dados = JSON.parse(e.target.result);
-            if(!confirm("Isso substituirá todos os dados atuais. Continuar?")) return;
-            clientes = dados.clientes || [];
-            planos = dados.planos || [];
-            servidores = dados.servidores || [];
-            localStorage.setItem("servidorPadrao", dados.servidorPadrao || "");
-            localStorage.setItem("clientes", JSON.stringify(clientes));
-            localStorage.setItem("planos", JSON.stringify(planos));
-            localStorage.setItem("servidores", JSON.stringify(servidores));
-            localStorage.setItem("configuracoes", JSON.stringify(dados.configuracoes || {}));
-            carregarConfiguracoes();
-            sincronizarPlanosFaltantes();
-            renderizarServidores();
-            renderizarPlanos();
-            renderizar();
-            atualizarDashboard();
-            alert("Backup restaurado com sucesso.");
+            pedirConfirmacao("Isso substituirá todos os dados atuais. Continuar?", () => {
+                clientes = dados.clientes || [];
+                planos = dados.planos || [];
+                servidores = dados.servidores || [];
+                localStorage.setItem("servidorPadrao", dados.servidorPadrao || "");
+                localStorage.setItem("clientes", JSON.stringify(clientes));
+                localStorage.setItem("planos", JSON.stringify(planos));
+                localStorage.setItem("servidores", JSON.stringify(servidores));
+                localStorage.setItem("configuracoes", JSON.stringify(dados.configuracoes || {}));
+                carregarConfiguracoes();
+                sincronizarPlanosFaltantes();
+                renderizarServidores();
+                renderizarPlanos();
+                renderizar();
+                atualizarDashboard();
+                mostrarAlerta("Backup restaurado com sucesso.", "sucesso");
+            });
         } catch(erro){
-            alert("Arquivo inválido.");
+            mostrarAlerta("Arquivo inválido.", "erro");
         }
     };
     leitor.readAsText(arquivo);
@@ -1493,7 +1537,7 @@ function renovarCliente(){
 
     if(ehClienteRevenda(cliente)){
         let creditos = parseInt(document.getElementById("renovacaoCreditos").value) || 0;
-        if(creditos <= 0){ alert("Informe a quantidade de créditos."); return; }
+        if(creditos <= 0){ mostrarAlerta("Informe a quantidade de créditos.", "aviso"); return; }
         let valorTotal = creditos * VALOR_CREDITO_REVENDA;
         let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - CUSTO_CREDITO_REVENDA);
         const hojeISORenovacao = new Date().toISOString().split("T")[0];
@@ -1808,12 +1852,13 @@ function sincronizarPlanosFaltantes(){
 
     if(adicionados.length > 0){
         localStorage.setItem("planos", JSON.stringify(planos));
-        alert(
-            `⚠️ ${adicionados.length} plano(s) que seus clientes usam não estavam cadastrados ` +
+        mostrarAlerta(
+            `${adicionados.length} plano(s) que seus clientes usam não estavam cadastrados ` +
             `e foram adicionados automaticamente em Configurações → Planos:\n\n` +
             adicionados.join("\n") +
             `\n\nAs renovações desses clientes estavam travadas (a data de vencimento não avançava). ` +
-            `Confira o valor e a duração desses planos em Configurações → Planos para garantir que estão certos.`
+            `Confira o valor e a duração desses planos em Configurações → Planos para garantir que estão certos.`,
+            "aviso"
         );
     }
 }
@@ -2012,7 +2057,7 @@ function editarPlano(index){
 function adicionarPlano(){
     let nome = document.getElementById("novoPlanoNome").value;
     let valor = document.getElementById("novoPlanoValor").value;
-    if(!nome || !valor){ alert("Preencha os campos."); return; }
+    if(!nome || !valor){ mostrarAlerta("Preencha os campos.", "aviso"); return; }
     let duracao = obterDuracaoSelecionada("novoPlanoDuracao", "novoPlanoDuracaoPersonalizada");
     planos.push({ nome, valor, duracao });
     document.getElementById("novoPlanoNome").value = "";
@@ -2054,6 +2099,25 @@ function confirmarAcaoModal(){
     const callback = acaoConfirmacaoPendente;
     fecharModalConfirmacao();
     if(typeof callback === "function") callback();
+}
+
+/* ===== MODAL DE ALERTA GENÉRICO (substitui o alert()) ===== */
+function mostrarAlerta(mensagem, tipo, titulo){
+    const icones = { sucesso:"✅", erro:"❌", aviso:"⚠️" };
+    const titulos = { sucesso:"Sucesso", erro:"Erro", aviso:"Atenção" };
+    tipo = icones[tipo] ? tipo : "aviso";
+
+    const icone = document.getElementById("alertaIcone");
+    icone.textContent = icones[tipo];
+    icone.className = "alerta-icone " + tipo;
+
+    document.getElementById("alertaTitulo").textContent = titulo || titulos[tipo];
+    document.getElementById("alertaMensagem").textContent = mensagem;
+    document.getElementById("modalAlerta").classList.add("ativo");
+}
+
+function fecharModalAlerta(){
+    document.getElementById("modalAlerta").classList.remove("ativo");
 }
 
 /* ===== DESTAQUE DE TERMO PESQUISADO ===== */
@@ -2180,9 +2244,9 @@ function adicionarCliente(){
     let obs = document.getElementById("obs").value;
 
     if(tipoCliente === "revenda"){
-        if(!nome){ alert("Preencha o nome do cliente."); return; }
+        if(!nome){ mostrarAlerta("Preencha o nome do cliente.", "aviso"); return; }
         let creditos = parseInt(document.getElementById("creditosRevenda").value) || 0;
-        if(creditos <= 0){ alert("Informe a quantidade de créditos."); return; }
+        if(creditos <= 0){ mostrarAlerta("Informe a quantidade de créditos.", "aviso"); return; }
         let valorTotal = creditos * VALOR_CREDITO_REVENDA;
         let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - CUSTO_CREDITO_REVENDA);
         const hojeISO = new Date().toISOString().split("T")[0];
@@ -2216,9 +2280,9 @@ function adicionarCliente(){
     let senha = document.getElementById("senha").value;
     let vencimento = document.getElementById("vencimento").value;
     let selectPlano = document.getElementById("plano");
-    if(selectPlano.selectedIndex == -1){ alert("Cadastre um plano primeiro."); return; }
+    if(selectPlano.selectedIndex == -1){ mostrarAlerta("Cadastre um plano primeiro.", "aviso"); return; }
     let planoTexto = selectPlano.options[selectPlano.selectedIndex].text;
-    if(!nome || !usuario || !senha){ alert("Preencha os campos."); return; }
+    if(!nome || !usuario || !senha){ mostrarAlerta("Preencha os campos.", "aviso"); return; }
 
     // Se o vencimento não foi preenchido manualmente, calcula automaticamente
     // com base na duração configurada do plano. Planos sem duração definida
@@ -2834,7 +2898,7 @@ document.addEventListener("DOMContentLoaded", function(){
         setTimeout(verificarResumoDiario, 400);
     } catch(erro){
         console.log(erro);
-        alert("Erro ao carregar sistema: " + erro.message);
+        mostrarAlerta("Erro ao carregar sistema: " + erro.message, "erro");
     }
 });
 </script>
@@ -2957,6 +3021,16 @@ document.addEventListener("DOMContentLoaded", function(){
         <strong id="historicoNome" style="color:white;"></strong>
         <div id="historicoConteudo" style="display:flex; flex-direction:column; gap:10px; max-height:50vh; overflow-y:auto;"></div>
         <button class="btn-edit" onclick="fecharHistorico()">Fechar</button>
+    </div>
+</div>
+
+<!-- MODAL ALERTA (substitui o alert()) -->
+<div class="modal" id="modalAlerta" onclick="if(event.target===this)fecharModalAlerta()">
+    <div class="modal-box modal-alerta-box">
+        <div class="alerta-icone aviso" id="alertaIcone">⚠️</div>
+        <h2 id="alertaTitulo">Atenção</h2>
+        <p id="alertaMensagem" class="alerta-mensagem"></p>
+        <button class="btn-add" onclick="fecharModalAlerta()">Entendido</button>
     </div>
 </div>
 
