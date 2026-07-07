@@ -575,12 +575,36 @@ select{
     display:flex;
     justify-content:space-between;
     align-items:center;
+    gap:10px;
+    cursor:grab;
+    transition:opacity .15s, transform .15s, box-shadow .15s;
+}
+
+.plano-item.arrastando{
+    opacity:.4;
+    cursor:grabbing;
+}
+
+.plano-item.arrastando-sobre{
+    box-shadow: 0 0 0 2px #38bdf8 inset;
+    transform:scale(1.01);
+}
+
+.drag-handle{
+    color:#475569;
+    font-size:16px;
+    line-height:1;
+    flex-shrink:0;
+    user-select:none;
+    cursor:grab;
 }
 
 .plano-info{
     display:flex;
     flex-direction:column;
     gap:5px;
+    flex:1;
+    min-width:0;
 }
 
 .plano-nome{
@@ -798,6 +822,73 @@ textarea{
 .toast-sucesso.ativo{
     opacity:1;
 }
+
+.toast-desfazer{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:#1e293b;
+    color:#e2e8f0;
+    padding:12px 16px;
+    border-radius:12px;
+    font-weight:normal;
+    font-size:14px;
+    z-index:9999;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s, transform .25s;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    box-shadow:0 4px 16px rgba(0,0,0,.4);
+    border:1px solid #334155;
+}
+
+.toast-desfazer.ativo{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+    pointer-events:auto;
+}
+
+.toast-desfazer button{
+    background:none;
+    border:none;
+    color:#38bdf8;
+    font-weight:bold;
+    font-size:14px;
+    cursor:pointer;
+    padding:4px 6px;
+}
+
+.input-dias-lembrete{
+    width:50px;
+    background:#0f172a;
+    border:1px solid #334155;
+    color:#38bdf8;
+    font-weight:bold;
+    font-size:inherit;
+    border-radius:8px;
+    text-align:center;
+    padding:2px 4px;
+    -moz-appearance:textfield;
+}
+
+.nome-clicavel{
+    cursor:pointer;
+    text-decoration:underline;
+    text-decoration-color:#334155;
+    text-underline-offset:2px;
+}
+.nome-clicavel:active{
+    opacity:.7;
+}
+
+.card-destacado{
+    box-shadow:0 0 0 2px #38bdf8 inset;
+    transition:box-shadow .3s;
+}
+
 .btn-desabilitado{
     background:#64748b !important;
     color:#cbd5e1 !important;
@@ -878,16 +969,6 @@ textarea{
     display:block;
     font-size:40px;
     margin-bottom:12px;
-}
-
-/* ===== FADE-IN DOS CARDS ===== */
-@keyframes cardFadeIn{
-    from{ opacity:0; transform:translateY(10px); }
-    to{ opacity:1; transform:translateY(0); }
-}
-
-.card{
-    animation: cardFadeIn .4s ease both;
 }
 
 /* ===== SKELETON LOADING ===== */
@@ -1077,7 +1158,10 @@ textarea{
         </div>
     </div>
     <div class="vencimentos-box">
-        <h2>Clientes vencendo nos próximos 2 dias</h2>
+        <h2>Clientes vencendo nos próximos
+            <input type="number" id="diasLembreteInput" min="1" max="30" value="2"
+                onchange="atualizarDiasLembrete()" class="input-dias-lembrete"> dias
+        </h2>
         <div id="listaVencendo"></div>
     </div>
 </div>
@@ -1228,6 +1312,7 @@ let itensPorPagina = parseInt(localStorage.getItem("itensPorPagina")) || 30;
 let paginaAtual = 1;
 let idRenderizacao = 0;
 let planoEditando = null;
+let dragItem = null;
 let clienteEditando = null;
 let servidorEditando = null;
 let clienteRenovacao = null;
@@ -2063,6 +2148,25 @@ function sugerirVencimentoPlano(){
     campoVencimento.value = data.toISOString().split("T")[0];
 }
 
+function iniciarDrag(el, tipo, index){
+    dragItem = { tipo, index };
+    el.classList.add("arrastando");
+}
+
+function soltarItem(e, tipo, indexDestino){
+    e.preventDefault();
+    e.currentTarget.classList.remove("arrastando-sobre");
+    if(!dragItem || dragItem.tipo !== tipo || dragItem.index === indexDestino) return;
+
+    let arr = tipo === "servidor" ? servidores : planos;
+    let [item] = arr.splice(dragItem.index, 1);
+    arr.splice(indexDestino, 0, item);
+    dragItem = null;
+
+    if(tipo === "servidor") renderizarServidores();
+    else renderizarPlanos();
+}
+
 function renderizarServidores(){
     let lista = document.getElementById("listaServidores");
     let select = document.getElementById("servidor");
@@ -2074,7 +2178,13 @@ function renderizarServidores(){
 
     servidores.forEach((servidor, index) => {
         lista.innerHTML += `
-<div class="plano-item">
+<div class="plano-item" draggable="true"
+    ondragstart="iniciarDrag(this,'servidor',${index})"
+    ondragend="this.classList.remove('arrastando')"
+    ondragover="event.preventDefault(); this.classList.add('arrastando-sobre')"
+    ondragleave="this.classList.remove('arrastando-sobre')"
+    ondrop="soltarItem(event,'servidor',${index})">
+    <span class="drag-handle">⠿</span>
     <div class="plano-info">
         <div class="plano-nome">${servidor.nome}</div>
         <div class="plano-valor">${servidor.custo}</div>
@@ -2132,7 +2242,13 @@ function renderizarPlanos(){
     planos.forEach((plano, index) => {
         let semDuracao = !plano.duracao;
         lista.innerHTML += `
-<div class="plano-item ${semDuracao ? "plano-revenda" : ""}">
+<div class="plano-item ${semDuracao ? "plano-revenda" : ""}" draggable="true"
+    ondragstart="iniciarDrag(this,'plano',${index})"
+    ondragend="this.classList.remove('arrastando')"
+    ondragover="event.preventDefault(); this.classList.add('arrastando-sobre')"
+    ondragleave="this.classList.remove('arrastando-sobre')"
+    ondrop="soltarItem(event,'plano',${index})">
+    <span class="drag-handle">⠿</span>
     <div class="plano-info">
         <div class="plano-nome">${plano.nome}</div>
         <div class="plano-valor">${moeda(plano.valor)}</div>
@@ -2458,6 +2574,8 @@ function adicionarCliente(){
     document.getElementById("obs").value = "";
 }
 
+let undoExclusao = null; // { cliente, index, timeoutId }
+
 function deletar(index){
     let cliente = clientes[index];
     if(!cliente) return;
@@ -2466,7 +2584,35 @@ function deletar(index){
         salvar();
         renderizar();
         atualizarDashboard();
+        mostrarToastDesfazer(cliente, index);
     }, "🗑️ Excluir cliente");
+}
+
+function mostrarToastDesfazer(cliente, index){
+    if(undoExclusao) clearTimeout(undoExclusao.timeoutId);
+
+    let toast = document.getElementById("toastDesfazer");
+    document.getElementById("toastDesfazerTexto").innerText = `Cliente "${cliente.nome}" excluído`;
+    toast.classList.add("ativo");
+
+    let timeoutId = setTimeout(() => {
+        toast.classList.remove("ativo");
+        undoExclusao = null;
+    }, 5000);
+
+    undoExclusao = { cliente, index, timeoutId };
+}
+
+function desfazerExclusao(){
+    if(!undoExclusao) return;
+    clearTimeout(undoExclusao.timeoutId);
+    let { cliente, index } = undoExclusao;
+    clientes.splice(Math.min(index, clientes.length), 0, cliente);
+    salvar();
+    renderizar();
+    atualizarDashboard();
+    document.getElementById("toastDesfazer").classList.remove("ativo");
+    undoExclusao = null;
 }
 
 function statusCliente(data){
@@ -2766,6 +2912,65 @@ function primeiroNome(nome){
     return nome.trim().split(" ")[0];
 }
 
+function irParaCliente(refOuNome){
+    let index = -1;
+    if(typeof refOuNome === "number"){
+        index = refOuNome;
+    } else {
+        let nomeAlvo = String(refOuNome || "").toLowerCase();
+        index = clientes.findIndex(c => (c.nome || "").toLowerCase() === nomeAlvo);
+    }
+
+    if(index === -1 || !clientes[index]){
+        mostrarAlerta("Cliente não encontrado (pode ter sido removido ou renomeado).", "aviso");
+        return;
+    }
+
+    let cliente = clientes[index];
+
+    abrirGuia("clientes");
+    filtrarClientes("todos");
+
+    let boxPesquisa = document.getElementById("boxPesquisa");
+    let campoPesquisa = document.getElementById("pesquisa");
+    if(campoPesquisa){
+        campoPesquisa.value = cliente.nome || "";
+        if(boxPesquisa) boxPesquisa.style.display = "flex";
+    }
+
+    paginaAtual = 1;
+    renderizar();
+
+    setTimeout(() => {
+        let lista = document.getElementById("listaClientes");
+        let card = lista ? lista.querySelector(".card") : null;
+        if(card){
+            card.scrollIntoView({behavior:"smooth", block:"center"});
+            card.classList.add("card-destacado");
+            setTimeout(() => card.classList.remove("card-destacado"), 2000);
+        }
+    }, 250);
+}
+
+function carregarDiasLembrete(){
+    let dias = parseInt(localStorage.getItem("diasLembreteDashboard")) || 2;
+    let input = document.getElementById("diasLembreteInput");
+    if(input) input.value = dias;
+}
+
+function atualizarDiasLembrete(){
+    let input = document.getElementById("diasLembreteInput");
+    let dias = parseInt(input.value) || 2;
+    if(dias < 1) dias = 1;
+    input.value = dias;
+    localStorage.setItem("diasLembreteDashboard", dias);
+    atualizarDashboard();
+}
+
+function obterDiasLembreteDashboard(){
+    return parseInt(localStorage.getItem("diasLembreteDashboard")) || 2;
+}
+
 function abrirGuia(id){
     document.querySelectorAll(".guia").forEach(g => g.classList.remove("ativa"));
     document.getElementById(id).classList.add("ativa");
@@ -2841,12 +3046,18 @@ function atualizarDashboard(){
         if(status == "ativo") ativos++;
 
         let diasRestantes = calcularDiasRestantes(cliente.vencimento);
-        if(diasRestantes === 0 || diasRestantes === 1){
+        let limiteDias = obterDiasLembreteDashboard();
+        if(diasRestantes >= 0 && diasRestantes < limiteDias){
             vencendo++;
-            let textoVencimento = diasRestantes === 0 ? "🔥 Vence Hoje" : "⚠️ Vence Amanhã";
+            let indexReal = clientes.indexOf(cliente);
+            let textoVencimento = diasRestantes === 0
+                ? "🔥 Vence Hoje"
+                : diasRestantes === 1
+                    ? "⚠️ Vence Amanhã"
+                    : `⚠️ Vence em ${diasRestantes} dias`;
             lista.innerHTML += `
 <div class="card vencendo">
-    <div class="nome">${cliente.nome}</div>
+    <div class="nome nome-clicavel" onclick="irParaCliente(${indexReal})">${cliente.nome}</div>
     <div class="info">${textoVencimento}</div>
     <div class="info">📅 ${formatarData(cliente.vencimento)}</div>
     <div class="info">📦 ${cliente.plano}</div>
@@ -2858,7 +3069,7 @@ function atualizarDashboard(){
             Lembrar
         </button>`}
         <button class="btn-renovar" style="background:#22c55e;color:white;padding:10px 15px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;"
-            onclick="abrirModalRenovacao(${clientes.indexOf(cliente)})">
+            onclick="abrirModalRenovacao(${indexReal})">
             🔄 Renovar
         </button>
     </div>
@@ -2935,7 +3146,7 @@ function renderizarHistoricoLucro(){
     <span class="historico-lucro-total">R$ ${mov.saldoAnterior.toFixed(2).replace(".",",")}</span>
     <span class="historico-lucro-valor">${sinal}R$ ${Math.abs(mov.valor).toFixed(2).replace(".",",")}</span>
     <span class="historico-lucro-data">${dataFormatada}</span>
-    <span class="historico-lucro-nome">${mov.cliente || ""}</span>
+    <span class="historico-lucro-nome nome-clicavel" onclick='irParaCliente(${JSON.stringify(mov.cliente || "")})'>${mov.cliente || ""}</span>
 </div>`;
     }).join("");
 }
@@ -3105,6 +3316,7 @@ document.addEventListener("DOMContentLoaded", function(){
         filtroAtual = "todos";
         aplicarModoCompacto();
         renderizar();
+        carregarDiasLembrete();
         atualizarDashboard();
         configuracaoOriginal = obterConfiguracoesAtuais();
         verificarAlteracoesConfiguracao();
@@ -3249,6 +3461,10 @@ document.addEventListener("DOMContentLoaded", function(){
 </div>
 
 <div id="toastSucesso" class="toast-sucesso">✅ Configurações salvas com sucesso!</div>
+<div id="toastDesfazer" class="toast-desfazer">
+    <span id="toastDesfazerTexto">Cliente excluído</span>
+    <button onclick="desfazerExclusao()">Desfazer</button>
+</div>
 
 <!-- MODAL RESUMO DIÁRIO -->
 <div class="modal-resumo-overlay" id="modalResumoDiario" style="display:none;" onclick="if(event.target===this)fecharResumoDiario()">
