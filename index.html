@@ -1766,16 +1766,17 @@ function renovarCliente(){
         let valorTotal = creditos * VALOR_CREDITO_REVENDA;
         let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - CUSTO_CREDITO_REVENDA);
         const hojeISORenovacao = new Date().toISOString().split("T")[0];
+        const idOperacaoRevenda = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 
         if(!Array.isArray(cliente.historicoCreditos)) cliente.historicoCreditos = [];
         cliente.tipoCliente = "revenda";
-        cliente.historicoCreditos.push({ data:hojeISORenovacao, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:CUSTO_CREDITO_REVENDA, valorTotal, lucro:lucroOperacao });
+        cliente.historicoCreditos.push({ data:hojeISORenovacao, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:CUSTO_CREDITO_REVENDA, valorTotal, lucro:lucroOperacao, idOperacao:idOperacaoRevenda });
         cliente.ultimaRenovacao = hojeISORenovacao;
         cliente.plano = `Revenda - ${creditos} créditos - ${moeda(valorTotal)}`;
-        registrarMovimentoLucro(cliente.nome, lucroOperacao);
+        registrarMovimentoLucro(cliente.nome, lucroOperacao, idOperacaoRevenda);
 
         if(!Array.isArray(cliente.historico)) cliente.historico = [];
-        cliente.historico.push({ data:hojeISORenovacao, vencimentoAnterior:"Revenda", vencimentoNovo:"Revenda", plano:cliente.plano });
+        cliente.historico.push({ data:hojeISORenovacao, vencimentoAnterior:"Revenda", vencimentoNovo:"Revenda", plano:cliente.plano, idOperacao:idOperacaoRevenda });
 
         salvar();
         renderizar();
@@ -1803,6 +1804,8 @@ function renovarCliente(){
 
     clientes[clienteRenovacao].ultimaRenovacao = new Date().toISOString().split("T")[0];
 
+    const idOperacaoRenov = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+
     {
         let matchValorRenov = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
         let valorPlanoRenov = matchValorRenov ? parseFloat(matchValorRenov[1].replace(",",".")) || 0 : 0;
@@ -1812,7 +1815,7 @@ function renovarCliente(){
         let custoServidorRenov = servidorClienteRenov
             ? Number((servidorClienteRenov.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
             : 0;
-        registrarMovimentoLucro(cliente.nome, valorPlanoRenov - custoServidorRenov);
+        registrarMovimentoLucro(cliente.nome, valorPlanoRenov - custoServidorRenov, idOperacaoRenov);
     }
 
     if(!Array.isArray(clientes[clienteRenovacao].historico)) clientes[clienteRenovacao].historico = [];
@@ -1820,7 +1823,8 @@ function renovarCliente(){
         data: new Date().toISOString().split("T")[0],
         vencimentoAnterior,
         vencimentoNovo,
-        plano: cliente.plano || ""
+        plano: cliente.plano || "",
+        idOperacao: idOperacaoRenov
     });
 
     salvar();
@@ -2354,7 +2358,7 @@ let acaoConfirmacaoPendente = null;
 /* ===== HISTÓRICO DE MOVIMENTOS DO LUCRO MENSAL ===== */
 let historicoLucro = JSON.parse(localStorage.getItem("historicoLucro")) || [];
 
-function registrarMovimentoLucro(nomeCliente, valor){
+function registrarMovimentoLucro(nomeCliente, valor, idOperacao){
     valor = Number(valor) || 0;
     if(valor === 0) return;
 
@@ -2370,7 +2374,7 @@ function registrarMovimentoLucro(nomeCliente, valor){
         saldoAnterior = parseFloat(textoLucro) || 0;
     }
 
-    historicoLucro.push({ data: new Date().toISOString(), cliente: nomeCliente || "", valor, saldoAnterior });
+    historicoLucro.push({ data: new Date().toISOString(), cliente: nomeCliente || "", valor, saldoAnterior, idOperacao: idOperacao || null });
     if(historicoLucro.length > 300) historicoLucro = historicoLucro.slice(-300);
     localStorage.setItem("historicoLucro", JSON.stringify(historicoLucro));
 }
@@ -3087,21 +3091,95 @@ function salvarEdicaoPlano(){
 }
 
 function salvarEdicaoCliente(){
+    let clienteAtual = clientes[clienteEditando];
+    let vencimentoAntigo = clienteAtual.vencimento || "";
+    let vencimentoEditado = document.getElementById("editVencimento").value;
+
     clientes[clienteEditando] = {
-        ...clientes[clienteEditando],
+        ...clienteAtual,
         servidor: document.getElementById("editServidor").value,
         nome: document.getElementById("editNome").value,
         usuario: document.getElementById("editUsuario").value,
         senha: document.getElementById("editSenha").value,
         whatsapp: document.getElementById("editWhatsapp").value,
-        vencimento: document.getElementById("editVencimento").value,
+        vencimento: vencimentoEditado,
         plano: document.getElementById("editPlano").value,
         obs: document.getElementById("editObs").value
     };
+
+    // Se a nova data for ANTERIOR à data que estava salva, entendemos que o
+    // usuário está corrigindo/desfazendo uma renovação lançada por engano.
+    // Nesse caso, removemos o lançamento correspondente do histórico do
+    // cliente e do histórico de lucro do Dashboard, devolvendo o valor ao
+    // total do mês. Clientes que apenas ficaram "vencidos" sem serem
+    // editados não passam por aqui, então o lucro deles não é afetado.
+    if(vencimentoAntigo && vencimentoEditado && new Date(vencimentoEditado) < new Date(vencimentoAntigo)){
+        desfazerRenovacaoAoEditar(clienteEditando, vencimentoAntigo);
+    }
+
     salvar();
     renderizar();
     atualizarDashboard();
     fecharModal();
+}
+
+function desfazerRenovacaoAoEditar(index, vencimentoAntigo){
+    let cliente = clientes[index];
+    if(!Array.isArray(cliente.historico) || cliente.historico.length === 0) return;
+
+    // Acha a renovação mais recente que resultou nesse vencimento
+    let posicao = -1;
+    for(let i = cliente.historico.length - 1; i >= 0; i--){
+        if(cliente.historico[i].vencimentoNovo === vencimentoAntigo){
+            posicao = i;
+            break;
+        }
+    }
+    if(posicao === -1) return; // não achou renovação correspondente, não mexe em nada
+
+    let entradaRemovida = cliente.historico.splice(posicao, 1)[0];
+
+    // Remove o lançamento correspondente do histórico de lucro do Dashboard.
+    // Prioridade 1: casar pelo idOperacao (renovações feitas após essa
+    // melhoria). Prioridade 2 (fallback): renovações antigas não têm esse
+    // vínculo, então casamos pelo nome do cliente + mesma data do lançamento
+    // — removendo a ocorrência mais recente encontrada nesse dia.
+    let tamanhoAntes = historicoLucro.length;
+
+    if(entradaRemovida.idOperacao){
+        historicoLucro = historicoLucro.filter(mov => mov.idOperacao !== entradaRemovida.idOperacao);
+    } else {
+        let dataAlvo = entradaRemovida.data; // "AAAA-MM-DD"
+        let nomeAlvo = (cliente.nome || "").toLowerCase();
+        let posicaoMov = -1;
+        for(let i = historicoLucro.length - 1; i >= 0; i--){
+            let mov = historicoLucro[i];
+            if(mov.idOperacao) continue; // não mexe em lançamentos já vinculados a outra renovação
+            let dataMov = (mov.data || "").split("T")[0];
+            if(dataMov === dataAlvo && (mov.cliente || "").toLowerCase() === nomeAlvo){
+                posicaoMov = i;
+                break;
+            }
+        }
+        if(posicaoMov !== -1) historicoLucro.splice(posicaoMov, 1);
+    }
+
+    if(historicoLucro.length !== tamanhoAntes){
+        localStorage.setItem("historicoLucro", JSON.stringify(historicoLucro));
+    }
+
+    // A "última renovação" volta a apontar para a renovação anterior (se
+    // existir); se essa era a única, o cliente deixa de contar no lucro
+    // deste mês, já que não houve renovação de fato.
+    let renovacaoAnterior = cliente.historico[cliente.historico.length - 1];
+    if(renovacaoAnterior){
+        cliente.ultimaRenovacao = renovacaoAnterior.data;
+    } else {
+        delete cliente.ultimaRenovacao;
+    }
+
+    renderizarHistoricoLucro();
+    mostrarSucesso(`↩️ Renovação de ${formatarData(vencimentoAntigo)} desfeita — valor removido do lucro do mês.`);
 }
 
 function fecharModal(){
