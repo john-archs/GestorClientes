@@ -726,6 +726,39 @@ select{
     gap:10px;
     margin-bottom:20px;
     overflow-x:auto;
+    position:sticky;
+    top:70px;
+    background:#0f172a;
+    padding:8px 0;
+    z-index:200;
+}
+
+/* ===== Botão flutuante de adicionar (celular) ===== */
+.fab-add{
+    display:none;
+}
+@media(max-width:640px){
+    .fab-add{
+        display:flex;
+        position:fixed;
+        bottom:22px;
+        right:18px;
+        width:58px;
+        height:58px;
+        border-radius:50%;
+        background:#22c55e;
+        color:white;
+        align-items:center;
+        justify-content:center;
+        font-size:26px;
+        border:none;
+        cursor:pointer;
+        box-shadow:0 4px 16px rgba(0,0,0,.45);
+        z-index:3000;
+    }
+    .fab-add:active{
+        transform:scale(.94);
+    }
 }
 
 .filtro-btn{
@@ -1239,6 +1272,8 @@ textarea{
 
     <div class="lista" id="listaClientes"></div>
     <div class="paginacao-clientes" id="paginacaoClientes"></div>
+
+    <button class="fab-add" onclick="toggleAdicionar()" aria-label="Adicionar cliente" title="Adicionar cliente">➕</button>
 </div>
 
 <!-- CONFIGURAÇÕES -->
@@ -1400,7 +1435,7 @@ function esconderTooltip(){
 let timerPesquisa;
 function pesquisaComDelay(){
     clearTimeout(timerPesquisa);
-    timerPesquisa = setTimeout(() => { paginaAtual = 1; renderizar(); }, 250);
+    timerPesquisa = setTimeout(() => { paginaAtual = 1; renderizar(); }, 120);
 }
 
 function copiarDadosCliente(){
@@ -2945,13 +2980,10 @@ function renderizar(){
     let inicio = (paginaAtual - 1) * itensPorPagina;
     let paginaClientes = filtrados.slice(inicio, inicio + itensPorPagina);
 
-    // Skeleton loading enquanto os cards são preparados
-    let minhaRenderizacao = ++idRenderizacao;
-    renderizarSkeleton(lista, Math.min(paginaClientes.length || 1, itensPorPagina));
-
-    setTimeout(() => {
-        if(minhaRenderizacao !== idRenderizacao) return; // uma renderização mais nova já começou
-
+    // Renderização imediata: os dados já estão em memória, então não há
+    // motivo pra atraso artificial (o antigo setTimeout de 150ms + skeleton
+    // só deixava a busca, os filtros e a paginação mais lentos à toa).
+    (() => {
         if(filtrados.length === 0){
             lista.innerHTML = `<div class="lista-vazia"><span>📭</span>Nenhum cliente encontrado</div>`;
         } else {
@@ -2991,7 +3023,7 @@ function renderizar(){
             return `
 <div class="card ${status}" style="animation-delay:${atraso}s">
     <div class="card-header">
-        <div class="card-header-left">
+        <div class="card-header-left" onclick="toggleAcoesCard('${uid}')" style="cursor:pointer;">
             <div class="nome">${destacar(cliente.nome, pesquisa)}</div>
             ${statusTexto}
         </div>
@@ -3035,7 +3067,7 @@ function renderizar(){
         document.getElementById("btnAtivos").innerHTML = `Ativos [${qtdAtivos}]`;
         document.getElementById("btnVencendo").innerHTML = `Vencendo [${qtdVencendo}]`;
         document.getElementById("btnVencidos").innerHTML = `Vencidos [${qtdVencidos}]`;
-    }, 150);
+    })();
 }
 
 function editarCliente(index){
@@ -3534,6 +3566,9 @@ function toggleAdicionar(){
             campoVencimento.type = "date";
             campoVencimento.value = data.toISOString().split("T")[0];
         }
+        box.scrollIntoView({behavior:"smooth", block:"start"});
+        let campoNome = document.getElementById("nome");
+        if(campoNome) setTimeout(() => campoNome.focus(), 300);
     }
 }
 function togglePesquisa(){
@@ -3595,6 +3630,80 @@ function tentarCopiaAntiga(campo){
         // Mesma coisa: falha silenciosa, o texto continua selecionado.
     }
 }
+
+/* ══════════════════════════════════════════════
+   ATALHOS DE TECLADO (PC) — não afetam o uso no celular
+══════════════════════════════════════════════ */
+const FECHAR_MODAL_POR_ID = {
+    modalEditar: fecharModal,
+    modalPlano: fecharModalPlano,
+    modalRenovacao: fecharModalRenovacao,
+    modalServidor: fecharModalServidor,
+    modalDadosCliente: fecharDadosCliente,
+    modalConfirmacao: fecharModalConfirmacao,
+    modalHistorico: fecharHistorico,
+    modalHistoricoCreditos: fecharHistoricoCreditos,
+    modalRelatorioPDF: fecharModalRelatorio,
+    modalAlerta: fecharModalAlerta
+};
+
+function fecharComEsc(){
+    const resumo = document.getElementById("modalResumoDiario");
+    if(resumo && resumo.style.display !== "none"){ fecharResumoDiario(); return true; }
+
+    for(const id in FECHAR_MODAL_POR_ID){
+        const modal = document.getElementById(id);
+        if(modal && modal.classList.contains("ativo")){ FECHAR_MODAL_POR_ID[id](); return true; }
+    }
+
+    const acoesAbertas = document.querySelector(".card-acoes.visivel");
+    if(acoesAbertas){
+        document.querySelectorAll(".card-acoes.visivel").forEach(el => el.classList.remove("visivel"));
+        document.querySelectorAll(".btn-toggle-acoes.aberto").forEach(el => { el.classList.remove("aberto"); el.innerText = "⋯"; });
+        return true;
+    }
+
+    const sidebar = document.getElementById("sidebar");
+    if(sidebar && sidebar.classList.contains("ativo")){ sidebar.classList.remove("ativo"); return true; }
+
+    return false;
+}
+
+document.addEventListener("keydown", function(e){
+    if(e.key === "Escape"){
+        fecharComEsc();
+        return;
+    }
+
+    const tag = (e.target.tagName || "").toLowerCase();
+    const estaDigitando = tag === "input" || tag === "textarea" || tag === "select" || e.target.isContentEditable;
+    const abaClientesAtiva = document.getElementById("clientes") && document.getElementById("clientes").classList.contains("ativa");
+
+    // "/" ou Ctrl+K → foco na busca
+    if((e.key === "/" && !estaDigitando) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")){
+        if(abaClientesAtiva){
+            e.preventDefault();
+            const box = document.getElementById("boxPesquisa");
+            if(box) box.style.display = "flex";
+            const campo = document.getElementById("pesquisa");
+            if(campo){ campo.focus(); campo.select(); }
+        }
+        return;
+    }
+
+    // "N" → abre o formulário de adicionar cliente
+    if(e.key.toLowerCase() === "n" && !estaDigitando && !e.ctrlKey && !e.metaKey && !e.altKey){
+        if(abaClientesAtiva){
+            e.preventDefault();
+            const box = document.getElementById("boxAdicionar");
+            if(box){
+                box.style.display = "flex";
+                const campoNome = document.getElementById("nome");
+                if(campoNome) campoNome.focus();
+            }
+        }
+    }
+});
 
 document.addEventListener("DOMContentLoaded", function(){
     try{
