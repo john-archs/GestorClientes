@@ -1841,17 +1841,18 @@ function renovarCliente(){
 
     const idOperacaoRenov = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 
-    {
-        let matchValorRenov = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
-        let valorPlanoRenov = matchValorRenov ? parseFloat(matchValorRenov[1].replace(",",".")) || 0 : 0;
-        let servidorClienteRenov = servidores.find(s =>
-            (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
-        );
-        let custoServidorRenov = servidorClienteRenov
-            ? Number((servidorClienteRenov.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
-            : 0;
-        registrarMovimentoLucro(cliente.nome, valorPlanoRenov - custoServidorRenov, idOperacaoRenov);
-    }
+    let matchValorRenov = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
+    let valorPlanoRenov = matchValorRenov ? parseFloat(matchValorRenov[1].replace(",",".")) || 0 : 0;
+    let servidorClienteRenov = servidores.find(s =>
+        (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
+    );
+    // Custo do servidor é "congelado" no momento da renovação: fica salvo
+    // junto do lançamento no histórico, para que uma alteração futura no
+    // custo do servidor não altere o lucro de renovações já feitas.
+    let custoServidorRenov = servidorClienteRenov
+        ? Number((servidorClienteRenov.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
+        : 0;
+    registrarMovimentoLucro(cliente.nome, valorPlanoRenov - custoServidorRenov, idOperacaoRenov);
 
     if(!Array.isArray(clientes[clienteRenovacao].historico)) clientes[clienteRenovacao].historico = [];
     clientes[clienteRenovacao].historico.push({
@@ -1859,6 +1860,8 @@ function renovarCliente(){
         vencimentoAnterior,
         vencimentoNovo,
         plano: cliente.plano || "",
+        custoServidor: custoServidorRenov,
+        lucro: valorPlanoRenov - custoServidorRenov,
         idOperacao: idOperacaoRenov
     });
 
@@ -2795,7 +2798,8 @@ function adicionarCliente(){
     }
 
     const hojeISO = new Date().toISOString().split("T")[0];
-    clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO });
+    const idOperacaoNovoCliente = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO, historico: [] });
 
     {
         let matchValorNovo = (planoTexto || "").match(/R\$\s*([\d.,]+)/);
@@ -2803,10 +2807,23 @@ function adicionarCliente(){
         let servidorClienteNovo = servidores.find(s =>
             (servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
         );
+        // Custo do servidor é "congelado" no momento do cadastro: fica salvo
+        // junto do lançamento no histórico, para que uma alteração futura no
+        // custo do servidor não altere o lucro deste cadastro já feito.
         let custoServidorNovo = servidorClienteNovo
             ? Number((servidorClienteNovo.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
             : 0;
-        registrarMovimentoLucro(nome, valorPlanoNovo - custoServidorNovo);
+        let clienteRecemCriado = clientes[clientes.length - 1];
+        clienteRecemCriado.historico.push({
+            data: hojeISO,
+            vencimentoAnterior: "-",
+            vencimentoNovo: vencimento || "-",
+            plano: planoTexto,
+            custoServidor: custoServidorNovo,
+            lucro: valorPlanoNovo - custoServidorNovo,
+            idOperacao: idOperacaoNovoCliente
+        });
+        registrarMovimentoLucro(nome, valorPlanoNovo - custoServidorNovo, idOperacaoNovoCliente);
     }
 
     salvar();
@@ -3309,10 +3326,12 @@ function formatarData(data){
 }
 
 function atualizarDashboard(){
-    let lucro = 0;
     const hoje = new Date();
     const mesAtual = hoje.getMonth();
     const anoAtual = hoje.getFullYear();
+    let lucro = 0;
+    let precisaSalvarMigracao = false;
+
     let ativos = 0, vencendo = 0;
     let lista = document.getElementById("listaVencendo");
     lista.innerHTML = "";
@@ -3353,18 +3372,48 @@ function atualizarDashboard(){
             salvar();
         }
 
-        let custoServidor = 0;
+        let custoServidorAtual = 0;
         if(servidorCliente){
-            custoServidor = Number(servidorCliente.custo.replace("R$","").replace(".","").replace(",","."));
+            custoServidorAtual = Number(servidorCliente.custo.replace("R$","").replace(".","").replace(",","."));
         }
 
+        // O lucro de cada lançamento (cadastro/renovação) é somado a partir do
+        // valor já "congelado" no histórico do cliente — assim, alterar o
+        // custo do servidor hoje não muda o lucro de lançamentos já feitos.
+        //
+        // Clientes cadastrados/renovados antes desta correção ainda não têm
+        // esse valor salvo no histórico. Para esses casos, "congelamos" agora
+        // o lançamento referente à última renovação usando o custo atual do
+        // servidor (o melhor valor disponível) e SALVAMOS essa informação,
+        // para que ela não volte a mudar em alterações futuras de custo.
         if(cliente.ultimaRenovacao){
-            let renovacao = new Date(cliente.ultimaRenovacao);
-            if(renovacao.getMonth() === mesAtual && renovacao.getFullYear() === anoAtual){
-                let lucroCliente = valor - custoServidor;
-                if(!isNaN(lucroCliente)) lucro += lucroCliente;
+            if(!Array.isArray(cliente.historico)) cliente.historico = [];
+            let jaTemLancamentoCongelado = cliente.historico.some(entrada =>
+                entrada && entrada.data === cliente.ultimaRenovacao && typeof entrada.lucro === "number"
+            );
+            if(!jaTemLancamentoCongelado){
+                cliente.historico.push({
+                    data: cliente.ultimaRenovacao,
+                    vencimentoAnterior: "-",
+                    vencimentoNovo: cliente.vencimento || "-",
+                    plano: cliente.plano || "",
+                    custoServidor: custoServidorAtual,
+                    lucro: valor - custoServidorAtual,
+                    idOperacao: null
+                });
+                precisaSalvarMigracao = true;
             }
         }
+
+        let lucroClienteMes = 0;
+        (cliente.historico || []).forEach(entrada => {
+            if(!entrada || !entrada.data) return;
+            let dataEntrada = new Date(entrada.data);
+            if(dataEntrada.getMonth() === mesAtual && dataEntrada.getFullYear() === anoAtual && typeof entrada.lucro === "number"){
+                lucroClienteMes += entrada.lucro;
+            }
+        });
+        lucro += lucroClienteMes;
 
         if(status == "ativo") ativos++;
 
@@ -3399,6 +3448,8 @@ function atualizarDashboard(){
 </div>`;
         }
     });
+
+    if(precisaSalvarMigracao) salvar();
 
     document.getElementById("lucroTotal").innerHTML = `R$ ${lucro.toFixed(2).replace(".",",")}`;
     document.getElementById("clientesAtivos").innerHTML = ativos;
