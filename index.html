@@ -726,39 +726,6 @@ select{
     gap:10px;
     margin-bottom:20px;
     overflow-x:auto;
-    position:sticky;
-    top:70px;
-    background:#0f172a;
-    padding:8px 0;
-    z-index:200;
-}
-
-/* ===== Botão flutuante de adicionar (celular) ===== */
-.fab-add{
-    display:none;
-}
-@media(max-width:640px){
-    .fab-add{
-        display:flex;
-        position:fixed;
-        bottom:22px;
-        right:18px;
-        width:58px;
-        height:58px;
-        border-radius:50%;
-        background:#22c55e;
-        color:white;
-        align-items:center;
-        justify-content:center;
-        font-size:26px;
-        border:none;
-        cursor:pointer;
-        box-shadow:0 4px 16px rgba(0,0,0,.45);
-        z-index:3000;
-    }
-    .fab-add:active{
-        transform:scale(.94);
-    }
 }
 
 .filtro-btn{
@@ -1272,8 +1239,6 @@ textarea{
 
     <div class="lista" id="listaClientes"></div>
     <div class="paginacao-clientes" id="paginacaoClientes"></div>
-
-    <button class="fab-add" onclick="toggleAdicionar()" aria-label="Adicionar cliente" title="Adicionar cliente">➕</button>
 </div>
 
 <!-- CONFIGURAÇÕES -->
@@ -1435,7 +1400,7 @@ function esconderTooltip(){
 let timerPesquisa;
 function pesquisaComDelay(){
     clearTimeout(timerPesquisa);
-    timerPesquisa = setTimeout(() => { paginaAtual = 1; renderizar(); }, 120);
+    timerPesquisa = setTimeout(() => { paginaAtual = 1; renderizar(); }, 250);
 }
 
 function copiarDadosCliente(){
@@ -1841,18 +1806,17 @@ function renovarCliente(){
 
     const idOperacaoRenov = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 
-    let matchValorRenov = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
-    let valorPlanoRenov = matchValorRenov ? parseFloat(matchValorRenov[1].replace(",",".")) || 0 : 0;
-    let servidorClienteRenov = servidores.find(s =>
-        (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
-    );
-    // Custo do servidor é "congelado" no momento da renovação: fica salvo
-    // junto do lançamento no histórico, para que uma alteração futura no
-    // custo do servidor não altere o lucro de renovações já feitas.
-    let custoServidorRenov = servidorClienteRenov
-        ? Number((servidorClienteRenov.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
-        : 0;
-    registrarMovimentoLucro(cliente.nome, valorPlanoRenov - custoServidorRenov, idOperacaoRenov);
+    {
+        let matchValorRenov = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
+        let valorPlanoRenov = matchValorRenov ? parseFloat(matchValorRenov[1].replace(",",".")) || 0 : 0;
+        let servidorClienteRenov = servidores.find(s =>
+            (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
+        );
+        let custoServidorRenov = servidorClienteRenov
+            ? Number((servidorClienteRenov.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
+            : 0;
+        registrarMovimentoLucro(cliente.nome, valorPlanoRenov - custoServidorRenov, idOperacaoRenov);
+    }
 
     if(!Array.isArray(clientes[clienteRenovacao].historico)) clientes[clienteRenovacao].historico = [];
     clientes[clienteRenovacao].historico.push({
@@ -1860,8 +1824,6 @@ function renovarCliente(){
         vencimentoAnterior,
         vencimentoNovo,
         plano: cliente.plano || "",
-        custoServidor: custoServidorRenov,
-        lucro: valorPlanoRenov - custoServidorRenov,
         idOperacao: idOperacaoRenov
     });
 
@@ -2798,8 +2760,7 @@ function adicionarCliente(){
     }
 
     const hojeISO = new Date().toISOString().split("T")[0];
-    const idOperacaoNovoCliente = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-    clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO, historico: [] });
+    clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO });
 
     {
         let matchValorNovo = (planoTexto || "").match(/R\$\s*([\d.,]+)/);
@@ -2807,23 +2768,10 @@ function adicionarCliente(){
         let servidorClienteNovo = servidores.find(s =>
             (servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
         );
-        // Custo do servidor é "congelado" no momento do cadastro: fica salvo
-        // junto do lançamento no histórico, para que uma alteração futura no
-        // custo do servidor não altere o lucro deste cadastro já feito.
         let custoServidorNovo = servidorClienteNovo
             ? Number((servidorClienteNovo.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
             : 0;
-        let clienteRecemCriado = clientes[clientes.length - 1];
-        clienteRecemCriado.historico.push({
-            data: hojeISO,
-            vencimentoAnterior: "-",
-            vencimentoNovo: vencimento || "-",
-            plano: planoTexto,
-            custoServidor: custoServidorNovo,
-            lucro: valorPlanoNovo - custoServidorNovo,
-            idOperacao: idOperacaoNovoCliente
-        });
-        registrarMovimentoLucro(nome, valorPlanoNovo - custoServidorNovo, idOperacaoNovoCliente);
+        registrarMovimentoLucro(nome, valorPlanoNovo - custoServidorNovo);
     }
 
     salvar();
@@ -2997,10 +2945,13 @@ function renderizar(){
     let inicio = (paginaAtual - 1) * itensPorPagina;
     let paginaClientes = filtrados.slice(inicio, inicio + itensPorPagina);
 
-    // Renderização imediata: os dados já estão em memória, então não há
-    // motivo pra atraso artificial (o antigo setTimeout de 150ms + skeleton
-    // só deixava a busca, os filtros e a paginação mais lentos à toa).
-    (() => {
+    // Skeleton loading enquanto os cards são preparados
+    let minhaRenderizacao = ++idRenderizacao;
+    renderizarSkeleton(lista, Math.min(paginaClientes.length || 1, itensPorPagina));
+
+    setTimeout(() => {
+        if(minhaRenderizacao !== idRenderizacao) return; // uma renderização mais nova já começou
+
         if(filtrados.length === 0){
             lista.innerHTML = `<div class="lista-vazia"><span>📭</span>Nenhum cliente encontrado</div>`;
         } else {
@@ -3040,7 +2991,7 @@ function renderizar(){
             return `
 <div class="card ${status}" style="animation-delay:${atraso}s">
     <div class="card-header">
-        <div class="card-header-left" onclick="toggleAcoesCard('${uid}')" style="cursor:pointer;">
+        <div class="card-header-left">
             <div class="nome">${destacar(cliente.nome, pesquisa)}</div>
             ${statusTexto}
         </div>
@@ -3084,7 +3035,7 @@ function renderizar(){
         document.getElementById("btnAtivos").innerHTML = `Ativos [${qtdAtivos}]`;
         document.getElementById("btnVencendo").innerHTML = `Vencendo [${qtdVencendo}]`;
         document.getElementById("btnVencidos").innerHTML = `Vencidos [${qtdVencidos}]`;
-    })();
+    }, 150);
 }
 
 function editarCliente(index){
@@ -3326,12 +3277,10 @@ function formatarData(data){
 }
 
 function atualizarDashboard(){
+    let lucro = 0;
     const hoje = new Date();
     const mesAtual = hoje.getMonth();
     const anoAtual = hoje.getFullYear();
-    let lucro = 0;
-    let precisaSalvarMigracao = false;
-
     let ativos = 0, vencendo = 0;
     let lista = document.getElementById("listaVencendo");
     lista.innerHTML = "";
@@ -3372,48 +3321,18 @@ function atualizarDashboard(){
             salvar();
         }
 
-        let custoServidorAtual = 0;
+        let custoServidor = 0;
         if(servidorCliente){
-            custoServidorAtual = Number(servidorCliente.custo.replace("R$","").replace(".","").replace(",","."));
+            custoServidor = Number(servidorCliente.custo.replace("R$","").replace(".","").replace(",","."));
         }
 
-        // O lucro de cada lançamento (cadastro/renovação) é somado a partir do
-        // valor já "congelado" no histórico do cliente — assim, alterar o
-        // custo do servidor hoje não muda o lucro de lançamentos já feitos.
-        //
-        // Clientes cadastrados/renovados antes desta correção ainda não têm
-        // esse valor salvo no histórico. Para esses casos, "congelamos" agora
-        // o lançamento referente à última renovação usando o custo atual do
-        // servidor (o melhor valor disponível) e SALVAMOS essa informação,
-        // para que ela não volte a mudar em alterações futuras de custo.
         if(cliente.ultimaRenovacao){
-            if(!Array.isArray(cliente.historico)) cliente.historico = [];
-            let jaTemLancamentoCongelado = cliente.historico.some(entrada =>
-                entrada && entrada.data === cliente.ultimaRenovacao && typeof entrada.lucro === "number"
-            );
-            if(!jaTemLancamentoCongelado){
-                cliente.historico.push({
-                    data: cliente.ultimaRenovacao,
-                    vencimentoAnterior: "-",
-                    vencimentoNovo: cliente.vencimento || "-",
-                    plano: cliente.plano || "",
-                    custoServidor: custoServidorAtual,
-                    lucro: valor - custoServidorAtual,
-                    idOperacao: null
-                });
-                precisaSalvarMigracao = true;
+            let renovacao = new Date(cliente.ultimaRenovacao);
+            if(renovacao.getMonth() === mesAtual && renovacao.getFullYear() === anoAtual){
+                let lucroCliente = valor - custoServidor;
+                if(!isNaN(lucroCliente)) lucro += lucroCliente;
             }
         }
-
-        let lucroClienteMes = 0;
-        (cliente.historico || []).forEach(entrada => {
-            if(!entrada || !entrada.data) return;
-            let dataEntrada = new Date(entrada.data);
-            if(dataEntrada.getMonth() === mesAtual && dataEntrada.getFullYear() === anoAtual && typeof entrada.lucro === "number"){
-                lucroClienteMes += entrada.lucro;
-            }
-        });
-        lucro += lucroClienteMes;
 
         if(status == "ativo") ativos++;
 
@@ -3448,8 +3367,6 @@ function atualizarDashboard(){
 </div>`;
         }
     });
-
-    if(precisaSalvarMigracao) salvar();
 
     document.getElementById("lucroTotal").innerHTML = `R$ ${lucro.toFixed(2).replace(".",",")}`;
     document.getElementById("clientesAtivos").innerHTML = ativos;
@@ -3534,13 +3451,24 @@ function calcularDiasRestantes(data){
     return Math.ceil((venc - hoje) / (1000*60*60*24));
 }
 
+function obterDiaReferenciaLembrete(){
+    // Usa o horário de Brasília e desloca o corte do dia para 01h00,
+    // ou seja, antes de 01h ainda conta como o dia anterior.
+    const agora = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    agora.setHours(agora.getHours() - 1);
+    const ano = agora.getFullYear();
+    const mes = String(agora.getMonth() + 1).padStart(2, "0");
+    const dia = String(agora.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+}
+
 function registrarLembrete(whatsapp){
-    const hoje = new Date().toISOString().split("T")[0];
+    const hoje = obterDiaReferenciaLembrete();
     localStorage.setItem("lembrete_" + whatsapp, hoje);
 }
 
 function foiLembrado(whatsapp){
-    const hoje = new Date().toISOString().split("T")[0];
+    const hoje = obterDiaReferenciaLembrete();
     return localStorage.getItem("lembrete_" + whatsapp) === hoje;
 }
 
@@ -3617,9 +3545,6 @@ function toggleAdicionar(){
             campoVencimento.type = "date";
             campoVencimento.value = data.toISOString().split("T")[0];
         }
-        box.scrollIntoView({behavior:"smooth", block:"start"});
-        let campoNome = document.getElementById("nome");
-        if(campoNome) setTimeout(() => campoNome.focus(), 300);
     }
 }
 function togglePesquisa(){
@@ -3681,80 +3606,6 @@ function tentarCopiaAntiga(campo){
         // Mesma coisa: falha silenciosa, o texto continua selecionado.
     }
 }
-
-/* ══════════════════════════════════════════════
-   ATALHOS DE TECLADO (PC) — não afetam o uso no celular
-══════════════════════════════════════════════ */
-const FECHAR_MODAL_POR_ID = {
-    modalEditar: fecharModal,
-    modalPlano: fecharModalPlano,
-    modalRenovacao: fecharModalRenovacao,
-    modalServidor: fecharModalServidor,
-    modalDadosCliente: fecharDadosCliente,
-    modalConfirmacao: fecharModalConfirmacao,
-    modalHistorico: fecharHistorico,
-    modalHistoricoCreditos: fecharHistoricoCreditos,
-    modalRelatorioPDF: fecharModalRelatorio,
-    modalAlerta: fecharModalAlerta
-};
-
-function fecharComEsc(){
-    const resumo = document.getElementById("modalResumoDiario");
-    if(resumo && resumo.style.display !== "none"){ fecharResumoDiario(); return true; }
-
-    for(const id in FECHAR_MODAL_POR_ID){
-        const modal = document.getElementById(id);
-        if(modal && modal.classList.contains("ativo")){ FECHAR_MODAL_POR_ID[id](); return true; }
-    }
-
-    const acoesAbertas = document.querySelector(".card-acoes.visivel");
-    if(acoesAbertas){
-        document.querySelectorAll(".card-acoes.visivel").forEach(el => el.classList.remove("visivel"));
-        document.querySelectorAll(".btn-toggle-acoes.aberto").forEach(el => { el.classList.remove("aberto"); el.innerText = "⋯"; });
-        return true;
-    }
-
-    const sidebar = document.getElementById("sidebar");
-    if(sidebar && sidebar.classList.contains("ativo")){ sidebar.classList.remove("ativo"); return true; }
-
-    return false;
-}
-
-document.addEventListener("keydown", function(e){
-    if(e.key === "Escape"){
-        fecharComEsc();
-        return;
-    }
-
-    const tag = (e.target.tagName || "").toLowerCase();
-    const estaDigitando = tag === "input" || tag === "textarea" || tag === "select" || e.target.isContentEditable;
-    const abaClientesAtiva = document.getElementById("clientes") && document.getElementById("clientes").classList.contains("ativa");
-
-    // "/" ou Ctrl+K → foco na busca
-    if((e.key === "/" && !estaDigitando) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")){
-        if(abaClientesAtiva){
-            e.preventDefault();
-            const box = document.getElementById("boxPesquisa");
-            if(box) box.style.display = "flex";
-            const campo = document.getElementById("pesquisa");
-            if(campo){ campo.focus(); campo.select(); }
-        }
-        return;
-    }
-
-    // "N" → abre o formulário de adicionar cliente
-    if(e.key.toLowerCase() === "n" && !estaDigitando && !e.ctrlKey && !e.metaKey && !e.altKey){
-        if(abaClientesAtiva){
-            e.preventDefault();
-            const box = document.getElementById("boxAdicionar");
-            if(box){
-                box.style.display = "flex";
-                const campoNome = document.getElementById("nome");
-                if(campoNome) campoNome.focus();
-            }
-        }
-    }
-});
 
 document.addEventListener("DOMContentLoaded", function(){
     try{
