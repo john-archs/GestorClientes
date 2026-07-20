@@ -557,6 +557,63 @@ button{
     color:#64748b;
 }
 
+.atalhos-periodo{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin:10px 0 14px;
+}
+
+.btn-atalho-periodo{
+    background:#334155;
+    color:#e2e8f0;
+    border:none;
+    padding:6px 12px;
+    border-radius:8px;
+    font-size:12px;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.btn-atalho-periodo:hover{
+    background:#475569;
+}
+
+.btn-atalho-periodo.ativo{
+    background:#38bdf8;
+    color:#0f172a;
+    font-weight:bold;
+}
+
+.resultado-lucro-periodo{
+    margin-top:14px;
+    padding:14px;
+    background:#1e293b;
+    border-radius:10px;
+    text-align:center;
+}
+
+.resultado-lucro-periodo .valor-total-periodo{
+    font-size:24px;
+    font-weight:bold;
+    color:#22c55e;
+}
+
+.resultado-lucro-periodo .label-total-periodo{
+    font-size:11px;
+    color:#94a3b8;
+    margin-top:2px;
+}
+
+.lista-lucro-periodo{
+    margin-top:12px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    max-height:220px;
+    overflow-y:auto;
+}
+
 .config-box{
     background:#1e293b;
     padding:20px;
@@ -1156,6 +1213,7 @@ textarea{
             <div class="lucro-linha">
                 <span id="lucroTotal">R$ 0,00</span>
                 <div class="lucro-botoes">
+                    <button class="btn-historico-lucro" onclick="abrirModalLucroPeriodo()">📅 Lucro por Período</button>
                     <button class="btn-historico-lucro" onclick="abrirModalRelatorio()">📄 Relatório PDF</button>
                     <button class="btn-historico-lucro" onclick="toggleHistoricoLucro()">📜 Histórico</button>
                 </div>
@@ -2507,6 +2565,105 @@ function fecharHistoricoCreditos(){
     document.getElementById("modalHistoricoCreditos").classList.remove("ativo");
 }
 
+/* ===== LUCRO POR PERÍODO (mensal, anual ou personalizado) ===== */
+function abrirModalLucroPeriodo(){
+    let hoje = new Date();
+    let primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+
+    document.getElementById("lucroPeriodoInicio").value = primeiroDia.toISOString().split("T")[0];
+    document.getElementById("lucroPeriodoFim").value = hoje.toISOString().split("T")[0];
+
+    marcarAtalhoAtivo("atalhoMesAtual");
+    document.getElementById("modalLucroPeriodo").classList.add("ativo");
+    calcularLucroPeriodo();
+}
+
+function fecharModalLucroPeriodo(){
+    document.getElementById("modalLucroPeriodo").classList.remove("ativo");
+}
+
+function marcarAtalhoAtivo(idAtivo){
+    ["atalhoMesAtual", "atalhoMesPassado", "atalhoAnoAtual"].forEach(id => {
+        document.getElementById(id).classList.toggle("ativo", id === idAtivo);
+    });
+}
+
+function aplicarAtalhoPeriodo(tipo){
+    let hoje = new Date();
+    let inicio, fim;
+
+    if(tipo === "mesAtual"){
+        inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        fim = hoje;
+        marcarAtalhoAtivo("atalhoMesAtual");
+    } else if(tipo === "mesPassado"){
+        inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+        fim = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+        marcarAtalhoAtivo("atalhoMesPassado");
+    } else if(tipo === "anoAtual"){
+        inicio = new Date(hoje.getFullYear(), 0, 1);
+        fim = hoje;
+        marcarAtalhoAtivo("atalhoAnoAtual");
+    }
+
+    document.getElementById("lucroPeriodoInicio").value = inicio.toISOString().split("T")[0];
+    document.getElementById("lucroPeriodoFim").value = fim.toISOString().split("T")[0];
+    calcularLucroPeriodo();
+}
+
+function calcularLucroPeriodo(){
+    let inicioStr = document.getElementById("lucroPeriodoInicio").value;
+    let fimStr = document.getElementById("lucroPeriodoFim").value;
+    let total = document.getElementById("lucroPeriodoTotal");
+    let label = document.getElementById("lucroPeriodoLabel");
+    let lista = document.getElementById("lucroPeriodoLista");
+
+    // se o usuário editar as datas manualmente, os atalhos deixam de refletir a seleção
+    marcarAtalhoAtivo(null);
+
+    if(!inicioStr || !fimStr){
+        total.innerText = "R$ 0,00";
+        label.innerText = "Selecione um período";
+        lista.innerHTML = "";
+        return;
+    }
+
+    let inicio = new Date(inicioStr + "T00:00:00");
+    let fim = new Date(fimStr + "T23:59:59");
+
+    if(inicio > fim){
+        mostrarAlerta("A data inicial não pode ser depois da data final.", "aviso");
+        return;
+    }
+
+    let movimentos = historicoLucro.filter(mov => {
+        let d = new Date(mov.data);
+        return d >= inicio && d <= fim;
+    }).sort((a,b) => new Date(b.data) - new Date(a.data));
+
+    let soma = movimentos.reduce((acc, mov) => acc + (Number(mov.valor) || 0), 0);
+
+    total.innerText = `R$ ${soma.toFixed(2).replace(".", ",")}`;
+    label.innerText = `${movimentos.length} movimento(s) no período`;
+
+    if(movimentos.length === 0){
+        lista.innerHTML = `<div class="historico-lucro-vazio">Nenhum movimento de lucro encontrado nesse período.</div>`;
+        return;
+    }
+
+    lista.innerHTML = movimentos.map(mov => {
+        let sinal = (Number(mov.valor) || 0) >= 0 ? "+" : "-";
+        let d = new Date(mov.data);
+        let dataFormatada = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+        return `
+<div class="historico-lucro-item">
+    <span class="historico-lucro-data">${dataFormatada}</span>
+    <span class="historico-lucro-nome">${mov.cliente || "-"}</span>
+    <span class="historico-lucro-valor">${sinal}R$ ${Math.abs(Number(mov.valor) || 0).toFixed(2).replace(".", ",")}</span>
+</div>`;
+    }).join("");
+}
+
 /* ===== RELATÓRIO DE LUCRO EM PDF (por período) ===== */
 function abrirModalRelatorio(){
     let hoje = new Date();
@@ -3451,24 +3608,13 @@ function calcularDiasRestantes(data){
     return Math.ceil((venc - hoje) / (1000*60*60*24));
 }
 
-function obterDiaReferenciaLembrete(){
-    // Usa o horário de Brasília e desloca o corte do dia para 01h00,
-    // ou seja, antes de 01h ainda conta como o dia anterior.
-    const agora = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    agora.setHours(agora.getHours() - 1);
-    const ano = agora.getFullYear();
-    const mes = String(agora.getMonth() + 1).padStart(2, "0");
-    const dia = String(agora.getDate()).padStart(2, "0");
-    return `${ano}-${mes}-${dia}`;
-}
-
 function registrarLembrete(whatsapp){
-    const hoje = obterDiaReferenciaLembrete();
+    const hoje = new Date().toISOString().split("T")[0];
     localStorage.setItem("lembrete_" + whatsapp, hoje);
 }
 
 function foiLembrado(whatsapp){
-    const hoje = obterDiaReferenciaLembrete();
+    const hoje = new Date().toISOString().split("T")[0];
     return localStorage.getItem("lembrete_" + whatsapp) === hoje;
 }
 
@@ -3772,6 +3918,36 @@ document.addEventListener("DOMContentLoaded", function(){
         <div id="historicoCreditosConteudo" style="display:flex; flex-direction:column; gap:8px; max-height:45vh; overflow-y:auto; margin-top:10px;"></div>
         <div id="historicoCreditosTotal" style="margin-top:12px; padding-top:12px; border-top:1px solid #334155; color:#38bdf8; font-weight:bold; font-size:12px; text-align:right;"></div>
         <button class="btn-edit" onclick="fecharHistoricoCreditos()">Fechar</button>
+    </div>
+</div>
+
+<!-- MODAL LUCRO POR PERÍODO -->
+<div class="modal" id="modalLucroPeriodo">
+    <div class="modal-box">
+        <div class="modal-topo">
+            <h2>📅 Lucro por Período</h2>
+            <button class="fechar-modal" onclick="fecharModalLucroPeriodo()">✕</button>
+        </div>
+
+        <div class="atalhos-periodo">
+            <button class="btn-atalho-periodo" id="atalhoMesAtual" onclick="aplicarAtalhoPeriodo('mesAtual')">Este mês</button>
+            <button class="btn-atalho-periodo" id="atalhoMesPassado" onclick="aplicarAtalhoPeriodo('mesPassado')">Mês passado</button>
+            <button class="btn-atalho-periodo" id="atalhoAnoAtual" onclick="aplicarAtalhoPeriodo('anoAtual')">Este ano</button>
+        </div>
+
+        <label>Data inicial</label>
+        <input type="date" id="lucroPeriodoInicio" onchange="calcularLucroPeriodo()">
+        <label>Data final</label>
+        <input type="date" id="lucroPeriodoFim" onchange="calcularLucroPeriodo()">
+
+        <div class="resultado-lucro-periodo">
+            <div class="valor-total-periodo" id="lucroPeriodoTotal">R$ 0,00</div>
+            <div class="label-total-periodo" id="lucroPeriodoLabel">Selecione um período</div>
+        </div>
+
+        <div class="lista-lucro-periodo" id="lucroPeriodoLista"></div>
+
+        <button class="btn-edit" onclick="fecharModalLucroPeriodo()" style="margin-top:14px;">Fechar</button>
     </div>
 </div>
 
