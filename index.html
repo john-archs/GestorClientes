@@ -4072,16 +4072,10 @@ document.addEventListener("DOMContentLoaded", function(){
             <h2>📄 Relatório de Lucro (PDF)</h2>
             <button class="fechar-modal" onclick="fecharModalRelatorio()">✕</button>
         </div>
-        <div class="periodo-datas-row">
-            <div class="periodo-data-col">
-                <label>Data inicial</label>
-                <input type="date" id="relatorioDataInicio">
-            </div>
-            <div class="periodo-data-col">
-                <label>Data final</label>
-                <input type="date" id="relatorioDataFim">
-            </div>
-        </div>
+        <label>Data inicial</label>
+        <input type="date" id="relatorioDataInicio">
+        <label>Data final</label>
+        <input type="date" id="relatorioDataFim">
         <button class="btn-add" onclick="gerarRelatorioPDF()" style="margin-top:14px;">📤 Gerar PDF</button>
         <button class="btn-edit" onclick="fecharModalRelatorio()">Cancelar</button>
     </div>
