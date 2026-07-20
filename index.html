@@ -1173,7 +1173,29 @@ textarea{
 .resumo-linha.alerta span:last-child{ color:#f87171; }
 .resumo-linha.aviso  span:last-child{ color:#fbbf24; }
 .resumo-linha.ok     span:last-child{ color:#4ade80; }
+.resumo-linha.aviso-backup{
+    justify-content:flex-start;
+    color:#fbbf24;
+    font-weight:bold;
+}
+.resumo-botoes{
+    display:flex;
+    gap:10px;
+    margin-top:4px;
+}
+.btn-fazer-backup-resumo{
+    flex:1;
+    background:#22c55e;
+    color:#0f172a;
+    border:none;
+    border-radius:10px;
+    padding:12px;
+    font-weight:bold;
+    font-size:15px;
+    cursor:pointer;
+}
 .btn-fechar-resumo{
+    flex:1;
     background:#38bdf8;
     color:#0f172a;
     border:none;
@@ -1182,7 +1204,6 @@ textarea{
     font-weight:bold;
     font-size:15px;
     cursor:pointer;
-    margin-top:4px;
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -3729,9 +3750,30 @@ function verificarResumoDiario(){
     if(linhas.length === 0)
         linhas.push(`<div class="resumo-linha ok"><span>✅ Tudo em dia!</span><span>Nenhum vencimento próximo</span></div>`);
 
+    // Aviso de backup: sugere backup se nunca foi feito ou já fazem 5+ dias
+    const dataUltimoBackup = localStorage.getItem("ultimoBackup");
+    const diasSemBackup = dataUltimoBackup
+        ? Math.floor((Date.now() - new Date(dataUltimoBackup).getTime()) / 86400000)
+        : null;
+    const precisaBackup = diasSemBackup === null || diasSemBackup >= 5;
+
+    if(precisaBackup){
+        const textoBackup = diasSemBackup === null
+            ? "💾 Você ainda não fez nenhum backup do sistema"
+            : `💾 Já fazem ${diasSemBackup} dias desde o último backup`;
+        linhas.push(`<div class="resumo-linha aviso-backup"><span>${textoBackup}</span></div>`);
+    }
+
     document.getElementById("resumoConteudo").innerHTML = linhas.join("");
+    document.getElementById("btnFazerBackupResumo").style.display = precisaBackup ? "block" : "none";
     document.getElementById("modalResumoDiario").style.display = "flex";
     localStorage.setItem("ultimoResumo", hoje);
+}
+
+function fazerBackupPeloResumo(){
+    exportarSistema();
+    document.getElementById("btnFazerBackupResumo").style.display = "none";
+    fecharResumoDiario();
 }
 
 function fecharResumoDiario(){
@@ -3989,7 +4031,10 @@ document.addEventListener("DOMContentLoaded", function(){
     <div class="modal-resumo-box">
         <h2>☀️ Resumo do dia</h2>
         <div id="resumoConteudo"></div>
-        <button class="btn-fechar-resumo" onclick="fecharResumoDiario()">Entendido ✓</button>
+        <div class="resumo-botoes">
+            <button class="btn-fechar-resumo" onclick="fecharResumoDiario()">Entendido ✓</button>
+            <button class="btn-fazer-backup-resumo" id="btnFazerBackupResumo" style="display:none;" onclick="fazerBackupPeloResumo()">💾 Fazer backup</button>
+        </div>
     </div>
 </div>
 </body>
