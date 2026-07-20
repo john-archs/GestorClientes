@@ -552,6 +552,26 @@ button{
     text-align:left;
 }
 
+.historico-renovacao-item{
+    background:#1e293b;
+    border-radius:10px;
+    padding:8px 12px;
+    color:#cbd5e1;
+    font-size:11px;
+    line-height:1.4;
+}
+
+.historico-renovacao-item .historico-renovacao-data{
+    color:#38bdf8;
+    font-weight:bold;
+    margin-bottom:2px;
+}
+
+.btn-atalho-periodo:disabled{
+    opacity:.4;
+    cursor:not-allowed;
+}
+
 .historico-lucro-vazio{
     font-size:11px;
     color:#64748b;
@@ -2550,23 +2570,51 @@ function aplicarModoCompacto(){
 }
 
 /* ===== HISTÓRICO DE RENOVAÇÕES ===== */
+let historicoRenovacoesAtual = [];
+let paginaHistoricoRenovacoes = 1;
+const ITENS_POR_PAGINA_HISTORICO = 10;
+
 function mostrarHistorico(index){
     let cliente = clientes[index];
     if(!cliente) return;
     document.getElementById("historicoNome").innerText = cliente.nome || "";
-    let historico = cliente.historico || [];
+    historicoRenovacoesAtual = [...(cliente.historico || [])].reverse();
+    paginaHistoricoRenovacoes = 1;
+    renderizarPaginaHistorico();
+    document.getElementById("modalHistorico").classList.add("ativo");
+}
+
+function renderizarPaginaHistorico(){
     let conteudo = document.getElementById("historicoConteudo");
-    if(historico.length === 0){
-        conteudo.innerHTML = `<div style="color:#94a3b8;">Nenhuma renovação registrada ainda.</div>`;
-    } else {
-        conteudo.innerHTML = [...historico].reverse().map(item => `
-<div style="background:#1e293b; border-radius:10px; padding:10px 14px; color:#cbd5e1;">
-    <div style="color:#38bdf8; font-weight:bold;">${formatarData(item.data)}</div>
+    let paginacao = document.getElementById("historicoPaginacao");
+    let totalPaginas = Math.max(1, Math.ceil(historicoRenovacoesAtual.length / ITENS_POR_PAGINA_HISTORICO));
+    if(paginaHistoricoRenovacoes > totalPaginas) paginaHistoricoRenovacoes = totalPaginas;
+
+    if(historicoRenovacoesAtual.length === 0){
+        conteudo.innerHTML = `<div class="historico-lucro-vazio">Nenhuma renovação registrada ainda.</div>`;
+        paginacao.style.display = "none";
+        return;
+    }
+
+    let inicio = (paginaHistoricoRenovacoes - 1) * ITENS_POR_PAGINA_HISTORICO;
+    let pagina = historicoRenovacoesAtual.slice(inicio, inicio + ITENS_POR_PAGINA_HISTORICO);
+
+    conteudo.innerHTML = pagina.map(item => `
+<div class="historico-renovacao-item">
+    <div class="historico-renovacao-data">${formatarData(item.data)}</div>
     <div>De: <span>${formatarData(item.vencimentoAnterior)}</span> → Para: <span>${formatarData(item.vencimentoNovo)}</span></div>
     ${item.plano ? `<div>📦 ${item.plano}</div>` : ""}
 </div>`).join("");
-    }
-    document.getElementById("modalHistorico").classList.add("ativo");
+
+    paginacao.style.display = totalPaginas > 1 ? "flex" : "none";
+    document.getElementById("historicoPaginaInfo").innerText = `Página ${paginaHistoricoRenovacoes} de ${totalPaginas}`;
+    document.getElementById("btnHistoricoAnterior").disabled = paginaHistoricoRenovacoes <= 1;
+    document.getElementById("btnHistoricoProximo").disabled = paginaHistoricoRenovacoes >= totalPaginas;
+}
+
+function irParaPaginaHistorico(delta){
+    paginaHistoricoRenovacoes += delta;
+    renderizarPaginaHistorico();
 }
 
 function fecharHistorico(){
@@ -4010,7 +4058,12 @@ document.addEventListener("DOMContentLoaded", function(){
             <button class="fechar-modal" onclick="fecharHistorico()">✕</button>
         </div>
         <strong id="historicoNome" style="color:white;"></strong>
-        <div id="historicoConteudo" style="display:flex; flex-direction:column; gap:10px; max-height:50vh; overflow-y:auto;"></div>
+        <div id="historicoConteudo" style="display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow-y:auto;"></div>
+        <div id="historicoPaginacao" style="display:none; justify-content:space-between; align-items:center; gap:10px;">
+            <button class="btn-atalho-periodo" id="btnHistoricoAnterior" onclick="irParaPaginaHistorico(-1)">◀ Anterior</button>
+            <span id="historicoPaginaInfo" style="font-size:12px; color:#94a3b8; white-space:nowrap;"></span>
+            <button class="btn-atalho-periodo" id="btnHistoricoProximo" onclick="irParaPaginaHistorico(1)">Próxima ▶</button>
+        </div>
         <button class="btn-edit" onclick="fecharHistorico()">Fechar</button>
     </div>
 </div>
@@ -4072,10 +4125,16 @@ document.addEventListener("DOMContentLoaded", function(){
             <h2>📄 Relatório de Lucro (PDF)</h2>
             <button class="fechar-modal" onclick="fecharModalRelatorio()">✕</button>
         </div>
-        <label>Data inicial</label>
-        <input type="date" id="relatorioDataInicio">
-        <label>Data final</label>
-        <input type="date" id="relatorioDataFim">
+        <div class="periodo-datas-row">
+            <div class="periodo-data-col">
+                <label>Data inicial</label>
+                <input type="date" id="relatorioDataInicio">
+            </div>
+            <div class="periodo-data-col">
+                <label>Data final</label>
+                <input type="date" id="relatorioDataFim">
+            </div>
+        </div>
         <button class="btn-add" onclick="gerarRelatorioPDF()" style="margin-top:14px;">📤 Gerar PDF</button>
         <button class="btn-edit" onclick="fecharModalRelatorio()">Cancelar</button>
     </div>
