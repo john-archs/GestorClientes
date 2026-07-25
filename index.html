@@ -107,6 +107,51 @@ button{
     color:white;
 }
 
+.botoes-rapidos-creditos{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+.botoes-rapidos-creditos button{
+    background:#334155;
+    color:#38bdf8;
+    padding:8px 12px;
+    font-size:13px;
+    border-radius:8px;
+}
+.botoes-rapidos-creditos button:hover{
+    background:#38bdf8;
+    color:#0f172a;
+}
+
+.subrevenda-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:#1e293b;
+    border-radius:8px;
+    padding:6px 10px;
+}
+.subrevenda-item span{
+    flex:1;
+}
+.subrevenda-item .btn-estrela{
+    background:none;
+    border:none;
+    cursor:pointer;
+    font-size:16px;
+    padding:0 4px;
+}
+.subrevenda-item .btn-remover-sub{
+    background:#7f1d1d;
+    color:white;
+    border:none;
+    border-radius:6px;
+    padding:4px 8px;
+    font-size:12px;
+    cursor:pointer;
+}
+
 /* ===== GRID DE CLIENTES ===== */
 .lista{
     display:grid;
@@ -1281,6 +1326,18 @@ textarea{
             <h3>⚠️ Vencendo</h3>
             <span id="clientesVencendo">0</span>
         </div>
+        <div class="dash-card" id="cardCreditosRevenda" style="display:none;">
+            <h3>💳 Créditos de Revenda</h3>
+            <div class="lucro-linha">
+                <span id="creditosRevendaTotal">0 créditos</span>
+                <div class="lucro-botoes">
+                    <button class="btn-historico-lucro" onclick="toggleCreditosRevendaDetalhe()">📊 Por Servidor</button>
+                </div>
+            </div>
+            <div id="creditosRevendaBox" class="historico-lucro-box" style="display:none;">
+                <div id="creditosRevendaLista"></div>
+            </div>
+        </div>
     </div>
     <div class="vencimentos-box">
         <h2>Clientes vencendo nos próximos
@@ -1313,7 +1370,7 @@ textarea{
         <input type="text" id="whatsapp" placeholder="+55 DDD NÚMERO" onblur="limparWhatsapp(this)">
         <select id="plano" onchange="sugerirVencimentoPlano()"></select>
         <input type="text" id="vencimento" placeholder="Data" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
-        <input type="number" id="creditosRevenda" min="1" placeholder="Quantidade de créditos" oninput="atualizarValorRevendaAdicionar()" style="display:none;">
+        <input type="number" id="creditosRevenda" min="1" placeholder="Quantidade de créditos (inicial)" oninput="atualizarValorRevendaAdicionar()" style="display:none;">
         <input type="text" id="valorRevendaCalculado" placeholder="Valor (calculado automaticamente)" readonly style="display:none;">
         <textarea id="obs" placeholder="OBS: dispositivo"></textarea>
         <button class="btn-add" onclick="adicionarCliente()">✅</button>
@@ -1442,6 +1499,7 @@ let dragItem = null;
 let clienteEditando = null;
 let servidorEditando = null;
 let clienteRenovacao = null;
+let clienteHistoricoCreditosAtual = null;
 
 let servidores = JSON.parse(localStorage.getItem("servidores")) || [
     { nome:"Genial", custo:"R$11,00", url:"http://aptxu.net" }
@@ -1548,16 +1606,20 @@ function mostrarDadosCliente(index){
     // (vínculo do custo), últimos créditos lançados e observações.
     if(ehClienteRevenda(cliente)){
         let ultimoCredito = Array.isArray(cliente.historicoCreditos) ? cliente.historicoCreditos.slice(-1)[0] : null;
+        let listaRevendas = Array.isArray(cliente.subRevendas) && cliente.subRevendas.length
+            ? cliente.subRevendas.map(s => `${s.nome}${s.padrao ? " ⭐" : ""}`).join(", ")
+            : "";
         let observacoes = "";
         if(cliente.obs){
             observacoes = cliente.obs.replace(/\\n/g, "\n");
             observacoes = `📝 Observações:\n${observacoes}`;
         }
         let textoRevenda =
-`👤 Nome: ${cliente.nome}
+`👤 Nome: ${cliente.nome}${listaRevendas ? `\n👥 Revendas: ${listaRevendas}` : ""}
 
-🖥️ Servidor: ${cliente.servidor || "-"}${
-ultimoCredito ? `\n🔸 Créditos (última renovação): ${ultimoCredito.creditos}\n🔸 Valor: ${moeda(ultimoCredito.valorTotal)}\n📅 Data: ${formatarData(ultimoCredito.data)}` : ""
+🖥️ Servidor: ${cliente.servidor || "-"}
+💳 Créditos adicionados (total): ${somaCreditosGrupo(cliente)}${
+ultimoCredito ? `\n🔸 Último lançamento: ${ultimoCredito.subRevendaNome || cliente.nome} — ${ultimoCredito.creditos} créditos — ${moeda(ultimoCredito.valorTotal)}\n📅 Data: ${formatarData(ultimoCredito.data)}` : ""
 }${observacoes ? `\n\n${observacoes}` : ""}`;
 
         document.getElementById("dadosClienteTexto").value = textoRevenda;
@@ -1867,6 +1929,18 @@ function abrirModalRenovacao(index){
         document.getElementById("renovacaoInfoRevenda").style.display = "block";
         document.getElementById("renovacaoCreditos").value = "";
         document.getElementById("renovacaoValorRevenda").value = "";
+
+        let selectSub = document.getElementById("renovacaoSubRevenda");
+        let subRevendas = Array.isArray(cliente.subRevendas) ? cliente.subRevendas : [];
+        if(subRevendas.length > 0){
+            selectSub.style.display = "block";
+            selectSub.innerHTML = subRevendas.map(s =>
+                `<option value="${s.id}" ${s.padrao ? "selected" : ""}>${s.nome}${s.padrao ? " ⭐" : ""}</option>`
+            ).join("");
+        } else {
+            selectSub.style.display = "none";
+            selectSub.innerHTML = "";
+        }
     } else {
         document.getElementById("renovacaoInfoNormal").style.display = "block";
         document.getElementById("renovacaoInfoRevenda").style.display = "none";
@@ -1889,6 +1963,13 @@ function atualizarValorRenovacaoRevenda(){
     document.getElementById("renovacaoValorRevenda").value = moeda(creditos * VALOR_CREDITO_REVENDA);
 }
 
+function definirCreditosRapido(qtd){
+    let campo = document.getElementById("renovacaoCreditos");
+    let atual = parseInt(campo.value) || 0;
+    campo.value = atual + qtd;
+    atualizarValorRenovacaoRevenda();
+}
+
 function renovarCliente(){
     if(clienteRenovacao === null) return;
     let cliente = clientes[clienteRenovacao];
@@ -1896,6 +1977,15 @@ function renovarCliente(){
     if(ehClienteRevenda(cliente)){
         let creditos = parseInt(document.getElementById("renovacaoCreditos").value) || 0;
         if(creditos <= 0){ mostrarAlerta("Informe a quantidade de créditos.", "aviso"); return; }
+
+        let subRevendas = Array.isArray(cliente.subRevendas) ? cliente.subRevendas : [];
+        let subSelecionada = null;
+        if(subRevendas.length > 0){
+            let selectSub = document.getElementById("renovacaoSubRevenda");
+            let subId = selectSub ? selectSub.value : null;
+            subSelecionada = subRevendas.find(s => s.id === subId) || subRevendas.find(s => s.padrao) || subRevendas[0];
+        }
+
         let custoCreditoAtual = obterCustoCreditoRevenda(cliente.servidor);
         let valorTotal = creditos * VALOR_CREDITO_REVENDA;
         let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - custoCreditoAtual);
@@ -1904,18 +1994,29 @@ function renovarCliente(){
 
         if(!Array.isArray(cliente.historicoCreditos)) cliente.historicoCreditos = [];
         cliente.tipoCliente = "revenda";
-        cliente.historicoCreditos.push({ data:hojeISORenovacao, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:custoCreditoAtual, valorTotal, lucro:lucroOperacao, idOperacao:idOperacaoRevenda });
+        cliente.historicoCreditos.push({
+            data:hojeISORenovacao, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:custoCreditoAtual,
+            valorTotal, lucro:lucroOperacao, idOperacao:idOperacaoRevenda,
+            subRevendaId: subSelecionada ? subSelecionada.id : null,
+            subRevendaNome: subSelecionada ? subSelecionada.nome : cliente.nome
+        });
         cliente.ultimaRenovacao = hojeISORenovacao;
-        cliente.plano = `Revenda - ${creditos} créditos - ${moeda(valorTotal)}`;
-        registrarMovimentoLucro(cliente.nome, lucroOperacao, idOperacaoRevenda);
+        if(!cliente.plano) cliente.plano = "Revenda (créditos)";
+
+        let nomeLucro = subSelecionada ? `${cliente.nome} - ${subSelecionada.nome}` : cliente.nome;
+        registrarMovimentoLucro(nomeLucro, lucroOperacao, idOperacaoRevenda);
 
         if(!Array.isArray(cliente.historico)) cliente.historico = [];
-        cliente.historico.push({ data:hojeISORenovacao, vencimentoAnterior:"Revenda", vencimentoNovo:"Revenda", plano:cliente.plano, idOperacao:idOperacaoRevenda });
+        cliente.historico.push({
+            data:hojeISORenovacao, vencimentoAnterior:"Revenda", vencimentoNovo:"Revenda",
+            plano: subSelecionada ? `+${creditos} créditos (${subSelecionada.nome})` : `+${creditos} créditos`,
+            idOperacao:idOperacaoRevenda
+        });
 
         salvar();
         renderizar();
         atualizarDashboard();
-        enviarMensagemRenovacaoRevenda(cliente, creditos, valorTotal);
+        enviarMensagemRenovacaoRevenda({ ...cliente, nome: nomeLucro }, creditos, valorTotal);
         fecharModalRenovacao();
         return;
     }
@@ -2536,20 +2637,27 @@ function registrarMovimentoLucro(nomeCliente, valor, idOperacao){
 }
 
 /* ===== MODAL DE CONFIRMAÇÃO GENÉRICO ===== */
-function pedirConfirmacao(mensagem, callback, titulo){
+let acaoCancelamentoPendente = null;
+
+function pedirConfirmacao(mensagem, callback, titulo, aoCancelar){
     document.getElementById("confirmacaoTitulo").innerText = titulo || "⚠️ Confirmar ação";
     document.getElementById("confirmacaoMensagem").innerText = mensagem;
     acaoConfirmacaoPendente = callback;
+    acaoCancelamentoPendente = aoCancelar || null;
     document.getElementById("modalConfirmacao").classList.add("ativo");
 }
 
 function fecharModalConfirmacao(){
     document.getElementById("modalConfirmacao").classList.remove("ativo");
     acaoConfirmacaoPendente = null;
+    const aoCancelar = acaoCancelamentoPendente;
+    acaoCancelamentoPendente = null;
+    if(typeof aoCancelar === "function") aoCancelar();
 }
 
 function confirmarAcaoModal(){
     const callback = acaoConfirmacaoPendente;
+    acaoCancelamentoPendente = null; // vai confirmar, não conta como cancelamento
     fecharModalConfirmacao();
     if(typeof callback === "function") callback();
 }
@@ -2623,41 +2731,158 @@ function fecharHistorico(){
 function mostrarHistoricoCreditos(index){
     let cliente = clientes[index];
     if(!cliente) return;
+    clienteHistoricoCreditosAtual = index;
 
     document.getElementById("historicoCreditosNome").innerText = cliente.nome || "";
     let conteudo = document.getElementById("historicoCreditosConteudo");
     let todos = Array.isArray(cliente.historicoCreditos) ? cliente.historicoCreditos : [];
+    let subRevendas = Array.isArray(cliente.subRevendas) ? cliente.subRevendas : [];
+
+    // Select de filtro por revenda — só aparece quando o grupo tem mais de
+    // uma revenda cadastrada. Preserva a seleção atual ao reabrir o mesmo cliente.
+    let selectFiltro = document.getElementById("historicoCreditosFiltroSub");
+    let filtroSubId = "";
+    if(subRevendas.length > 1){
+        selectFiltro.style.display = "block";
+        if(selectFiltro.dataset.montadoPara != index){
+            selectFiltro.innerHTML = `<option value="">Todos os revendas</option>` +
+                subRevendas.map(s => `<option value="${s.id}">${s.nome}${s.padrao ? " ⭐" : ""}</option>`).join("");
+            selectFiltro.dataset.montadoPara = index;
+        }
+        filtroSubId = selectFiltro.value || "";
+    } else {
+        selectFiltro.style.display = "none";
+        selectFiltro.innerHTML = "";
+        delete selectFiltro.dataset.montadoPara;
+    }
+
+    // Resumo: total de créditos e valor já adicionados por cada revenda do
+    // grupo (todo o período, não só o mês atual).
+    let resumoBox = document.getElementById("historicoCreditosResumoSub");
+    let resumo = creditosPorSubRevenda(cliente);
+    let chaves = Object.keys(resumo);
+    resumoBox.innerHTML = chaves.length > 1 ? chaves.map(chave => {
+        let r = resumo[chave];
+        return `
+<div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:6px 10px; font-size:12px; color:#cbd5e1; display:flex; justify-content:space-between; gap:8px;">
+    <span>👤 ${r.nome}</span>
+    <span><strong>${r.creditos}</strong> crédito(s) · ${moeda(r.valor)}</span>
+</div>`;
+    }).join("") : "";
 
     let agora = new Date();
     let mesAtual = agora.getMonth();
     let anoAtual = agora.getFullYear();
-    let historico = todos.filter(op => {
-        if(!op.data) return false;
-        let d = new Date(op.data);
-        return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
-    });
+    // Mantém a posição original de cada lançamento em cliente.historicoCreditos
+    // (não a posição na lista filtrada/invertida) para poder reverter o
+    // lançamento certo depois.
+    let historico = todos
+        .map((op, posicao) => ({ op, posicao }))
+        .filter(({op}) => {
+            if(!op.data) return false;
+            let d = new Date(op.data);
+            if(d.getMonth() !== mesAtual || d.getFullYear() !== anoAtual) return false;
+            if(filtroSubId && op.subRevendaId !== filtroSubId) return false;
+            return true;
+        });
 
     if(historico.length === 0){
         conteudo.innerHTML = `<div style="color:#94a3b8; font-size:12px;">Nenhum crédito registrado neste mês.</div>`;
         document.getElementById("historicoCreditosTotal").innerText = "";
     } else {
         let total = 0;
-        conteudo.innerHTML = [...historico].reverse().map(op => {
+        conteudo.innerHTML = [...historico].reverse().map(({op, posicao}) => {
             total += (op.valorTotal || 0);
+            let nomeRevenda = op.subRevendaNome || cliente.nome;
             return `
-<div style="background:#1e293b; border-radius:10px; padding:8px 12px; color:#cbd5e1; display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:12px;">
-    <div>
-        <div style="color:#38bdf8; font-weight:bold; font-size:12px;">${formatarData(op.data)}</div>
-        <div style="font-size:11px; color:#94a3b8;">${op.creditos || 0} crédito(s)</div>
+<div style="background:#1e293b; border-radius:10px; padding:8px 12px; color:#cbd5e1; font-size:12px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span style="color:#38bdf8; font-weight:bold;">${formatarData(op.data)} · ${nomeRevenda} · ${cliente.servidor || "-"}</span>
+        <span style="display:flex; align-items:center; gap:8px;">
+            <span style="font-weight:bold; color:#22c55e;">${moeda(op.valorTotal || 0)}</span>
+            <button onclick="confirmarReverterCredito(${index}, ${posicao})" title="Reverter lançamento" style="background:#7f1d1d; color:white; border:none; border-radius:8px; padding:6px 8px; font-size:12px; cursor:pointer;">↩️</button>
+        </span>
     </div>
-    <div style="font-weight:bold; color:#22c55e; font-size:12px;">${moeda(op.valorTotal || 0)}</div>
+    <div style="color:#94a3b8; margin-top:4px;">${op.creditos || 0} crédito(s)</div>
 </div>`;
         }).join("");
-        document.getElementById("historicoCreditosTotal").innerText = `Total do mês: ${moeda(total)}`;
+        document.getElementById("historicoCreditosTotal").innerText = `Total do mês${filtroSubId ? " (filtrado)" : ""}: ${moeda(total)}`;
     }
 
     document.getElementById("modalHistoricoCreditos").classList.add("ativo");
 }
+
+function confirmarReverterCredito(indexCliente, posicaoCredito){
+    let cliente = clientes[indexCliente];
+    if(!cliente) return;
+    let op = (cliente.historicoCreditos || [])[posicaoCredito];
+    if(!op) return;
+
+    // Fecha o histórico antes de abrir a confirmação, pra não ficar um modal
+    // atrás do outro. Reabre o histórico tanto se cancelar quanto se confirmar.
+    fecharHistoricoCreditos();
+    pedirConfirmacao(
+        `Reverter o lançamento de ${op.creditos || 0} crédito(s) de ${formatarData(op.data)}? O valor de ${moeda(op.valorTotal || 0)} será removido do lucro do mês.`,
+        () => reverterCreditoRevenda(indexCliente, posicaoCredito),
+        "↩️ Reverter créditos",
+        () => mostrarHistoricoCreditos(indexCliente)
+    );
+}
+
+function reverterCreditoRevenda(indexCliente, posicaoCredito){
+    let cliente = clientes[indexCliente];
+    if(!cliente || !Array.isArray(cliente.historicoCreditos)) return;
+    let entradaRemovida = cliente.historicoCreditos[posicaoCredito];
+    if(!entradaRemovida) return;
+
+    cliente.historicoCreditos.splice(posicaoCredito, 1);
+
+    // Remove também a entrada correspondente do histórico geral de
+    // renovações, se essa ligação existir (renovações recentes têm idOperacao).
+    if(Array.isArray(cliente.historico) && entradaRemovida.idOperacao){
+        cliente.historico = cliente.historico.filter(h => h.idOperacao !== entradaRemovida.idOperacao);
+    }
+
+    // Remove o lançamento correspondente do histórico de lucro do Dashboard.
+    // Mesma lógica usada para desfazer renovação de clientes normais:
+    // prioridade pelo idOperacao, com fallback por nome + data.
+    let tamanhoAntes = historicoLucro.length;
+    if(entradaRemovida.idOperacao){
+        historicoLucro = historicoLucro.filter(mov => mov.idOperacao !== entradaRemovida.idOperacao);
+    } else {
+        let dataAlvo = entradaRemovida.data;
+        let nomeAlvo = (cliente.nome || "").toLowerCase();
+        let posicaoMov = -1;
+        for(let i = historicoLucro.length - 1; i >= 0; i--){
+            let mov = historicoLucro[i];
+            if(mov.idOperacao) continue;
+            let dataMov = (mov.data || "").split("T")[0];
+            if(dataMov === dataAlvo && (mov.cliente || "").toLowerCase() === nomeAlvo){
+                posicaoMov = i;
+                break;
+            }
+        }
+        if(posicaoMov !== -1) historicoLucro.splice(posicaoMov, 1);
+    }
+    if(historicoLucro.length !== tamanhoAntes){
+        localStorage.setItem("historicoLucro", JSON.stringify(historicoLucro));
+    }
+
+    // "Última renovação" volta a apontar para o lançamento anterior, se existir
+    let anterior = cliente.historicoCreditos[cliente.historicoCreditos.length - 1];
+    if(anterior){
+        cliente.ultimaRenovacao = anterior.data;
+    } else {
+        delete cliente.ultimaRenovacao;
+    }
+
+    salvar();
+    renderizar();
+    atualizarDashboard();
+    mostrarHistoricoCreditos(indexCliente);
+    mostrarSucesso(`↩️ Lançamento de ${entradaRemovida.creditos || 0} crédito(s) revertido — valor removido do lucro do mês.`);
+}
+
 
 function fecharHistoricoCreditos(){
     document.getElementById("modalHistoricoCreditos").classList.remove("ativo");
@@ -2910,6 +3135,30 @@ function ehClienteRevenda(cliente){
     return Array.isArray(cliente.historicoCreditos) && cliente.historicoCreditos.length > 0;
 }
 
+function gerarIdSubRevenda(){
+    return `sr-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+}
+
+function somaCreditosGrupo(cliente){
+    if(!cliente || !Array.isArray(cliente.historicoCreditos)) return 0;
+    return cliente.historicoCreditos.reduce((total, op) => total + (op.creditos || 0), 0);
+}
+
+// Retorna { chave: {nome, creditos, valor} } com o total de créditos e valor
+// já adicionados a cada revenda do grupo, somando todo o histórico.
+function creditosPorSubRevenda(cliente){
+    let mapa = {};
+    if(!cliente || !Array.isArray(cliente.historicoCreditos)) return mapa;
+    cliente.historicoCreditos.forEach(op => {
+        let chave = op.subRevendaId || op.subRevendaNome || cliente.nome;
+        let nome = op.subRevendaNome || cliente.nome;
+        if(!mapa[chave]) mapa[chave] = { nome, creditos:0, valor:0 };
+        mapa[chave].creditos += (op.creditos || 0);
+        mapa[chave].valor += (op.valorTotal || 0);
+    });
+    return mapa;
+}
+
 function alternarTipoCliente(){
     let campoTipo = document.getElementById("tipoCliente");
     let ehRevenda = campoTipo && campoTipo.value === "revenda";
@@ -2919,6 +3168,7 @@ function alternarTipoCliente(){
     document.getElementById("vencimento").style.display = ehRevenda ? "none" : "block";
     document.getElementById("creditosRevenda").style.display = ehRevenda ? "block" : "none";
     document.getElementById("valorRevendaCalculado").style.display = ehRevenda ? "block" : "none";
+    document.getElementById("nome").placeholder = ehRevenda ? "Nome do Revenda" : "Nome";
     if(ehRevenda) atualizarValorRevendaAdicionar();
 }
 
@@ -2962,24 +3212,44 @@ function adicionarCliente(){
     let obs = document.getElementById("obs").value;
 
     if(tipoCliente === "revenda"){
-        if(!nome){ mostrarAlerta("Preencha o nome do cliente.", "aviso"); return; }
+        if(!nome){ mostrarAlerta("Preencha o nome do revenda.", "aviso"); return; }
         let creditos = parseInt(document.getElementById("creditosRevenda").value) || 0;
         if(creditos <= 0){ mostrarAlerta("Informe a quantidade de créditos.", "aviso"); return; }
         let custoCreditoAtual = obterCustoCreditoRevenda(servidor);
         let valorTotal = creditos * VALOR_CREDITO_REVENDA;
         let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - custoCreditoAtual);
         const hojeISO = new Date().toISOString().split("T")[0];
+        const idOperacaoRevendaNovo = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+        const idSub = gerarIdSubRevenda();
 
-        clientes.push({
-            servidor, nome, usuario:"-", senha:"-", whatsapp,
-            vencimento:"", plano:`Revenda - ${creditos} créditos - ${moeda(valorTotal)}`,
-            obs, tipoCliente:"revenda", ultimaRenovacao: hojeISO,
-            historicoCreditos:[{ data:hojeISO, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:custoCreditoAtual, valorTotal, lucro:lucroOperacao }]
-        });
-        registrarMovimentoLucro(nome, lucroOperacao);
-        salvar();
-        const novoClienteRevenda = clientes[clientes.length - 1];
-        enviarMensagemAtivacaoRevenda(novoClienteRevenda);
+        // Revendas do mesmo servidor ficam agrupadas em um único cliente
+        // "Revendas <Servidor>", cada uma como um sub-revenda dentro do grupo.
+        let grupo = clientes.find(c => c.tipoCliente === "revenda" && (c.servidor || "") === servidor);
+
+        if(grupo){
+            if(!Array.isArray(grupo.subRevendas)) grupo.subRevendas = [];
+            grupo.subRevendas.push({ id:idSub, nome, padrao: grupo.subRevendas.length === 0 });
+            if(!Array.isArray(grupo.historicoCreditos)) grupo.historicoCreditos = [];
+            grupo.historicoCreditos.push({ data:hojeISO, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:custoCreditoAtual, valorTotal, lucro:lucroOperacao, idOperacao:idOperacaoRevendaNovo, subRevendaId:idSub, subRevendaNome:nome });
+            grupo.ultimaRenovacao = hojeISO;
+            registrarMovimentoLucro(`${grupo.nome} - ${nome}`, lucroOperacao, idOperacaoRevendaNovo);
+            salvar();
+            enviarMensagemAtivacaoRevenda({ ...grupo, whatsapp, nome:`${grupo.nome} - ${nome}` });
+        } else {
+            let nomeGrupo = `Revendas ${servidor}`;
+            clientes.push({
+                servidor, nome:nomeGrupo, usuario:"-", senha:"-", whatsapp,
+                vencimento:"", plano:"Revenda (créditos)",
+                obs, tipoCliente:"revenda", ultimaRenovacao: hojeISO,
+                subRevendas:[{ id:idSub, nome, padrao:true }],
+                historicoCreditos:[{ data:hojeISO, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:custoCreditoAtual, valorTotal, lucro:lucroOperacao, idOperacao:idOperacaoRevendaNovo, subRevendaId:idSub, subRevendaNome:nome }]
+            });
+            registrarMovimentoLucro(`${nomeGrupo} - ${nome}`, lucroOperacao, idOperacaoRevendaNovo);
+            salvar();
+            const novoClienteRevenda = clientes[clientes.length - 1];
+            enviarMensagemAtivacaoRevenda({ ...novoClienteRevenda, nome:`${nomeGrupo} - ${nome}` });
+        }
+
         clientes = JSON.parse(localStorage.getItem("clientes")) || [];
         filtroAtual = "todos";
         renderizar();
@@ -3255,23 +3525,33 @@ function renderizar(){
     </div>
 
     <div class="card-body">
+        ${ehClienteRevenda(cliente) ? `
+        <div class="card-row">🖥️ <span>${destacar(cliente.servidor || "-", pesquisa)}</span></div>
+        ${Array.isArray(cliente.subRevendas) && cliente.subRevendas.length ? `<div class="card-row">👥 <span>${cliente.subRevendas.map(s => {
+            let r = creditosPorSubRevenda(cliente)[s.id] || { creditos:0 };
+            return `${destacar(s.nome, pesquisa)}${s.padrao ? " ⭐" : ""} (${r.creditos})`;
+        }).join(", ")}</span></div>` : ""}
+        <div class="card-row">💳 <span>${somaCreditosGrupo(cliente)} créditos adicionados</span></div>
+        ` : `
         <div class="card-row">👤 <span>${destacar(cliente.usuario || "-", pesquisa)}</span></div>
         <div class="card-row">📦 <span>${destacar(cliente.plano || "-", pesquisa)}</span></div>
         <div class="card-row">📅 <span>${obterDuracaoPlano(cliente.plano) === null ? "Revenda (sem vencimento)" : formatarData(cliente.vencimento)}</span></div>
+        `}
     </div>
 
     <div class="card-acoes" id="acoes-${uid}">
         <div class="acao-grupo">
-            <button class="btn-acao whats" onclick='enviarDadosCliente(${JSON.stringify(cliente)})'>📱<span class="btn-label"> WhatsApp</span></button>
+            ${!ehClienteRevenda(cliente) ? `<button class="btn-acao whats" onclick='enviarDadosCliente(${JSON.stringify(cliente)})'>📱<span class="btn-label"> WhatsApp</span></button>` : ""}
             <button class="btn-acao dados" onclick="mostrarDadosCliente(${indexReal})">📄<span class="btn-label"> Dados</span></button>
         </div>
         <div class="acao-grupo">
             <button class="btn-acao editar" onclick="editarCliente(${indexReal})">✏️<span class="btn-label"> Editar</span></button>
-            <button class="btn-acao renovar" onclick="abrirModalRenovacao(${indexReal})">🔄<span class="btn-label"> Renovar</span></button>
+            <button class="btn-acao renovar" onclick="abrirModalRenovacao(${indexReal})">🔄<span class="btn-label"> ${ehClienteRevenda(cliente) ? "Add Créditos" : "Renovar"}</span></button>
         </div>
         <div class="acao-grupo">
-            <button class="btn-acao historico" onclick="mostrarHistorico(${indexReal})">📜<span class="btn-label"> Histórico</span></button>
-            ${ehClienteRevenda(cliente) ? `<button class="btn-acao historico-creditos" onclick="mostrarHistoricoCreditos(${indexReal})" title="Histórico de créditos">💳<span class="btn-label"> Créditos</span></button>` : ""}
+            ${ehClienteRevenda(cliente)
+                ? `<button class="btn-acao historico-creditos" onclick="mostrarHistoricoCreditos(${indexReal})" title="Histórico de créditos">💳<span class="btn-label"> Histórico Créditos</span></button>`
+                : `<button class="btn-acao historico" onclick="mostrarHistorico(${indexReal})">📜<span class="btn-label"> Histórico</span></button>`}
         </div>
         <div class="acao-grupo">
             ${botoesExtras}
@@ -3330,9 +3610,66 @@ function editarCliente(index){
         selectPlano.innerHTML += `<option ${selected}>${textoPlano}</option>`;
     });
 
+    let boxSubRevendas = document.getElementById("editSubRevendasBox");
+    if(cliente.tipoCliente === "revenda"){
+        boxSubRevendas.style.display = "block";
+        renderizarSubRevendasEditar();
+    } else {
+        boxSubRevendas.style.display = "none";
+    }
+
     let modal = document.getElementById("modalEditar");
     modal.style.display = "flex";
     modal.classList.add("ativo");
+}
+
+function renderizarSubRevendasEditar(){
+    let cliente = clientes[clienteEditando];
+    let box = document.getElementById("editSubRevendasLista");
+    if(!cliente || !Array.isArray(cliente.subRevendas)){ box.innerHTML = ""; return; }
+    box.innerHTML = cliente.subRevendas.map(s => `
+<div class="subrevenda-item">
+    <button class="btn-estrela" title="Definir como padrão" onclick="definirRevendaPadrao('${s.id}')" style="color:${s.padrao ? "#facc15" : "#475569"};">⭐</button>
+    <span>${s.nome}</span>
+    <button class="btn-remover-sub" title="Remover" onclick="removerSubRevenda('${s.id}')">✕</button>
+</div>`).join("");
+}
+
+function definirRevendaPadrao(id){
+    let cliente = clientes[clienteEditando];
+    if(!cliente || !Array.isArray(cliente.subRevendas)) return;
+    cliente.subRevendas.forEach(s => { s.padrao = (s.id === id); });
+    salvar();
+    renderizarSubRevendasEditar();
+}
+
+function adicionarSubRevenda(){
+    let cliente = clientes[clienteEditando];
+    if(!cliente) return;
+    let campo = document.getElementById("novaSubRevendaNome");
+    let nome = campo.value.trim();
+    if(!nome){ mostrarAlerta("Informe o nome do revenda.", "aviso"); return; }
+    if(!Array.isArray(cliente.subRevendas)) cliente.subRevendas = [];
+    cliente.subRevendas.push({ id:gerarIdSubRevenda(), nome, padrao: cliente.subRevendas.length === 0 });
+    campo.value = "";
+    salvar();
+    renderizar();
+    renderizarSubRevendasEditar();
+}
+
+function removerSubRevenda(id){
+    let cliente = clientes[clienteEditando];
+    if(!cliente || !Array.isArray(cliente.subRevendas)) return;
+    if(cliente.subRevendas.length <= 1){ mostrarAlerta("Mantenha pelo menos um revenda no grupo.", "aviso"); return; }
+    let alvo = cliente.subRevendas.find(s => s.id === id);
+    pedirConfirmacao(`Remover "${alvo ? alvo.nome : ""}" deste grupo de revendas? O histórico de créditos já lançado será mantido.`, () => {
+        let eraPadrao = alvo && alvo.padrao;
+        cliente.subRevendas = cliente.subRevendas.filter(s => s.id !== id);
+        if(eraPadrao && cliente.subRevendas.length) cliente.subRevendas[0].padrao = true;
+        salvar();
+        renderizar();
+        renderizarSubRevendasEditar();
+    }, "✕ Remover revenda");
 }
 
 function salvarEdicaoPlano(){
@@ -3547,6 +3884,70 @@ function formatarData(data){
     return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
+function toggleCreditosRevendaDetalhe(){
+    let box = document.getElementById("creditosRevendaBox");
+    if(!box) return;
+    box.style.display = box.style.display === "none" ? "block" : "none";
+}
+
+// Soma os créditos de revenda usados no mês atual (por servidor) e estima
+// quantos créditos serão necessários para renovar quem renovou no mês
+// anterior — assumindo que a maioria dos clientes revenda renova todo mês
+// com a mesma quantidade de créditos da última vez.
+function atualizarCreditosRevenda(){
+    let card = document.getElementById("cardCreditosRevenda");
+    if(!card) return;
+
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
+    const mesAnterior = mesAtual === 0 ? 11 : mesAtual - 1;
+    const anoDoMesAnterior = mesAtual === 0 ? anoAtual - 1 : anoAtual;
+
+    let usadoPorServidor = {};
+    let previstoPorServidor = {};
+    let totalMes = 0;
+    let totalPrevisto = 0;
+
+    clientes.forEach(cliente => {
+        if(!ehClienteRevenda(cliente)) return;
+        let nomeServidor = cliente.servidor || "Sem servidor";
+        (cliente.historicoCreditos || []).forEach(op => {
+            if(!op.data) return;
+            let d = new Date(op.data);
+            let creditos = Number(op.creditos) || 0;
+            if(d.getMonth() === mesAtual && d.getFullYear() === anoAtual){
+                usadoPorServidor[nomeServidor] = (usadoPorServidor[nomeServidor] || 0) + creditos;
+                totalMes += creditos;
+            } else if(d.getMonth() === mesAnterior && d.getFullYear() === anoDoMesAnterior){
+                previstoPorServidor[nomeServidor] = (previstoPorServidor[nomeServidor] || 0) + creditos;
+                totalPrevisto += creditos;
+            }
+        });
+    });
+
+    if(totalMes === 0 && totalPrevisto === 0){
+        card.style.display = "none";
+        return;
+    }
+    card.style.display = "";
+
+    document.getElementById("creditosRevendaTotal").innerText = `${totalMes} crédito${totalMes === 1 ? "" : "s"} usados`;
+
+    let servidoresEnvolvidos = [...new Set([...Object.keys(usadoPorServidor), ...Object.keys(previstoPorServidor)])].sort();
+
+    document.getElementById("creditosRevendaLista").innerHTML = servidoresEnvolvidos.map(nomeServidor => {
+        let usado = usadoPorServidor[nomeServidor] || 0;
+        let previsto = previstoPorServidor[nomeServidor] || 0;
+        return `
+<div style="background:#1e293b; border-radius:10px; padding:8px 12px; color:#cbd5e1; font-size:12px; margin-bottom:8px;">
+    <div style="color:#38bdf8; font-weight:bold;">🖥️ ${nomeServidor}</div>
+    <div>Usado este mês: <strong>${usado}</strong> crédito${usado === 1 ? "" : "s"}</div>
+    <div style="color:#94a3b8;">≈ Previsto p/ renovar quem renovou mês passado: <strong>${previsto}</strong> crédito${previsto === 1 ? "" : "s"}</div>
+</div>`;
+    }).join("") || `<div style="color:#94a3b8;">Nenhum crédito lançado.</div>`;
+}
+
 function atualizarDashboard(){
     let lucro = 0;
     const hoje = new Date();
@@ -3555,6 +3956,8 @@ function atualizarDashboard(){
     let ativos = 0, vencendo = 0;
     let lista = document.getElementById("listaVencendo");
     lista.innerHTML = "";
+
+    atualizarCreditosRevenda();
 
     clientes.forEach(cliente => {
         let status = statusCliente(cliente.vencimento);
@@ -3972,6 +4375,15 @@ document.addEventListener("DOMContentLoaded", function(){
         <select id="editPlano"></select>
         <input type="date" id="editVencimento">
         <textarea id="editObs" placeholder="Dispositivo"></textarea>
+        <div id="editSubRevendasBox" style="display:none;">
+            <hr style="border-color:#334155; margin:10px 0;">
+            <strong style="color:#38bdf8;">👥 Revendas deste servidor</strong>
+            <div id="editSubRevendasLista" style="display:flex; flex-direction:column; gap:6px; margin:8px 0;"></div>
+            <div style="display:flex; gap:8px;">
+                <input type="text" id="novaSubRevendaNome" placeholder="Nome do novo revenda">
+                <button class="btn-add" onclick="adicionarSubRevenda()">➕</button>
+            </div>
+        </div>
         <button class="btn-add" onclick="salvarEdicaoCliente()">Salvar Alterações</button>
     </div>
 </div>
@@ -4014,7 +4426,15 @@ document.addEventListener("DOMContentLoaded", function(){
             <div id="renovacaoPlano"></div>
         </div>
         <div id="renovacaoInfoRevenda" style="display:none;">
-            <input type="number" id="renovacaoCreditos" min="1" placeholder="Quantidade de créditos" oninput="atualizarValorRenovacaoRevenda()">
+            <select id="renovacaoSubRevenda" style="display:none;"></select>
+            <div class="botoes-rapidos-creditos" id="botoesRapidosCreditos">
+                <button type="button" onclick="definirCreditosRapido(10)">+10</button>
+                <button type="button" onclick="definirCreditosRapido(15)">+15</button>
+                <button type="button" onclick="definirCreditosRapido(20)">+20</button>
+                <button type="button" onclick="definirCreditosRapido(30)">+30</button>
+                <button type="button" onclick="definirCreditosRapido(50)">+50</button>
+            </div>
+            <input type="number" id="renovacaoCreditos" min="1" placeholder="Quantidade de créditos (ou digite manualmente)" oninput="atualizarValorRenovacaoRevenda()">
             <input type="text" id="renovacaoValorRevenda" placeholder="Valor (calculado automaticamente)" readonly>
         </div>
         <button class="btn-add" onclick="renovarCliente()">✅ Confirmar Renovação</button>
@@ -4086,6 +4506,8 @@ document.addEventListener("DOMContentLoaded", function(){
             <button class="fechar-modal" onclick="fecharHistoricoCreditos()">✕</button>
         </div>
         <strong id="historicoCreditosNome" style="color:white;"></strong>
+        <select id="historicoCreditosFiltroSub" style="display:none; margin-top:8px;" onchange="mostrarHistoricoCreditos(clienteHistoricoCreditosAtual)"></select>
+        <div id="historicoCreditosResumoSub" style="display:flex; flex-direction:column; gap:4px; margin-top:8px;"></div>
         <div id="historicoCreditosConteudo" style="display:flex; flex-direction:column; gap:8px; max-height:45vh; overflow-y:auto; margin-top:10px;"></div>
         <div id="historicoCreditosTotal" style="margin-top:12px; padding-top:12px; border-top:1px solid #334155; color:#38bdf8; font-weight:bold; font-size:12px; text-align:right;"></div>
         <button class="btn-edit" onclick="fecharHistoricoCreditos()">Fechar</button>
