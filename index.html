@@ -2048,7 +2048,7 @@ function renovarCliente(){
         if(!cliente.plano) cliente.plano = "Revenda (créditos)";
 
         let nomeLucro = subSelecionada ? `${cliente.nome} - ${subSelecionada.nome}` : cliente.nome;
-        registrarMovimentoLucro(nomeLucro, lucroOperacao, idOperacaoRevenda);
+        registrarMovimentoLucro(nomeLucro, lucroOperacao, idOperacaoRevenda, hojeISORenovacao);
 
         if(!Array.isArray(cliente.historico)) cliente.historico = [];
         cliente.historico.push({
@@ -2659,7 +2659,7 @@ let acaoConfirmacaoPendente = null;
 /* ===== HISTÓRICO DE MOVIMENTOS DO LUCRO MENSAL ===== */
 let historicoLucro = JSON.parse(localStorage.getItem("historicoLucro")) || [];
 
-function registrarMovimentoLucro(nomeCliente, valor, idOperacao){
+function registrarMovimentoLucro(nomeCliente, valor, idOperacao, dataMovimento){
     valor = Number(valor) || 0;
     if(valor === 0) return;
 
@@ -2675,7 +2675,13 @@ function registrarMovimentoLucro(nomeCliente, valor, idOperacao){
         saldoAnterior = parseFloat(textoLucro) || 0;
     }
 
-    historicoLucro.push({ data: new Date().toISOString(), cliente: nomeCliente || "", valor, saldoAnterior, idOperacao: idOperacao || null });
+    // dataMovimento permite registrar o lançamento na data escolhida pelo
+    // usuário (ex: créditos de revenda com data retroativa/futura), em vez de
+    // sempre gravar o momento exato do clique — senão o lucro aparece no mês
+    // errado no Dashboard.
+    let dataFinal = dataMovimento ? new Date(dataMovimento).toISOString() : new Date().toISOString();
+
+    historicoLucro.push({ data: dataFinal, cliente: nomeCliente || "", valor, saldoAnterior, idOperacao: idOperacao || null });
     if(historicoLucro.length > 300) historicoLucro = historicoLucro.slice(-300);
     localStorage.setItem("historicoLucro", JSON.stringify(historicoLucro));
 }
@@ -3010,7 +3016,7 @@ function salvarEdicaoCredito(){
     });
     cliente.ultimaRenovacao = novaData;
 
-    registrarMovimentoLucro(`${cliente.nome} - ${subRevendaNome}`, lucroOperacao, novoIdOperacao);
+    registrarMovimentoLucro(`${cliente.nome} - ${subRevendaNome}`, lucroOperacao, novoIdOperacao, novaData);
 
     if(!Array.isArray(cliente.historico)) cliente.historico = [];
     cliente.historico.push({
@@ -3376,7 +3382,7 @@ function adicionarCliente(){
             if(!Array.isArray(grupo.historicoCreditos)) grupo.historicoCreditos = [];
             grupo.historicoCreditos.push({ data:hojeISO, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:custoCreditoAtual, valorTotal, lucro:lucroOperacao, idOperacao:idOperacaoRevendaNovo, subRevendaId:idSub, subRevendaNome:nome });
             grupo.ultimaRenovacao = hojeISO;
-            registrarMovimentoLucro(`${grupo.nome} - ${nome}`, lucroOperacao, idOperacaoRevendaNovo);
+            registrarMovimentoLucro(`${grupo.nome} - ${nome}`, lucroOperacao, idOperacaoRevendaNovo, hojeISO);
             salvar();
             enviarMensagemAtivacaoRevenda({ ...grupo, whatsapp, nome:`${grupo.nome} - ${nome}` });
         } else {
@@ -3388,7 +3394,7 @@ function adicionarCliente(){
                 subRevendas:[{ id:idSub, nome, padrao:true }],
                 historicoCreditos:[{ data:hojeISO, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:custoCreditoAtual, valorTotal, lucro:lucroOperacao, idOperacao:idOperacaoRevendaNovo, subRevendaId:idSub, subRevendaNome:nome }]
             });
-            registrarMovimentoLucro(`${nomeGrupo} - ${nome}`, lucroOperacao, idOperacaoRevendaNovo);
+            registrarMovimentoLucro(`${nomeGrupo} - ${nome}`, lucroOperacao, idOperacaoRevendaNovo, hojeISO);
             salvar();
             const novoClienteRevenda = clientes[clientes.length - 1];
             enviarMensagemAtivacaoRevenda({ ...novoClienteRevenda, nome:`${nomeGrupo} - ${nome}` });
