@@ -107,6 +107,35 @@ button{
     color:white;
 }
 
+.campo-pesquisa-wrapper{
+    position:relative;
+    display:flex;
+    flex:1;
+}
+.campo-pesquisa-wrapper input{
+    width:100%;
+    padding-right:36px;
+}
+.btn-limpar-pesquisa{
+    position:absolute;
+    right:6px;
+    top:50%;
+    transform:translateY(-50%);
+    background:#334155;
+    color:#cbd5e1;
+    border:none;
+    border-radius:50%;
+    width:24px;
+    height:24px;
+    font-size:13px;
+    line-height:1;
+    cursor:pointer;
+}
+.btn-limpar-pesquisa:hover{
+    background:#ef4444;
+    color:white;
+}
+
 .botoes-rapidos-creditos{
     display:flex;
     gap:8px;
@@ -1377,7 +1406,10 @@ textarea{
     </div>
 
     <div class="topo" id="boxPesquisa" style="display:none;">
-        <input type="text" id="pesquisa" placeholder="Pesquisar cliente..." oninput="pesquisaComDelay()">
+        <div class="campo-pesquisa-wrapper">
+            <input type="text" id="pesquisa" placeholder="Pesquisar cliente..." oninput="pesquisaComDelay()">
+            <button type="button" id="btnLimparPesquisa" class="btn-limpar-pesquisa" onclick="limparPesquisa()" style="display:none;">✕</button>
+        </div>
     </div>
 
     <div class="filtros-clientes">
@@ -1566,8 +1598,19 @@ function esconderTooltip(){
 
 let timerPesquisa;
 function pesquisaComDelay(){
+    let campo = document.getElementById("pesquisa");
+    document.getElementById("btnLimparPesquisa").style.display = campo.value ? "block" : "none";
     clearTimeout(timerPesquisa);
     timerPesquisa = setTimeout(() => { paginaAtual = 1; renderizar(); }, 250);
+}
+
+function limparPesquisa(){
+    let campo = document.getElementById("pesquisa");
+    campo.value = "";
+    campo.focus();
+    document.getElementById("btnLimparPesquisa").style.display = "none";
+    paginaAtual = 1;
+    renderizar();
 }
 
 function copiarDadosCliente(){
@@ -1929,6 +1972,7 @@ function abrirModalRenovacao(index){
         document.getElementById("renovacaoInfoRevenda").style.display = "block";
         document.getElementById("renovacaoCreditos").value = "";
         document.getElementById("renovacaoValorRevenda").value = "";
+        document.getElementById("renovacaoDataCredito").value = new Date().toISOString().split("T")[0];
 
         let selectSub = document.getElementById("renovacaoSubRevenda");
         let subRevendas = Array.isArray(cliente.subRevendas) ? cliente.subRevendas : [];
@@ -1989,7 +2033,7 @@ function renovarCliente(){
         let custoCreditoAtual = obterCustoCreditoRevenda(cliente.servidor);
         let valorTotal = creditos * VALOR_CREDITO_REVENDA;
         let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - custoCreditoAtual);
-        const hojeISORenovacao = new Date().toISOString().split("T")[0];
+        const hojeISORenovacao = document.getElementById("renovacaoDataCredito").value || new Date().toISOString().split("T")[0];
         const idOperacaoRevenda = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 
         if(!Array.isArray(cliente.historicoCreditos)) cliente.historicoCreditos = [];
@@ -2796,14 +2840,15 @@ function mostrarHistoricoCreditos(index){
             let nomeRevenda = op.subRevendaNome || cliente.nome;
             return `
 <div style="background:#1e293b; border-radius:10px; padding:8px 12px; color:#cbd5e1; font-size:12px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-        <span style="color:#38bdf8; font-weight:bold;">${formatarData(op.data)} · ${nomeRevenda} · ${cliente.servidor || "-"}</span>
-        <span style="display:flex; align-items:center; gap:8px;">
-            <span style="font-weight:bold; color:#22c55e;">${moeda(op.valorTotal || 0)}</span>
-            <button onclick="confirmarReverterCredito(${index}, ${posicao})" title="Reverter lançamento" style="background:#7f1d1d; color:white; border:none; border-radius:8px; padding:6px 8px; font-size:12px; cursor:pointer;">↩️</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:nowrap;">
+        <span style="color:#38bdf8; font-weight:bold; font-size:11px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${formatarData(op.data)} · ${nomeRevenda} · ${cliente.servidor || "-"}</span>
+        <span style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+            <span style="font-weight:bold; color:#22c55e; font-size:11px; white-space:nowrap;">${moeda(op.valorTotal || 0)}</span>
+            <button onclick="abrirEdicaoCredito(${index}, ${posicao})" title="Editar lançamento" style="background:#334155; color:#38bdf8; border:none; border-radius:6px; padding:4px 6px; font-size:11px; cursor:pointer; flex-shrink:0;">✏️</button>
+            <button onclick="confirmarReverterCredito(${index}, ${posicao})" title="Reverter lançamento" style="background:#7f1d1d; color:white; border:none; border-radius:6px; padding:4px 6px; font-size:11px; cursor:pointer; flex-shrink:0;">↩️</button>
         </span>
     </div>
-    <div style="color:#94a3b8; margin-top:4px;">${op.creditos || 0} crédito(s)</div>
+    <div style="color:#94a3b8; margin-top:4px; font-size:11px;">${op.creditos || 0} crédito(s)</div>
 </div>`;
         }).join("");
         document.getElementById("historicoCreditosTotal").innerText = `Total do mês${filtroSubId ? " (filtrado)" : ""}: ${moeda(total)}`;
@@ -2829,23 +2874,20 @@ function confirmarReverterCredito(indexCliente, posicaoCredito){
     );
 }
 
-function reverterCreditoRevenda(indexCliente, posicaoCredito){
-    let cliente = clientes[indexCliente];
-    if(!cliente || !Array.isArray(cliente.historicoCreditos)) return;
+// Remove um lançamento de crédito do histórico do cliente, do histórico geral
+// e do histórico de lucro do Dashboard. Usado tanto para reverter quanto para
+// editar um lançamento (edição = remove o antigo e lança um novo, corrigido).
+function removerLancamentoCreditoRevenda(cliente, posicaoCredito){
+    if(!cliente || !Array.isArray(cliente.historicoCreditos)) return null;
     let entradaRemovida = cliente.historicoCreditos[posicaoCredito];
-    if(!entradaRemovida) return;
+    if(!entradaRemovida) return null;
 
     cliente.historicoCreditos.splice(posicaoCredito, 1);
 
-    // Remove também a entrada correspondente do histórico geral de
-    // renovações, se essa ligação existir (renovações recentes têm idOperacao).
     if(Array.isArray(cliente.historico) && entradaRemovida.idOperacao){
         cliente.historico = cliente.historico.filter(h => h.idOperacao !== entradaRemovida.idOperacao);
     }
 
-    // Remove o lançamento correspondente do histórico de lucro do Dashboard.
-    // Mesma lógica usada para desfazer renovação de clientes normais:
-    // prioridade pelo idOperacao, com fallback por nome + data.
     let tamanhoAntes = historicoLucro.length;
     if(entradaRemovida.idOperacao){
         historicoLucro = historicoLucro.filter(mov => mov.idOperacao !== entradaRemovida.idOperacao);
@@ -2876,6 +2918,15 @@ function reverterCreditoRevenda(indexCliente, posicaoCredito){
         delete cliente.ultimaRenovacao;
     }
 
+    return entradaRemovida;
+}
+
+function reverterCreditoRevenda(indexCliente, posicaoCredito){
+    let cliente = clientes[indexCliente];
+    if(!cliente) return;
+    let entradaRemovida = removerLancamentoCreditoRevenda(cliente, posicaoCredito);
+    if(!entradaRemovida) return;
+
     salvar();
     renderizar();
     atualizarDashboard();
@@ -2883,6 +2934,99 @@ function reverterCreditoRevenda(indexCliente, posicaoCredito){
     mostrarSucesso(`↩️ Lançamento de ${entradaRemovida.creditos || 0} crédito(s) revertido — valor removido do lucro do mês.`);
 }
 
+
+let creditoEditando = null; // {indexCliente, posicaoCredito}
+
+function abrirEdicaoCredito(indexCliente, posicaoCredito){
+    let cliente = clientes[indexCliente];
+    if(!cliente) return;
+    let op = (cliente.historicoCreditos || [])[posicaoCredito];
+    if(!op) return;
+
+    creditoEditando = { indexCliente, posicaoCredito };
+
+    document.getElementById("editCreditoData").value = op.data || "";
+    document.getElementById("editCreditoQuantidade").value = op.creditos || "";
+
+    let selectSub = document.getElementById("editCreditoSubRevenda");
+    let subRevendas = Array.isArray(cliente.subRevendas) ? cliente.subRevendas : [];
+    if(subRevendas.length > 1){
+        selectSub.style.display = "block";
+        selectSub.innerHTML = subRevendas.map(s =>
+            `<option value="${s.id}" ${op.subRevendaId === s.id ? "selected" : ""}>${s.nome}${s.padrao ? " ⭐" : ""}</option>`
+        ).join("");
+    } else {
+        selectSub.style.display = "none";
+        selectSub.innerHTML = "";
+    }
+
+    fecharHistoricoCreditos();
+    document.getElementById("modalEditarCredito").classList.add("ativo");
+}
+
+function fecharEdicaoCredito(){
+    document.getElementById("modalEditarCredito").classList.remove("ativo");
+    if(creditoEditando) mostrarHistoricoCreditos(creditoEditando.indexCliente);
+    creditoEditando = null;
+}
+
+function salvarEdicaoCredito(){
+    if(!creditoEditando) return;
+    let { indexCliente, posicaoCredito } = creditoEditando;
+    let cliente = clientes[indexCliente];
+    if(!cliente) return;
+
+    let novaData = document.getElementById("editCreditoData").value;
+    let novaQuantidade = parseInt(document.getElementById("editCreditoQuantidade").value) || 0;
+    if(!novaData){ mostrarAlerta("Informe a data do lançamento.", "aviso"); return; }
+    if(novaQuantidade <= 0){ mostrarAlerta("Informe a quantidade de créditos.", "aviso"); return; }
+
+    let subRevendas = Array.isArray(cliente.subRevendas) ? cliente.subRevendas : [];
+    let selectSub = document.getElementById("editCreditoSubRevenda");
+    let subSelecionada = null;
+    if(subRevendas.length > 1 && selectSub.value){
+        subSelecionada = subRevendas.find(s => s.id === selectSub.value);
+    }
+
+    let entradaAntiga = removerLancamentoCreditoRevenda(cliente, posicaoCredito);
+    if(!entradaAntiga) return;
+
+    // Mantém o preço/custo por crédito que já estava registrado no lançamento
+    // original — só data, quantidade e revenda são realmente "corrigidos" aqui.
+    let valorUnitario = entradaAntiga.valorUnitario ?? VALOR_CREDITO_REVENDA;
+    let custoUnitario = entradaAntiga.custoUnitario ?? obterCustoCreditoRevenda(cliente.servidor);
+    let valorTotal = novaQuantidade * valorUnitario;
+    let lucroOperacao = novaQuantidade * (valorUnitario - custoUnitario);
+    let novoIdOperacao = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+
+    let subRevendaId = subSelecionada ? subSelecionada.id : (entradaAntiga.subRevendaId || null);
+    let subRevendaNome = subSelecionada ? subSelecionada.nome : (entradaAntiga.subRevendaNome || cliente.nome);
+
+    if(!Array.isArray(cliente.historicoCreditos)) cliente.historicoCreditos = [];
+    cliente.historicoCreditos.push({
+        data:novaData, creditos:novaQuantidade, valorUnitario, custoUnitario,
+        valorTotal, lucro:lucroOperacao, idOperacao:novoIdOperacao,
+        subRevendaId, subRevendaNome
+    });
+    cliente.ultimaRenovacao = novaData;
+
+    registrarMovimentoLucro(`${cliente.nome} - ${subRevendaNome}`, lucroOperacao, novoIdOperacao);
+
+    if(!Array.isArray(cliente.historico)) cliente.historico = [];
+    cliente.historico.push({
+        data:novaData, vencimentoAnterior:"Revenda", vencimentoNovo:"Revenda",
+        plano: `+${novaQuantidade} créditos (${subRevendaNome})`,
+        idOperacao:novoIdOperacao
+    });
+
+    salvar();
+    renderizar();
+    atualizarDashboard();
+    document.getElementById("modalEditarCredito").classList.remove("ativo");
+    mostrarHistoricoCreditos(indexCliente);
+    creditoEditando = null;
+    mostrarSucesso("✏️ Lançamento atualizado.");
+}
 
 function fecharHistoricoCreditos(){
     document.getElementById("modalHistoricoCreditos").classList.remove("ativo");
@@ -4427,6 +4571,8 @@ document.addEventListener("DOMContentLoaded", function(){
         </div>
         <div id="renovacaoInfoRevenda" style="display:none;">
             <select id="renovacaoSubRevenda" style="display:none;"></select>
+            <label style="font-size:12px;color:#94a3b8;display:block;margin:6px 0 4px;">📅 Data</label>
+            <input type="date" id="renovacaoDataCredito">
             <div class="botoes-rapidos-creditos" id="botoesRapidosCreditos">
                 <button type="button" onclick="definirCreditosRapido(10)">+10</button>
                 <button type="button" onclick="definirCreditosRapido(15)">+15</button>
@@ -4511,6 +4657,21 @@ document.addEventListener("DOMContentLoaded", function(){
         <div id="historicoCreditosConteudo" style="display:flex; flex-direction:column; gap:8px; max-height:45vh; overflow-y:auto; margin-top:10px;"></div>
         <div id="historicoCreditosTotal" style="margin-top:12px; padding-top:12px; border-top:1px solid #334155; color:#38bdf8; font-weight:bold; font-size:12px; text-align:right;"></div>
         <button class="btn-edit" onclick="fecharHistoricoCreditos()">Fechar</button>
+    </div>
+</div>
+
+<!-- MODAL EDITAR LANÇAMENTO DE CRÉDITO (REVENDA) -->
+<div class="modal" id="modalEditarCredito">
+    <div class="modal-box">
+        <div class="modal-topo">
+            <h2>✏️ Editar Lançamento</h2>
+            <button class="fechar-modal" onclick="fecharEdicaoCredito()">✕</button>
+        </div>
+        <label style="font-size:12px;color:#94a3b8;display:block;margin:6px 0 4px;">📅 Data</label>
+        <input type="date" id="editCreditoData">
+        <select id="editCreditoSubRevenda" style="display:none; margin-top:8px;"></select>
+        <input type="number" id="editCreditoQuantidade" min="1" placeholder="Quantidade de créditos" style="margin-top:8px;">
+        <button class="btn-add" onclick="salvarEdicaoCredito()">✅ Salvar Alterações</button>
     </div>
 </div>
 
