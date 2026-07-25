@@ -2675,11 +2675,24 @@ function registrarMovimentoLucro(nomeCliente, valor, idOperacao, dataMovimento){
         saldoAnterior = parseFloat(textoLucro) || 0;
     }
 
-    // dataMovimento permite registrar o lançamento na data escolhida pelo
-    // usuário (ex: créditos de revenda com data retroativa/futura), em vez de
-    // sempre gravar o momento exato do clique — senão o lucro aparece no mês
-    // errado no Dashboard.
-    let dataFinal = dataMovimento ? new Date(dataMovimento).toISOString() : new Date().toISOString();
+    // dataMovimento chega como "YYYY-MM-DD" (sem horário), escolhida pelo
+    // usuário. Se convertêssemos direto com `new Date("YYYY-MM-DD").toISOString()`,
+    // o JS trata essa string como meia-noite UTC — e em fusos negativos
+    // (ex: Brasil, UTC-3) isso "volta" pro dia anterior quando exibido depois
+    // em horário local. Por isso montamos o horário como meio-dia LOCAL do
+    // dia escolhido antes de converter, o que evita esse deslocamento.
+    let dataFinal;
+    if(dataMovimento){
+        let partes = String(dataMovimento).split("-");
+        if(partes.length === 3){
+            let d = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]), 12, 0, 0);
+            dataFinal = d.toISOString();
+        } else {
+            dataFinal = new Date(dataMovimento).toISOString();
+        }
+    } else {
+        dataFinal = new Date().toISOString();
+    }
 
     historicoLucro.push({ data: dataFinal, cliente: nomeCliente || "", valor, saldoAnterior, idOperacao: idOperacao || null });
     if(historicoLucro.length > 300) historicoLucro = historicoLucro.slice(-300);
