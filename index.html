@@ -2148,6 +2148,15 @@ function moeda(valor){
     return `R$ ${valor.toFixed(2).replace(".",",")}`;
 }
 
+// Sempre com 2 casas decimais e ponto separador de milhar (ex: R$ 1.027,00).
+// Usado só nos valores de lucro/totais do Dashboard e relatórios, que nunca
+// são "lidos de volta" via regex (diferente do valor de plano, que usa
+// moeda() acima e precisa continuar sem separador de milhar).
+function moedaCentavos(valor){
+    valor = Number(valor) || 0;
+    return `R$ ${valor.toLocaleString("pt-BR", { minimumFractionDigits:2, maximumFractionDigits:2 })}`;
+}
+
 /* ══════════════════════════════════════════════
    DURAÇÃO DOS PLANOS
    Cada plano tem uma duração no formato { unidade, valor }:
@@ -2732,7 +2741,7 @@ function calcularLucroPeriodo(){
 
     let soma = movimentos.reduce((acc, mov) => acc + (Number(mov.valor) || 0), 0);
 
-    total.innerText = `R$ ${soma.toFixed(2).replace(".", ",")}`;
+    total.innerText = moedaCentavos(soma);
     label.innerText = `${movimentos.length} movimento(s) no período`;
 
     if(movimentos.length === 0){
@@ -2748,7 +2757,7 @@ function calcularLucroPeriodo(){
 <div class="historico-lucro-item">
     <span class="historico-lucro-data">${dataFormatada}</span>
     <span class="historico-lucro-nome">${mov.cliente || "-"}</span>
-    <span class="historico-lucro-valor">${sinal}R$ ${Math.abs(Number(mov.valor) || 0).toFixed(2).replace(".", ",")}</span>
+    <span class="historico-lucro-valor">${sinal}${moedaCentavos(Math.abs(Number(mov.valor) || 0))}</span>
 </div>`;
     }).join("");
 }
@@ -2857,7 +2866,7 @@ function gerarRelatorioPDF(){
         let sinal = valor >= 0 ? "+" : "-";
         doc.text(dataFmt, 14, y);
         doc.text(String(mov.cliente || "-"), 45, y);
-        doc.text(`${sinal}R$ ${Math.abs(valor).toFixed(2).replace(".",",")}`, 196, y, { align: "right" });
+        doc.text(`${sinal}${moedaCentavos(Math.abs(valor))}`, 196, y, { align: "right" });
         y += 7;
     });
 
@@ -2867,7 +2876,7 @@ function gerarRelatorioPDF(){
     y += 9;
     doc.setFontSize(12);
     doc.setFont(undefined, "bold");
-    doc.text(`Total do período: R$ ${total.toFixed(2).replace(".",",")}`, 196, y, { align: "right" });
+    doc.text(`Total do período: ${moedaCentavos(total)}`, 196, y, { align: "right" });
 
     const nomeGestorArquivo = nomeSistema.replace(/[^a-zA-Z0-9À-ÿ ]/g, "").replace(/\s+/g, "_");
     const nomeArquivo = `Relatorio_Lucro_${nomeGestorArquivo}_${inicioStr}_a_${fimStr}.pdf`;
@@ -3630,7 +3639,7 @@ function atualizarDashboard(){
         }
     });
 
-    document.getElementById("lucroTotal").innerHTML = `R$ ${lucro.toFixed(2).replace(".",",")}`;
+    document.getElementById("lucroTotal").innerHTML = moedaCentavos(lucro);
     document.getElementById("clientesAtivos").innerHTML = ativos;
     document.getElementById("clientesVencendo").innerHTML = vencendo;
 
@@ -3696,8 +3705,8 @@ function renderizarHistoricoLucro(){
         }
         return `
 <div class="historico-lucro-item">
-    <span class="historico-lucro-total">R$ ${mov.saldoAnterior.toFixed(2).replace(".",",")}</span>
-    <span class="historico-lucro-valor">${sinal}R$ ${Math.abs(mov.valor).toFixed(2).replace(".",",")}</span>
+    <span class="historico-lucro-total">${moedaCentavos(mov.saldoAnterior)}</span>
+    <span class="historico-lucro-valor">${sinal}${moedaCentavos(Math.abs(mov.valor))}</span>
     <span class="historico-lucro-data">${dataFormatada}</span>
     <span class="historico-lucro-nome nome-clicavel" onclick='irParaCliente(${JSON.stringify(mov.cliente || "")})'>${mov.cliente || ""}</span>
 </div>`;
@@ -3829,7 +3838,7 @@ function verificarResumoDiario(){
     if(vencemAmanha > 0)
         linhas.push(`<div class="resumo-linha aviso"><span>⚠️ Vencem amanhã</span><span>${vencemAmanha} cliente${vencemAmanha>1?"s":""}</span></div>`);
     if(receber > 0)
-        linhas.push(`<div class="resumo-linha ok"><span>💰 A receber hoje/amanhã</span><span>R$ ${receber.toFixed(2).replace(".",",")}</span></div>`);
+        linhas.push(`<div class="resumo-linha ok"><span>💰 A receber hoje/amanhã</span><span>${moedaCentavos(receber)}</span></div>`);
 
     if(linhas.length === 0)
         linhas.push(`<div class="resumo-linha ok"><span>✅ Tudo em dia!</span><span>Nenhum vencimento próximo</span></div>`);
