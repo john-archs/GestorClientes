@@ -1652,6 +1652,9 @@ function mostrarDadosCliente(index){
         let listaRevendas = Array.isArray(cliente.subRevendas) && cliente.subRevendas.length
             ? cliente.subRevendas.map(s => `${s.nome}${s.padrao ? " ⭐" : ""}`).join(", ")
             : "";
+        let hojeDados = new Date();
+        let creditosMesDados = somaCreditosGrupoMes(cliente, hojeDados.getMonth(), hojeDados.getFullYear());
+        let creditosTotalDados = somaCreditosGrupo(cliente);
         let observacoes = "";
         if(cliente.obs){
             observacoes = cliente.obs.replace(/\\n/g, "\n");
@@ -1661,7 +1664,8 @@ function mostrarDadosCliente(index){
 `👤 Nome: ${cliente.nome}${listaRevendas ? `\n👥 Revendas: ${listaRevendas}` : ""}
 
 🖥️ Servidor: ${cliente.servidor || "-"}
-💳 Créditos adicionados (total): ${somaCreditosGrupo(cliente)}${
+💳 Créditos este mês: ${creditosMesDados}
+💳 Créditos adicionados (total): ${creditosTotalDados}${
 ultimoCredito ? `\n🔸 Último lançamento: ${ultimoCredito.subRevendaNome || cliente.nome} — ${ultimoCredito.creditos} créditos — ${moeda(ultimoCredito.valorTotal)}\n📅 Data: ${formatarData(ultimoCredito.data)}` : ""
 }${observacoes ? `\n\n${observacoes}` : ""}`;
 
@@ -2094,6 +2098,9 @@ function renovarCliente(){
         let custoServidorRenov = servidorClienteRenov
             ? Number((servidorClienteRenov.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
             : 0;
+        // O custo do servidor é mensal: planos de vários meses (trimestral,
+        // semestral, anual...) consomem um crédito de custo por mês, não só um.
+        custoServidorRenov = custoServidorRenov * obterMesesEquivalentes(obterDuracaoPlano(cliente.plano));
         registrarMovimentoLucro(cliente.nome, valorPlanoRenov - custoServidorRenov, idOperacaoRenov);
     }
 
@@ -2413,6 +2420,17 @@ function obterDuracaoPlano(planoTexto){
     let plano = obterPlanoPorNome(extrairNomePlano(planoTexto));
     if(!plano) return null;
     return plano.duracao || null;
+}
+
+// O custo do servidor é sempre mensal (1 crédito = 1 mês). Planos com mais de
+// um mês (trimestral, semestral, anual...) devem contar vários créditos —
+// ex: trimestral = 3 créditos de custo, não 1. Esta função converte a duração
+// do plano em "quantos meses de crédito" ele consome.
+function obterMesesEquivalentes(duracao){
+    if(!duracao) return 1;
+    if(duracao.unidade === "meses") return duracao.valor || 1;
+    if(duracao.unidade === "dias") return Math.max(1, Math.round((duracao.valor || 30) / 30));
+    return 1;
 }
 
 function formatarDuracaoPlano(duracao){
@@ -2791,9 +2809,21 @@ function fecharHistorico(){
     document.getElementById("modalHistorico").classList.remove("ativo");
 }
 
+let mesHistoricoCreditosSel = null;
+let anoHistoricoCreditosSel = null;
+
 function mostrarHistoricoCreditos(index){
     let cliente = clientes[index];
     if(!cliente) return;
+
+    // Ao abrir um cliente diferente do que estava sendo visto, volta pro mês
+    // atual. Se for o mesmo cliente (ex: reabertura após editar/reverter um
+    // lançamento), mantém o mês que estava sendo consultado.
+    let agoraAbertura = new Date();
+    if(clienteHistoricoCreditosAtual !== index || mesHistoricoCreditosSel === null){
+        mesHistoricoCreditosSel = agoraAbertura.getMonth();
+        anoHistoricoCreditosSel = agoraAbertura.getFullYear();
+    }
     clienteHistoricoCreditosAtual = index;
 
     document.getElementById("historicoCreditosNome").innerText = cliente.nome || "";
@@ -2819,10 +2849,24 @@ function mostrarHistoricoCreditos(index){
         delete selectFiltro.dataset.montadoPara;
     }
 
-    // Resumo: total de créditos e valor já adicionados por cada revenda do
-    // grupo (todo o período, não só o mês atual).
+    let mesAtual = mesHistoricoCreditosSel;
+    let anoAtual = anoHistoricoCreditosSel;
+
+    // Label do mês sendo consultado + trava do botão "próximo" para não
+    // navegar além do mês atual.
+    const nomesMeses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    document.getElementById("historicoCreditosMesLabel").innerText = `${nomesMeses[mesAtual]} de ${anoAtual}`;
+    let hoje = new Date();
+    let ehMesAtualReal = (mesAtual === hoje.getMonth() && anoAtual === hoje.getFullYear());
+    let btnProximo = document.getElementById("historicoCreditosMesProximo");
+    btnProximo.disabled = ehMesAtualReal;
+    btnProximo.style.opacity = ehMesAtualReal ? "0.4" : "1";
+    btnProximo.style.cursor = ehMesAtualReal ? "default" : "pointer";
+
+    // Resumo: total de créditos e valor de cada revenda do grupo, só no mês
+    // sendo consultado (não é mais o total histórico acumulado).
     let resumoBox = document.getElementById("historicoCreditosResumoSub");
-    let resumo = creditosPorSubRevenda(cliente);
+    let resumo = creditosPorSubRevendaMes(cliente, mesAtual, anoAtual);
     let chaves = Object.keys(resumo);
     resumoBox.innerHTML = chaves.length > 1 ? chaves.map(chave => {
         let r = resumo[chave];
@@ -2833,9 +2877,6 @@ function mostrarHistoricoCreditos(index){
 </div>`;
     }).join("") : "";
 
-    let agora = new Date();
-    let mesAtual = agora.getMonth();
-    let anoAtual = agora.getFullYear();
     // Mantém a posição original de cada lançamento em cliente.historicoCreditos
     // (não a posição na lista filtrada/invertida) para poder reverter o
     // lançamento certo depois.
@@ -2850,7 +2891,7 @@ function mostrarHistoricoCreditos(index){
         });
 
     if(historico.length === 0){
-        conteudo.innerHTML = `<div style="color:#94a3b8; font-size:12px;">Nenhum crédito registrado neste mês.</div>`;
+        conteudo.innerHTML = `<div style="color:#94a3b8; font-size:12px;">Nenhum crédito registrado em ${nomesMeses[mesAtual].toLowerCase()}.</div>`;
         document.getElementById("historicoCreditosTotal").innerText = "";
     } else {
         let total = 0;
@@ -2874,6 +2915,28 @@ function mostrarHistoricoCreditos(index){
     }
 
     document.getElementById("modalHistoricoCreditos").classList.add("ativo");
+}
+
+function historicoCreditosMesAnterior(){
+    if(mesHistoricoCreditosSel === null) return;
+    mesHistoricoCreditosSel--;
+    if(mesHistoricoCreditosSel < 0){
+        mesHistoricoCreditosSel = 11;
+        anoHistoricoCreditosSel--;
+    }
+    mostrarHistoricoCreditos(clienteHistoricoCreditosAtual);
+}
+
+function historicoCreditosMesProximo(){
+    if(mesHistoricoCreditosSel === null) return;
+    let hoje = new Date();
+    if(mesHistoricoCreditosSel === hoje.getMonth() && anoHistoricoCreditosSel === hoje.getFullYear()) return;
+    mesHistoricoCreditosSel++;
+    if(mesHistoricoCreditosSel > 11){
+        mesHistoricoCreditosSel = 0;
+        anoHistoricoCreditosSel++;
+    }
+    mostrarHistoricoCreditos(clienteHistoricoCreditosAtual);
 }
 
 function confirmarReverterCredito(indexCliente, posicaoCredito){
@@ -2979,7 +3042,7 @@ function abrirEdicaoCredito(indexCliente, posicaoCredito){
         selectSub.innerHTML = "";
     }
 
-    fecharHistoricoCreditos();
+    document.getElementById("modalHistoricoCreditos").classList.remove("ativo");
     document.getElementById("modalEditarCredito").classList.add("ativo");
 }
 
@@ -3049,6 +3112,9 @@ function salvarEdicaoCredito(){
 
 function fecharHistoricoCreditos(){
     document.getElementById("modalHistoricoCreditos").classList.remove("ativo");
+    clienteHistoricoCreditosAtual = null;
+    mesHistoricoCreditosSel = null;
+    anoHistoricoCreditosSel = null;
 }
 
 /* ===== LUCRO POR PERÍODO (mensal, anual ou personalizado) ===== */
@@ -3307,12 +3373,42 @@ function somaCreditosGrupo(cliente){
     return cliente.historicoCreditos.reduce((total, op) => total + (op.creditos || 0), 0);
 }
 
+// Mesmo total, mas só dos lançamentos de um mês/ano específico (usado no
+// card do cliente, que deve mostrar o total do mês, não o total histórico).
+function somaCreditosGrupoMes(cliente, mes, ano){
+    if(!cliente || !Array.isArray(cliente.historicoCreditos)) return 0;
+    return cliente.historicoCreditos.reduce((total, op) => {
+        if(!op.data) return total;
+        let d = new Date(op.data);
+        if(d.getMonth() !== mes || d.getFullYear() !== ano) return total;
+        return total + (op.creditos || 0);
+    }, 0);
+}
+
 // Retorna { chave: {nome, creditos, valor} } com o total de créditos e valor
 // já adicionados a cada revenda do grupo, somando todo o histórico.
 function creditosPorSubRevenda(cliente){
     let mapa = {};
     if(!cliente || !Array.isArray(cliente.historicoCreditos)) return mapa;
     cliente.historicoCreditos.forEach(op => {
+        let chave = op.subRevendaId || op.subRevendaNome || cliente.nome;
+        let nome = op.subRevendaNome || cliente.nome;
+        if(!mapa[chave]) mapa[chave] = { nome, creditos:0, valor:0 };
+        mapa[chave].creditos += (op.creditos || 0);
+        mapa[chave].valor += (op.valorTotal || 0);
+    });
+    return mapa;
+}
+
+// Igual à anterior, mas restrito a um mês/ano específico — usado no resumo
+// por revenda do modal de Histórico de Créditos, que pode navegar por meses.
+function creditosPorSubRevendaMes(cliente, mes, ano){
+    let mapa = {};
+    if(!cliente || !Array.isArray(cliente.historicoCreditos)) return mapa;
+    cliente.historicoCreditos.forEach(op => {
+        if(!op.data) return;
+        let d = new Date(op.data);
+        if(d.getMonth() !== mes || d.getFullYear() !== ano) return;
         let chave = op.subRevendaId || op.subRevendaNome || cliente.nome;
         let nome = op.subRevendaNome || cliente.nome;
         if(!mapa[chave]) mapa[chave] = { nome, creditos:0, valor:0 };
@@ -3460,6 +3556,9 @@ function adicionarCliente(){
         let custoServidorNovo = servidorClienteNovo
             ? Number((servidorClienteNovo.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
             : 0;
+        // Mesmo ajuste: custo do servidor é mensal, então planos de vários
+        // meses (trimestral, semestral, anual...) contam vários créditos de custo.
+        custoServidorNovo = custoServidorNovo * obterMesesEquivalentes(obterDuracaoPlano(planoTexto));
         registrarMovimentoLucro(nome, valorPlanoNovo - custoServidorNovo);
     }
 
@@ -3690,11 +3789,15 @@ function renderizar(){
     <div class="card-body">
         ${ehClienteRevenda(cliente) ? `
         <div class="card-row">🖥️ <span>${destacar(cliente.servidor || "-", pesquisa)}</span></div>
-        ${Array.isArray(cliente.subRevendas) && cliente.subRevendas.length ? `<div class="card-row">👥 <span>${cliente.subRevendas.map(s => {
-            let r = creditosPorSubRevenda(cliente)[s.id] || { creditos:0 };
-            return `${destacar(s.nome, pesquisa)}${s.padrao ? " ⭐" : ""} (${r.creditos})`;
-        }).join(", ")}</span></div>` : ""}
-        <div class="card-row">💳 <span>${somaCreditosGrupo(cliente)} créditos adicionados</span></div>
+        ${Array.isArray(cliente.subRevendas) && cliente.subRevendas.length ? `<div class="card-row">👥 <span>${(() => {
+            let hoje = new Date();
+            let resumoMesCard = creditosPorSubRevendaMes(cliente, hoje.getMonth(), hoje.getFullYear());
+            return cliente.subRevendas.map(s => {
+                let r = resumoMesCard[s.id] || { creditos:0 };
+                return `${destacar(s.nome, pesquisa)}${s.padrao ? " ⭐" : ""} (${r.creditos})`;
+            }).join(", ");
+        })()}</span></div>` : ""}
+        <div class="card-row">💳 <span>${(() => { let hoje = new Date(); return somaCreditosGrupoMes(cliente, hoje.getMonth(), hoje.getFullYear()); })()} créditos este mês</span></div>
         ` : `
         <div class="card-row">👤 <span>${destacar(cliente.usuario || "-", pesquisa)}</span></div>
         <div class="card-row">📦 <span>${destacar(cliente.plano || "-", pesquisa)}</span></div>
@@ -4161,6 +4264,9 @@ function atualizarDashboard(){
         let custoServidor = 0;
         if(servidorCliente){
             custoServidor = Number(servidorCliente.custo.replace("R$","").replace(".","").replace(",","."));
+            // Custo mensal do servidor multiplicado pelos meses do plano
+            // (trimestral = 3 créditos de custo, semestral = 6, etc.).
+            custoServidor = custoServidor * obterMesesEquivalentes(obterDuracaoPlano(cliente.plano));
         }
 
         if(cliente.ultimaRenovacao){
@@ -4671,6 +4777,11 @@ document.addEventListener("DOMContentLoaded", function(){
             <button class="fechar-modal" onclick="fecharHistoricoCreditos()">✕</button>
         </div>
         <strong id="historicoCreditosNome" style="color:white;"></strong>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; background:#1e293b; border-radius:8px; padding:6px 10px;">
+            <button type="button" id="historicoCreditosMesAnterior" onclick="historicoCreditosMesAnterior()" style="background:#334155; color:#38bdf8; border:none; border-radius:6px; padding:6px 10px; font-size:14px; cursor:pointer;">◀</button>
+            <span id="historicoCreditosMesLabel" style="color:#e2e8f0; font-weight:bold; font-size:13px;"></span>
+            <button type="button" id="historicoCreditosMesProximo" onclick="historicoCreditosMesProximo()" style="background:#334155; color:#38bdf8; border:none; border-radius:6px; padding:6px 10px; font-size:14px; cursor:pointer;">▶</button>
+        </div>
         <select id="historicoCreditosFiltroSub" style="display:none; margin-top:8px;" onchange="mostrarHistoricoCreditos(clienteHistoricoCreditosAtual)"></select>
         <div id="historicoCreditosResumoSub" style="display:flex; flex-direction:column; gap:4px; margin-top:8px;"></div>
         <div id="historicoCreditosConteudo" style="display:flex; flex-direction:column; gap:8px; max-height:45vh; overflow-y:auto; margin-top:10px;"></div>
