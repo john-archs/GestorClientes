@@ -1356,7 +1356,7 @@ textarea{
             <span id="clientesVencendo">0</span>
         </div>
         <div class="dash-card" id="cardCreditosRevenda" style="display:none;">
-            <h3>💳 Créditos de Revenda</h3>
+            <h3>💳 Créditos usados</h3>
             <div class="lucro-linha">
                 <span id="creditosRevendaTotal">0 créditos</span>
                 <div class="lucro-botoes">
@@ -4156,10 +4156,11 @@ function toggleCreditosRevendaDetalhe(){
     box.style.display = box.style.display === "none" ? "block" : "none";
 }
 
-// Soma os créditos de revenda usados no mês atual (por servidor) e estima
-// quantos créditos serão necessários para renovar quem renovou no mês
-// anterior — assumindo que a maioria dos clientes revenda renova todo mês
-// com a mesma quantidade de créditos da última vez.
+// Soma os créditos de servidor usados no mês atual — juntando Revenda e
+// clientes normais (cada mês de plano de um cliente normal também consome um
+// crédito de custo do servidor, igual explicado no ajuste de lucro).
+// O total geral do card junta os dois; o detalhamento "Por Servidor" mostra
+// quanto veio de Revenda e quanto veio de clientes, separadamente.
 function atualizarCreditosRevenda(){
     let card = document.getElementById("cardCreditosRevenda");
     if(!card) return;
@@ -4170,26 +4171,40 @@ function atualizarCreditosRevenda(){
     const mesAnterior = mesAtual === 0 ? 11 : mesAtual - 1;
     const anoDoMesAnterior = mesAtual === 0 ? anoAtual - 1 : anoAtual;
 
-    let usadoPorServidor = {};
+    let usadoRevendaPorServidor = {};
+    let usadoClientePorServidor = {};
     let previstoPorServidor = {};
     let totalMes = 0;
     let totalPrevisto = 0;
 
     clientes.forEach(cliente => {
-        if(!ehClienteRevenda(cliente)) return;
         let nomeServidor = cliente.servidor || "Sem servidor";
-        (cliente.historicoCreditos || []).forEach(op => {
-            if(!op.data) return;
-            let d = new Date(op.data);
-            let creditos = Number(op.creditos) || 0;
-            if(d.getMonth() === mesAtual && d.getFullYear() === anoAtual){
-                usadoPorServidor[nomeServidor] = (usadoPorServidor[nomeServidor] || 0) + creditos;
-                totalMes += creditos;
-            } else if(d.getMonth() === mesAnterior && d.getFullYear() === anoDoMesAnterior){
-                previstoPorServidor[nomeServidor] = (previstoPorServidor[nomeServidor] || 0) + creditos;
-                totalPrevisto += creditos;
-            }
-        });
+
+        if(ehClienteRevenda(cliente)){
+            (cliente.historicoCreditos || []).forEach(op => {
+                if(!op.data) return;
+                let d = new Date(op.data);
+                let creditos = Number(op.creditos) || 0;
+                if(d.getMonth() === mesAtual && d.getFullYear() === anoAtual){
+                    usadoRevendaPorServidor[nomeServidor] = (usadoRevendaPorServidor[nomeServidor] || 0) + creditos;
+                    totalMes += creditos;
+                } else if(d.getMonth() === mesAnterior && d.getFullYear() === anoDoMesAnterior){
+                    previstoPorServidor[nomeServidor] = (previstoPorServidor[nomeServidor] || 0) + creditos;
+                    totalPrevisto += creditos;
+                }
+            });
+            return;
+        }
+
+        // Cliente normal: se ele foi ativado/renovado neste mês, o plano
+        // atual consome créditos de servidor conforme sua duração (1 mês = 1
+        // crédito, trimestral = 3, semestral = 6, anual = 12...).
+        if(!cliente.ultimaRenovacao) return;
+        let d = new Date(cliente.ultimaRenovacao);
+        if(d.getMonth() !== mesAtual || d.getFullYear() !== anoAtual) return;
+        let creditos = obterMesesEquivalentes(obterDuracaoPlano(cliente.plano));
+        usadoClientePorServidor[nomeServidor] = (usadoClientePorServidor[nomeServidor] || 0) + creditos;
+        totalMes += creditos;
     });
 
     if(totalMes === 0 && totalPrevisto === 0){
@@ -4200,15 +4215,25 @@ function atualizarCreditosRevenda(){
 
     document.getElementById("creditosRevendaTotal").innerText = `${totalMes} crédito${totalMes === 1 ? "" : "s"} usados`;
 
-    let servidoresEnvolvidos = [...new Set([...Object.keys(usadoPorServidor), ...Object.keys(previstoPorServidor)])].sort();
+    let servidoresEnvolvidos = [...new Set([
+        ...Object.keys(usadoRevendaPorServidor),
+        ...Object.keys(usadoClientePorServidor),
+        ...Object.keys(previstoPorServidor)
+    ])].sort();
 
     document.getElementById("creditosRevendaLista").innerHTML = servidoresEnvolvidos.map(nomeServidor => {
-        let usado = usadoPorServidor[nomeServidor] || 0;
+        let usadoRevenda = usadoRevendaPorServidor[nomeServidor] || 0;
+        let usadoCliente = usadoClientePorServidor[nomeServidor] || 0;
+        let usadoTotal = usadoRevenda + usadoCliente;
         let previsto = previstoPorServidor[nomeServidor] || 0;
+        let partesBreakdown = [];
+        if(usadoRevenda > 0) partesBreakdown.push(`Revenda: <strong>${usadoRevenda}</strong>`);
+        if(usadoCliente > 0) partesBreakdown.push(`Clientes: <strong>${usadoCliente}</strong>`);
         return `
 <div style="background:#1e293b; border-radius:10px; padding:8px 12px; color:#cbd5e1; font-size:12px; margin-bottom:8px;">
     <div style="color:#38bdf8; font-weight:bold;">🖥️ ${nomeServidor}</div>
-    <div>Usado este mês: <strong>${usado}</strong> crédito${usado === 1 ? "" : "s"}</div>
+    <div>Usado este mês: <strong>${usadoTotal}</strong> crédito${usadoTotal === 1 ? "" : "s"}</div>
+    ${partesBreakdown.length ? `<div style="color:#94a3b8; margin-top:2px;">↳ ${partesBreakdown.join(" · ")}</div>` : ""}
     <div style="color:#94a3b8;">≈ Previsto p/ renovar quem renovou mês passado: <strong>${previsto}</strong> crédito${previsto === 1 ? "" : "s"}</div>
 </div>`;
     }).join("") || `<div style="color:#94a3b8;">Nenhum crédito lançado.</div>`;
