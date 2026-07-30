@@ -4377,13 +4377,20 @@ function atualizarDashboard(){
         });
 
         if(entradasNoMes.length > 0){
-            entradasNoMes.forEach(entrada => {
-                if(typeof entrada.lucro === "number"){
-                    lucro += entrada.lucro;
-                } else {
-                    lucro += calcularLucroClienteLegado(cliente, entrada.plano || cliente.plano);
-                }
-            });
+            // Conta só a operação MAIS RECENTE do mês por cliente — a mesma
+            // lógica de antes (que sempre olhava uma única vez "a última
+            // renovação" de cada cliente). Somar TODAS as entradas do mês
+            // foi o que fez o valor disparar: um cliente criado e depois
+            // renovado no mesmo mês, por exemplo, passou a contar as duas
+            // operações, quando só deveria contar uma.
+            let ultimaEntradaNoMes = entradasNoMes.reduce((maisRecente, atual) =>
+                new Date(atual.data) >= new Date(maisRecente.data) ? atual : maisRecente
+            );
+            if(typeof ultimaEntradaNoMes.lucro === "number"){
+                lucro += ultimaEntradaNoMes.lucro;
+            } else {
+                lucro += calcularLucroClienteLegado(cliente, ultimaEntradaNoMes.plano || cliente.plano);
+            }
         } else if(cliente.ultimaRenovacao){
             // Sem nenhuma entrada de histórico neste mês (cliente criado
             // antes dessa correção existir, por exemplo) — cai pro cálculo
