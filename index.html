@@ -4299,7 +4299,6 @@ ${partesBreakdown.length ? `<div style="color:#94a3b8; margin-top:2px;">↳ ${pa
 }
 
 function atualizarDashboard(){
-    let lucro = 0;
     const hoje = new Date();
     const mesAtual = hoje.getMonth();
     const anoAtual = hoje.getFullYear();
@@ -4307,58 +4306,26 @@ function atualizarDashboard(){
     let lista = document.getElementById("listaVencendo");
     lista.innerHTML = "";
 
+    // O lucro do mês vem do histórico de lucro (valores já fixados no
+    // momento de cada operação — renovação, novo cliente ou créditos de
+    // revenda), e não recalculado agora com o custo ATUAL do servidor. Assim,
+    // alterar o custo de um servidor em Configurações não altera lucro de
+    // operações passadas — só passa a valer para lançamentos futuros.
+    let lucro = historicoLucro
+        .filter(mov => {
+            let d = new Date(mov.data);
+            return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+        })
+        .reduce((soma, mov) => soma + (Number(mov.valor) || 0), 0);
+
     atualizarCreditosRevenda();
 
     clientes.forEach(cliente => {
         let status = statusCliente(cliente.vencimento);
 
-        // Clientes revenda têm lucro calculado por operação de crédito
-        // (créditos × valor de venda − créditos × custo por crédito),
-        // registrado no histórico de créditos a cada compra/renovação.
         if(ehClienteRevenda(cliente)){
-            (cliente.historicoCreditos || []).forEach(operacao => {
-                let dataOperacao = new Date(operacao.data);
-                if(dataOperacao.getMonth() === mesAtual && dataOperacao.getFullYear() === anoAtual){
-                    lucro += Number(operacao.lucro) || 0;
-                }
-            });
             if(status == "ativo") ativos++;
             return;
-        }
-
-        let valor = 0;
-        if(cliente.plano && typeof cliente.plano === "string"){
-            let match = cliente.plano.match(/R\$\s*([\d.,]+)/);
-            if(match){
-                let textoValor = match[1].replace(",", ".");
-                valor = parseFloat(textoValor) || 0;
-            }
-        }
-
-        let servidorCliente = servidores.find(s =>
-            (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
-        );
-
-        if(!servidorCliente && servidores.length > 0){
-            servidorCliente = servidores[0];
-            cliente.servidor = servidorCliente.nome;
-            salvar();
-        }
-
-        let custoServidor = 0;
-        if(servidorCliente){
-            custoServidor = Number(servidorCliente.custo.replace("R$","").replace(".","").replace(",","."));
-            // Custo mensal do servidor multiplicado pelos meses do plano
-            // (trimestral = 3 créditos de custo, semestral = 6, etc.).
-            custoServidor = custoServidor * obterMesesEquivalentes(obterDuracaoPlano(cliente.plano));
-        }
-
-        if(cliente.ultimaRenovacao){
-            let renovacao = new Date(cliente.ultimaRenovacao);
-            if(renovacao.getMonth() === mesAtual && renovacao.getFullYear() === anoAtual){
-                let lucroCliente = valor - custoServidor;
-                if(!isNaN(lucroCliente)) lucro += lucroCliente;
-            }
         }
 
         if(status == "ativo") ativos++;
