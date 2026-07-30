@@ -724,6 +724,68 @@ button{
     gap:15px;
 }
 
+.config-cards{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.config-card{
+    background:#1e293b;
+    border-radius:16px;
+    overflow:hidden;
+}
+
+.config-card-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:18px 20px;
+    cursor:pointer;
+    user-select:none;
+}
+
+.config-card-header:hover{
+    background:#25324a;
+}
+
+.config-card-header-titulo{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-weight:bold;
+    font-size:16px;
+}
+
+.config-card-header .seta-config{
+    font-size:13px;
+    color:#94a3b8;
+    transition:transform .25s ease;
+    flex-shrink:0;
+}
+
+.config-card.aberto .config-card-header .seta-config{
+    transform:rotate(180deg);
+}
+
+.config-card-body{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .3s ease;
+}
+
+.config-card-body-interno{
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+    padding:0 20px 20px 20px;
+}
+
+.config-card.aberto .config-card-body{
+    max-height:3000px;
+}
+
 select{
     background:#1e293b;
     color:white;
@@ -1442,81 +1504,146 @@ textarea{
 <!-- CONFIGURAÇÕES -->
 <div id="configuracoes" class="guia">
     <h1>⚙️ Configurações</h1>
-    <div class="config-box">
-        <div class="linha-config">
-            <label for="nomeSistema"><strong>● Nome do sistema</strong></label>
-            <input type="text" id="nomeSistema">
-        </div>
-        <label><strong>● Logo do sistema</strong></label>
-        <div class="logo-acoes">
-            <button type="button" class="btn-edit" onclick="document.getElementById('logoUpload').click()">🖼️ Escolher Imagem</button>
-            <button type="button" class="btn-delete" onclick="removerLogo()">🗑️ Remover Imagem</button>
-            <input type="file" id="logoUpload" accept="image/*" style="display:none">
-        </div>
-        <hr>
-        <h2>● Servidores</h2>
-        <div class="topo">
-            <button class="btn-add" onclick="toggleServidor()">➕ Servidor</button>
-        </div>
-        <div class="topo" id="boxServidor" style="display:none;">
-            <input type="text" id="novoServidor" placeholder="Nome do servidor">
-            <input type="text" id="custoServidor" placeholder="11,00">
-            <input type="text" id="urlServidor" placeholder="http://aptxu.net"/>
-            <button class="btn-add" onclick="adicionarServidor()">✅</button>
-        </div>
-        <div id="listaServidores"></div>
+    <div class="config-cards">
 
-        <h2>● Planos</h2>
-        <div class="topo">
-            <button class="btn-add" onclick="togglePlano()">➕ Plano</button>
+        <div class="config-card">
+            <div class="config-card-header" onclick="toggleConfigCard(this)">
+                <div class="config-card-header-titulo">🏷️ Identidade do Sistema</div>
+                <span class="seta-config">▼</span>
+            </div>
+            <div class="config-card-body">
+                <div class="config-card-body-interno">
+                    <div class="linha-config">
+                        <label for="nomeSistema"><strong>● Nome do sistema</strong></label>
+                        <input type="text" id="nomeSistema">
+                    </div>
+                    <label><strong>● Logo do sistema</strong></label>
+                    <div class="logo-acoes">
+                        <button type="button" class="btn-edit" onclick="document.getElementById('logoUpload').click()">🖼️ Escolher Imagem</button>
+                        <button type="button" class="btn-delete" onclick="removerLogo()">🗑️ Remover Imagem</button>
+                        <input type="file" id="logoUpload" accept="image/*" style="display:none">
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="topo" id="boxPlano" style="display:none;">
-            <input type="text" id="novoPlanoNome" placeholder="Nome do plano">
-            <input type="number" id="novoPlanoValor" placeholder="Valor">
-            <select id="novoPlanoDuracao" onchange="alternarDuracaoPersonalizada('novoPlanoDuracao','novoPlanoDuracaoPersonalizada')">
-                <option value="7d">7 dias</option>
-                <option value="15d">15 dias</option>
-                <option value="1m" selected>1 mês (Mensal)</option>
-                <option value="2m">2 meses</option>
-                <option value="3m">3 meses (Trimestral)</option>
-                <option value="6m">6 meses (Semestral)</option>
-                <option value="12m">12 meses (Anual)</option>
-                <option value="personalizado">Personalizado (dias)</option>
-                <option value="revenda">Revenda (sem duração definida)</option>
-            </select>
-            <input type="number" id="novoPlanoDuracaoPersonalizada" placeholder="Nº de dias" style="display:none;">
-            <button class="btn-add" onclick="adicionarPlano()">✅</button>
-        </div>
-        <div id="listaPlanos"></div>
 
-        <hr>
-        <h2>● Backup Completo</h2>
-        <div class="backup-acoes">
-            <button class="btn-add" onclick="exportarSistema()">📤 Exportar Sistema</button>
-            <button class="btn-edit" onclick="document.getElementById('arquivoSistema').click()">📥 Importar Sistema</button>
-            <input type="file" id="arquivoSistema" accept=".json" style="display:none" onchange="importarSistema(event)">
+        <div class="config-card">
+            <div class="config-card-header" onclick="toggleConfigCard(this)">
+                <div class="config-card-header-titulo">🖥️ Servidores</div>
+                <span class="seta-config">▼</span>
+            </div>
+            <div class="config-card-body">
+                <div class="config-card-body-interno">
+                    <div class="topo">
+                        <button class="btn-add" onclick="toggleServidor()">➕ Servidor</button>
+                    </div>
+                    <div class="topo" id="boxServidor" style="display:none;">
+                        <input type="text" id="novoServidor" placeholder="Nome do servidor">
+                        <input type="text" id="custoServidor" placeholder="11,00">
+                        <input type="text" id="urlServidor" placeholder="http://aptxu.net"/>
+                        <button class="btn-add" onclick="adicionarServidor()">✅</button>
+                    </div>
+                    <div id="listaServidores"></div>
+                </div>
+            </div>
         </div>
-        <div id="textoUltimoBackup" class="texto-ultimo-backup"></div>
-        <hr>
-        <h2>● Dados PIX</h2>
-        <label>Chave PIX</label>
-        <input type="text" id="pixChave" placeholder="Digite a chave PIX">
-        <label>Nome do Recebedor</label>
-        <input type="text" id="pixNome" placeholder="Nome do titular">
-        <label>Banco</label>
-        <input type="text" id="pixBanco" placeholder="Banco">
-        <hr>
-        <h2>● Suporte</h2>
-        <label>WhatsApp Suporte (com código do país + DDD, só números)</label>
-        <input type="text" id="whatsappSuporte" placeholder="Ex: 5584991815446" onblur="limparWhatsapp(this)">
-        <hr>
-        <h2>● Extras</h2>
-        <label>Promoção</label>
-        <textarea id="textoPromocao" placeholder="Texto promocional enviado nas renovações"></textarea>
-        <label>Rodapé</label>
-        <textarea id="textoRodape" placeholder="Mensagem final da empresa"></textarea>
-        <button id="btnSalvarConfiguracoes" class="btn-vencendo" onclick="salvarConfiguracoes()">Salvar Configurações</button>
+
+        <div class="config-card">
+            <div class="config-card-header" onclick="toggleConfigCard(this)">
+                <div class="config-card-header-titulo">📦 Planos</div>
+                <span class="seta-config">▼</span>
+            </div>
+            <div class="config-card-body">
+                <div class="config-card-body-interno">
+                    <div class="topo">
+                        <button class="btn-add" onclick="togglePlano()">➕ Plano</button>
+                    </div>
+                    <div class="topo" id="boxPlano" style="display:none;">
+                        <input type="text" id="novoPlanoNome" placeholder="Nome do plano">
+                        <input type="number" id="novoPlanoValor" placeholder="Valor">
+                        <select id="novoPlanoDuracao" onchange="alternarDuracaoPersonalizada('novoPlanoDuracao','novoPlanoDuracaoPersonalizada')">
+                            <option value="7d">7 dias</option>
+                            <option value="15d">15 dias</option>
+                            <option value="1m" selected>1 mês (Mensal)</option>
+                            <option value="2m">2 meses</option>
+                            <option value="3m">3 meses (Trimestral)</option>
+                            <option value="6m">6 meses (Semestral)</option>
+                            <option value="12m">12 meses (Anual)</option>
+                            <option value="personalizado">Personalizado (dias)</option>
+                            <option value="revenda">Revenda (sem duração definida)</option>
+                        </select>
+                        <input type="number" id="novoPlanoDuracaoPersonalizada" placeholder="Nº de dias" style="display:none;">
+                        <button class="btn-add" onclick="adicionarPlano()">✅</button>
+                    </div>
+                    <div id="listaPlanos"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="config-card">
+            <div class="config-card-header" onclick="toggleConfigCard(this)">
+                <div class="config-card-header-titulo">💾 Backup Completo</div>
+                <span class="seta-config">▼</span>
+            </div>
+            <div class="config-card-body">
+                <div class="config-card-body-interno">
+                    <div class="backup-acoes">
+                        <button class="btn-add" onclick="exportarSistema()">📤 Exportar Sistema</button>
+                        <button class="btn-edit" onclick="document.getElementById('arquivoSistema').click()">📥 Importar Sistema</button>
+                        <input type="file" id="arquivoSistema" accept=".json" style="display:none" onchange="importarSistema(event)">
+                    </div>
+                    <div id="textoUltimoBackup" class="texto-ultimo-backup"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="config-card">
+            <div class="config-card-header" onclick="toggleConfigCard(this)">
+                <div class="config-card-header-titulo">💳 Dados PIX</div>
+                <span class="seta-config">▼</span>
+            </div>
+            <div class="config-card-body">
+                <div class="config-card-body-interno">
+                    <label>Chave PIX</label>
+                    <input type="text" id="pixChave" placeholder="Digite a chave PIX">
+                    <label>Nome do Recebedor</label>
+                    <input type="text" id="pixNome" placeholder="Nome do titular">
+                    <label>Banco</label>
+                    <input type="text" id="pixBanco" placeholder="Banco">
+                </div>
+            </div>
+        </div>
+
+        <div class="config-card">
+            <div class="config-card-header" onclick="toggleConfigCard(this)">
+                <div class="config-card-header-titulo">🎧 Suporte</div>
+                <span class="seta-config">▼</span>
+            </div>
+            <div class="config-card-body">
+                <div class="config-card-body-interno">
+                    <label>WhatsApp Suporte (com código do país + DDD, só números)</label>
+                    <input type="text" id="whatsappSuporte" placeholder="Ex: 5584991815446" onblur="limparWhatsapp(this)">
+                </div>
+            </div>
+        </div>
+
+        <div class="config-card">
+            <div class="config-card-header" onclick="toggleConfigCard(this)">
+                <div class="config-card-header-titulo">✍️ Extras</div>
+                <span class="seta-config">▼</span>
+            </div>
+            <div class="config-card-body">
+                <div class="config-card-body-interno">
+                    <label>Promoção</label>
+                    <textarea id="textoPromocao" placeholder="Texto promocional enviado nas renovações"></textarea>
+                    <label>Rodapé</label>
+                    <textarea id="textoRodape" placeholder="Mensagem final da empresa"></textarea>
+                </div>
+            </div>
+        </div>
+
     </div>
+    <button id="btnSalvarConfiguracoes" class="btn-vencendo" onclick="salvarConfiguracoes()" style="margin-top:15px;width:100%;">Salvar Configurações</button>
 </div>
 
 <script>
@@ -1886,7 +2013,11 @@ function exportarSistema(){
         planos,
         servidores,
         servidorPadrao: localStorage.getItem("servidorPadrao") || "",
-        configuracoes: config
+        configuracoes: config,
+        historicoLucro,
+        itensPorPagina: localStorage.getItem("itensPorPagina") || "",
+        modoCompacto: localStorage.getItem("modoCompacto") || "",
+        diasLembreteDashboard: localStorage.getItem("diasLembreteDashboard") || ""
     };
 
     const hoje = new Date();
@@ -1934,11 +2065,23 @@ function importarSistema(event){
                 clientes = dados.clientes || [];
                 planos = dados.planos || [];
                 servidores = dados.servidores || [];
+                historicoLucro = dados.historicoLucro || [];
                 localStorage.setItem("servidorPadrao", dados.servidorPadrao || "");
                 localStorage.setItem("clientes", JSON.stringify(clientes));
                 localStorage.setItem("planos", JSON.stringify(planos));
                 localStorage.setItem("servidores", JSON.stringify(servidores));
                 localStorage.setItem("configuracoes", JSON.stringify(dados.configuracoes || {}));
+                localStorage.setItem("historicoLucro", JSON.stringify(historicoLucro));
+                if(dados.itensPorPagina){
+                    itensPorPagina = parseInt(dados.itensPorPagina) || itensPorPagina;
+                    localStorage.setItem("itensPorPagina", itensPorPagina);
+                }
+                if(dados.modoCompacto !== undefined && dados.modoCompacto !== ""){
+                    localStorage.setItem("modoCompacto", dados.modoCompacto);
+                }
+                if(dados.diasLembreteDashboard){
+                    localStorage.setItem("diasLembreteDashboard", dados.diasLembreteDashboard);
+                }
                 carregarConfiguracoes();
                 sincronizarPlanosFaltantes();
                 renderizarServidores();
@@ -2101,7 +2244,8 @@ function renovarCliente(){
         // O custo do servidor é mensal: planos de vários meses (trimestral,
         // semestral, anual...) consomem um crédito de custo por mês, não só um.
         custoServidorRenov = custoServidorRenov * obterMesesEquivalentes(obterDuracaoPlano(cliente.plano));
-        registrarMovimentoLucro(cliente.nome, valorPlanoRenov - custoServidorRenov, idOperacaoRenov);
+        var lucroRenovAtual = valorPlanoRenov - custoServidorRenov;
+        registrarMovimentoLucro(cliente.nome, lucroRenovAtual, idOperacaoRenov);
     }
 
     if(!Array.isArray(clientes[clienteRenovacao].historico)) clientes[clienteRenovacao].historico = [];
@@ -2110,7 +2254,10 @@ function renovarCliente(){
         vencimentoAnterior,
         vencimentoNovo,
         plano: cliente.plano || "",
-        idOperacao: idOperacaoRenov
+        idOperacao: idOperacaoRenov,
+        // Lucro CONGELADO no momento dessa renovação (não recalcula depois
+        // com o custo atual do servidor, se ele mudar em Configurações).
+        lucro: lucroRenovAtual
     });
 
     salvar();
@@ -2256,6 +2403,16 @@ function configurarUploadLogo(){
         };
         leitor.readAsDataURL(arquivo);
     });
+}
+
+function toggleConfigCard(header){
+    let card = header.closest(".config-card");
+    if(!card) return;
+    let jaAberto = card.classList.contains("aberto");
+    document.querySelectorAll("#configuracoes .config-card.aberto").forEach(c => {
+        if(c !== card) c.classList.remove("aberto");
+    });
+    card.classList.toggle("aberto", !jaAberto);
 }
 
 function toggleServidor(){
@@ -3545,6 +3702,7 @@ function adicionarCliente(){
     }
 
     const hojeISO = new Date().toISOString().split("T")[0];
+    const idOperacaoNovoCliente = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO });
 
     {
@@ -3559,7 +3717,17 @@ function adicionarCliente(){
         // Mesmo ajuste: custo do servidor é mensal, então planos de vários
         // meses (trimestral, semestral, anual...) contam vários créditos de custo.
         custoServidorNovo = custoServidorNovo * obterMesesEquivalentes(obterDuracaoPlano(planoTexto));
-        registrarMovimentoLucro(nome, valorPlanoNovo - custoServidorNovo);
+        let lucroNovoAtual = valorPlanoNovo - custoServidorNovo;
+        registrarMovimentoLucro(nome, lucroNovoAtual, idOperacaoNovoCliente);
+
+        // Registra também no histórico do próprio cliente, com o lucro já
+        // CONGELADO nesse momento — assim, se o custo do servidor mudar
+        // depois em Configurações, essa criação não é recalculada.
+        let novoCliente = clientes[clientes.length - 1];
+        novoCliente.historico = [{
+            data: hojeISO, vencimentoAnterior: "", vencimentoNovo: vencimento,
+            plano: planoTexto || "", idOperacao: idOperacaoNovoCliente, lucro: lucroNovoAtual
+        }];
     }
 
     salvar();
@@ -4298,12 +4466,30 @@ ${partesBreakdown.length ? `<div style="color:#94a3b8; margin-top:2px;">↳ ${pa
 <div style="color:#94a3b8;">≈ Previsto (baseado no mês anterior): <strong>${previsto}</strong> crédito${previsto === 1 ? "" : "s"}</div>`;
 }
 
+function calcularLucroClienteLegado(cliente, planoTexto){
+    let valor = 0;
+    if(planoTexto && typeof planoTexto === "string"){
+        let match = planoTexto.match(/R\$\s*([\d.,]+)/);
+        if(match) valor = parseFloat(match[1].replace(",",".")) || 0;
+    }
+    let servidorCliente = servidores.find(s =>
+        (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
+    );
+    let custoServidor = 0;
+    if(servidorCliente){
+        custoServidor = Number((servidorCliente.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0;
+        custoServidor = custoServidor * obterMesesEquivalentes(obterDuracaoPlano(planoTexto));
+    }
+    let resultado = valor - custoServidor;
+    return isNaN(resultado) ? 0 : resultado;
+}
+
 function atualizarDashboard(){
-    let lucro = 0;
     const hoje = new Date();
     const mesAtual = hoje.getMonth();
     const anoAtual = hoje.getFullYear();
     let ativos = 0, vencendo = 0;
+    let lucro = 0;
     let lista = document.getElementById("listaVencendo");
     lista.innerHTML = "";
 
@@ -4314,7 +4500,8 @@ function atualizarDashboard(){
 
         // Clientes revenda têm lucro calculado por operação de crédito
         // (créditos × valor de venda − créditos × custo por crédito),
-        // registrado no histórico de créditos a cada compra/renovação.
+        // já CONGELADO no histórico de créditos a cada compra/renovação —
+        // por isso não muda se o custo do servidor mudar depois.
         if(ehClienteRevenda(cliente)){
             (cliente.historicoCreditos || []).forEach(operacao => {
                 let dataOperacao = new Date(operacao.data);
@@ -4326,42 +4513,46 @@ function atualizarDashboard(){
             return;
         }
 
-        let valor = 0;
-        if(cliente.plano && typeof cliente.plano === "string"){
-            let match = cliente.plano.match(/R\$\s*([\d.,]+)/);
-            if(match){
-                let textoValor = match[1].replace(",", ".");
-                valor = parseFloat(textoValor) || 0;
+        if(status == "ativo") ativos++;
+
+        // Lucro do mês: soma os lançamentos do histórico do cliente que
+        // caíram neste mês, usando o lucro já CONGELADO em cada um (campo
+        // `lucro`, salvo desde essa correção — não recalcula com o custo
+        // atual do servidor). Lançamentos antigos (de antes da correção)
+        // ainda não têm esse campo — para eles, calcula com o custo atual,
+        // igual já acontecia antes, só pra não perder cobertura de lucro
+        // já contabilizado no passado.
+        let historicoCliente = Array.isArray(cliente.historico) ? cliente.historico : [];
+        let entradasNoMes = historicoCliente.filter(h => {
+            if(!h.data) return false;
+            let d = new Date(h.data);
+            return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+        });
+
+        if(entradasNoMes.length > 0){
+            // Conta só a operação MAIS RECENTE do mês por cliente — a mesma
+            // lógica de antes (que sempre olhava uma única vez "a última
+            // renovação" de cada cliente). Somar TODAS as entradas do mês
+            // foi o que fez o valor disparar: um cliente criado e depois
+            // renovado no mesmo mês, por exemplo, passou a contar as duas
+            // operações, quando só deveria contar uma.
+            let ultimaEntradaNoMes = entradasNoMes.reduce((maisRecente, atual) =>
+                new Date(atual.data) >= new Date(maisRecente.data) ? atual : maisRecente
+            );
+            if(typeof ultimaEntradaNoMes.lucro === "number"){
+                lucro += ultimaEntradaNoMes.lucro;
+            } else {
+                lucro += calcularLucroClienteLegado(cliente, ultimaEntradaNoMes.plano || cliente.plano);
             }
-        }
-
-        let servidorCliente = servidores.find(s =>
-            (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
-        );
-
-        if(!servidorCliente && servidores.length > 0){
-            servidorCliente = servidores[0];
-            cliente.servidor = servidorCliente.nome;
-            salvar();
-        }
-
-        let custoServidor = 0;
-        if(servidorCliente){
-            custoServidor = Number(servidorCliente.custo.replace("R$","").replace(".","").replace(",","."));
-            // Custo mensal do servidor multiplicado pelos meses do plano
-            // (trimestral = 3 créditos de custo, semestral = 6, etc.).
-            custoServidor = custoServidor * obterMesesEquivalentes(obterDuracaoPlano(cliente.plano));
-        }
-
-        if(cliente.ultimaRenovacao){
+        } else if(cliente.ultimaRenovacao){
+            // Sem nenhuma entrada de histórico neste mês (cliente criado
+            // antes dessa correção existir, por exemplo) — cai pro cálculo
+            // antigo, só pra não perder essa cobertura.
             let renovacao = new Date(cliente.ultimaRenovacao);
             if(renovacao.getMonth() === mesAtual && renovacao.getFullYear() === anoAtual){
-                let lucroCliente = valor - custoServidor;
-                if(!isNaN(lucroCliente)) lucro += lucroCliente;
+                lucro += calcularLucroClienteLegado(cliente, cliente.plano);
             }
         }
-
-        if(status == "ativo") ativos++;
 
         let diasRestantes = calcularDiasRestantes(cliente.vencimento);
         let limiteDias = obterDiasLembreteDashboard();
@@ -4680,6 +4871,44 @@ function tentarCopiaAntiga(campo){
     }
 }
 
+// Congela (uma única vez, na primeira carga após essa correção) o lucro de
+// lançamentos antigos que ainda não tinham esse campo salvo. Sem isso, esses
+// lançamentos específicos continuavam recalculando com o custo ATUAL do
+// servidor toda vez que o Dashboard atualizava — por isso mudar o custo de
+// um servidor ainda alterava o total, mesmo depois da correção anterior.
+// Depois desse congelamento, só lançamentos NOVOS usam o custo do momento
+// deles; os antigos ficam fixos com o valor calculado agora (a melhor
+// informação disponível, já que o custo de quando aconteceram não foi
+// salvo antes de existir esse campo).
+function congelarLucroHistoricoAntigo(){
+    let alterou = false;
+
+    clientes.forEach(cliente => {
+        if(ehClienteRevenda(cliente)){
+            (cliente.historicoCreditos || []).forEach(op => {
+                if(typeof op.lucro !== "number"){
+                    let custoUnitario = typeof op.custoUnitario === "number" ? op.custoUnitario : obterCustoCreditoRevenda(cliente.servidor);
+                    let valorUnitario = typeof op.valorUnitario === "number" ? op.valorUnitario : VALOR_CREDITO_REVENDA;
+                    op.custoUnitario = custoUnitario;
+                    op.valorUnitario = valorUnitario;
+                    op.lucro = (Number(op.creditos) || 0) * (valorUnitario - custoUnitario);
+                    alterou = true;
+                }
+            });
+            return;
+        }
+
+        (cliente.historico || []).forEach(entrada => {
+            if(typeof entrada.lucro !== "number"){
+                entrada.lucro = calcularLucroClienteLegado(cliente, entrada.plano || cliente.plano);
+                alterou = true;
+            }
+        });
+    });
+
+    if(alterou) salvar();
+}
+
 document.addEventListener("DOMContentLoaded", function(){
     try{
         carregarConfiguracoes();
@@ -4698,6 +4927,7 @@ document.addEventListener("DOMContentLoaded", function(){
         renderizarPlanos();
         filtroAtual = "todos";
         aplicarModoCompacto();
+        congelarLucroHistoricoAntigo();
         renderizar();
         carregarDiasLembrete();
         mostrarTextoUltimoBackup();
