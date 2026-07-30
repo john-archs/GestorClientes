@@ -2101,8 +2101,7 @@ function renovarCliente(){
         // O custo do servidor é mensal: planos de vários meses (trimestral,
         // semestral, anual...) consomem um crédito de custo por mês, não só um.
         custoServidorRenov = custoServidorRenov * obterMesesEquivalentes(obterDuracaoPlano(cliente.plano));
-        var lucroRenovAtual = valorPlanoRenov - custoServidorRenov;
-        registrarMovimentoLucro(cliente.nome, lucroRenovAtual, idOperacaoRenov);
+        registrarMovimentoLucro(cliente.nome, valorPlanoRenov - custoServidorRenov, idOperacaoRenov);
     }
 
     if(!Array.isArray(clientes[clienteRenovacao].historico)) clientes[clienteRenovacao].historico = [];
@@ -2111,10 +2110,7 @@ function renovarCliente(){
         vencimentoAnterior,
         vencimentoNovo,
         plano: cliente.plano || "",
-        idOperacao: idOperacaoRenov,
-        // Lucro CONGELADO no momento dessa renovação (não recalcula depois
-        // com o custo atual do servidor, se ele mudar em Configurações).
-        lucro: lucroRenovAtual
+        idOperacao: idOperacaoRenov
     });
 
     salvar();
@@ -3549,7 +3545,6 @@ function adicionarCliente(){
     }
 
     const hojeISO = new Date().toISOString().split("T")[0];
-    const idOperacaoNovoCliente = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO });
 
     {
@@ -3564,17 +3559,7 @@ function adicionarCliente(){
         // Mesmo ajuste: custo do servidor é mensal, então planos de vários
         // meses (trimestral, semestral, anual...) contam vários créditos de custo.
         custoServidorNovo = custoServidorNovo * obterMesesEquivalentes(obterDuracaoPlano(planoTexto));
-        let lucroNovoAtual = valorPlanoNovo - custoServidorNovo;
-        registrarMovimentoLucro(nome, lucroNovoAtual, idOperacaoNovoCliente);
-
-        // Registra também no histórico do próprio cliente, com o lucro já
-        // CONGELADO nesse momento — assim, se o custo do servidor mudar
-        // depois em Configurações, essa criação não é recalculada.
-        let novoCliente = clientes[clientes.length - 1];
-        novoCliente.historico = [{
-            data: hojeISO, vencimentoAnterior: "", vencimentoNovo: vencimento,
-            plano: planoTexto || "", idOperacao: idOperacaoNovoCliente, lucro: lucroNovoAtual
-        }];
+        registrarMovimentoLucro(nome, valorPlanoNovo - custoServidorNovo);
     }
 
     salvar();
@@ -4313,30 +4298,12 @@ ${partesBreakdown.length ? `<div style="color:#94a3b8; margin-top:2px;">↳ ${pa
 <div style="color:#94a3b8;">≈ Previsto (baseado no mês anterior): <strong>${previsto}</strong> crédito${previsto === 1 ? "" : "s"}</div>`;
 }
 
-function calcularLucroClienteLegado(cliente, planoTexto){
-    let valor = 0;
-    if(planoTexto && typeof planoTexto === "string"){
-        let match = planoTexto.match(/R\$\s*([\d.,]+)/);
-        if(match) valor = parseFloat(match[1].replace(",",".")) || 0;
-    }
-    let servidorCliente = servidores.find(s =>
-        (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
-    );
-    let custoServidor = 0;
-    if(servidorCliente){
-        custoServidor = Number((servidorCliente.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0;
-        custoServidor = custoServidor * obterMesesEquivalentes(obterDuracaoPlano(planoTexto));
-    }
-    let resultado = valor - custoServidor;
-    return isNaN(resultado) ? 0 : resultado;
-}
-
 function atualizarDashboard(){
+    let lucro = 0;
     const hoje = new Date();
     const mesAtual = hoje.getMonth();
     const anoAtual = hoje.getFullYear();
     let ativos = 0, vencendo = 0;
-    let lucro = 0;
     let lista = document.getElementById("listaVencendo");
     lista.innerHTML = "";
 
@@ -4347,8 +4314,7 @@ function atualizarDashboard(){
 
         // Clientes revenda têm lucro calculado por operação de crédito
         // (créditos × valor de venda − créditos × custo por crédito),
-        // já CONGELADO no histórico de créditos a cada compra/renovação —
-        // por isso não muda se o custo do servidor mudar depois.
+        // registrado no histórico de créditos a cada compra/renovação.
         if(ehClienteRevenda(cliente)){
             (cliente.historicoCreditos || []).forEach(operacao => {
                 let dataOperacao = new Date(operacao.data);
@@ -4360,46 +4326,42 @@ function atualizarDashboard(){
             return;
         }
 
-        if(status == "ativo") ativos++;
-
-        // Lucro do mês: soma os lançamentos do histórico do cliente que
-        // caíram neste mês, usando o lucro já CONGELADO em cada um (campo
-        // `lucro`, salvo desde essa correção — não recalcula com o custo
-        // atual do servidor). Lançamentos antigos (de antes da correção)
-        // ainda não têm esse campo — para eles, calcula com o custo atual,
-        // igual já acontecia antes, só pra não perder cobertura de lucro
-        // já contabilizado no passado.
-        let historicoCliente = Array.isArray(cliente.historico) ? cliente.historico : [];
-        let entradasNoMes = historicoCliente.filter(h => {
-            if(!h.data) return false;
-            let d = new Date(h.data);
-            return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
-        });
-
-        if(entradasNoMes.length > 0){
-            // Conta só a operação MAIS RECENTE do mês por cliente — a mesma
-            // lógica de antes (que sempre olhava uma única vez "a última
-            // renovação" de cada cliente). Somar TODAS as entradas do mês
-            // foi o que fez o valor disparar: um cliente criado e depois
-            // renovado no mesmo mês, por exemplo, passou a contar as duas
-            // operações, quando só deveria contar uma.
-            let ultimaEntradaNoMes = entradasNoMes.reduce((maisRecente, atual) =>
-                new Date(atual.data) >= new Date(maisRecente.data) ? atual : maisRecente
-            );
-            if(typeof ultimaEntradaNoMes.lucro === "number"){
-                lucro += ultimaEntradaNoMes.lucro;
-            } else {
-                lucro += calcularLucroClienteLegado(cliente, ultimaEntradaNoMes.plano || cliente.plano);
-            }
-        } else if(cliente.ultimaRenovacao){
-            // Sem nenhuma entrada de histórico neste mês (cliente criado
-            // antes dessa correção existir, por exemplo) — cai pro cálculo
-            // antigo, só pra não perder essa cobertura.
-            let renovacao = new Date(cliente.ultimaRenovacao);
-            if(renovacao.getMonth() === mesAtual && renovacao.getFullYear() === anoAtual){
-                lucro += calcularLucroClienteLegado(cliente, cliente.plano);
+        let valor = 0;
+        if(cliente.plano && typeof cliente.plano === "string"){
+            let match = cliente.plano.match(/R\$\s*([\d.,]+)/);
+            if(match){
+                let textoValor = match[1].replace(",", ".");
+                valor = parseFloat(textoValor) || 0;
             }
         }
+
+        let servidorCliente = servidores.find(s =>
+            (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
+        );
+
+        if(!servidorCliente && servidores.length > 0){
+            servidorCliente = servidores[0];
+            cliente.servidor = servidorCliente.nome;
+            salvar();
+        }
+
+        let custoServidor = 0;
+        if(servidorCliente){
+            custoServidor = Number(servidorCliente.custo.replace("R$","").replace(".","").replace(",","."));
+            // Custo mensal do servidor multiplicado pelos meses do plano
+            // (trimestral = 3 créditos de custo, semestral = 6, etc.).
+            custoServidor = custoServidor * obterMesesEquivalentes(obterDuracaoPlano(cliente.plano));
+        }
+
+        if(cliente.ultimaRenovacao){
+            let renovacao = new Date(cliente.ultimaRenovacao);
+            if(renovacao.getMonth() === mesAtual && renovacao.getFullYear() === anoAtual){
+                let lucroCliente = valor - custoServidor;
+                if(!isNaN(lucroCliente)) lucro += lucroCliente;
+            }
+        }
+
+        if(status == "ativo") ativos++;
 
         let diasRestantes = calcularDiasRestantes(cliente.vencimento);
         let limiteDias = obterDiasLembreteDashboard();
