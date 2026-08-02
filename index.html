@@ -90,6 +90,12 @@ button{
     color:black;
 }
 
+.btn-icon-svg{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
 .btn-icon{
     width:44px;
     height:44px;
@@ -1124,6 +1130,66 @@ textarea{
     margin-top:6px;
 }
 
+.texto-ultimo-backup.backup-alerta{
+    color:#f59e0b;
+    font-weight:bold;
+}
+
+.texto-ultimo-backup.backup-atrasado{
+    color:#ef4444;
+    font-weight:bold;
+}
+
+.dica-variaveis{
+    font-size:11px;
+    color:#94a3b8;
+    background:#1e293b;
+    border-radius:8px;
+    padding:8px 10px;
+    margin-bottom:12px;
+    line-height:1.6;
+}
+
+.dica-variaveis code{
+    background:#0f172a;
+    color:#38bdf8;
+    padding:1px 5px;
+    border-radius:4px;
+    font-size:11px;
+}
+
+.btn-preview-mensagem{
+    margin-top:8px;
+    width:100%;
+}
+
+.preview-whatsapp-fundo{
+    background:#0b141a;
+    background-image:repeating-linear-gradient(45deg, #0e1a21 0, #0e1a21 1px, #0b141a 1px, #0b141a 12px);
+    border-radius:10px;
+    padding:16px;
+    max-height:50vh;
+    overflow-y:auto;
+}
+
+.preview-whatsapp-bolha{
+    background:#005c4b;
+    color:#e9edef;
+    padding:10px 12px;
+    border-radius:10px;
+    white-space:pre-wrap;
+    font-size:13.5px;
+    line-height:1.45;
+    box-shadow:0 1px 2px rgba(0,0,0,.3);
+}
+
+.preview-whatsapp-bolha code{
+    background:rgba(0,0,0,.25);
+    padding:1px 4px;
+    border-radius:4px;
+    font-family:"Courier New", monospace;
+}
+
 .btn-desabilitado{
     background:#64748b !important;
     color:#cbd5e1 !important;
@@ -1373,8 +1439,18 @@ textarea{
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute">
+    <defs>
+        <linearGradient id="gradienteEstrelaDourada" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fef08a"/>
+            <stop offset="50%" stop-color="#fbbf24"/>
+            <stop offset="100%" stop-color="#b45309"/>
+        </linearGradient>
+    </defs>
+</svg>
 <div id="cabecalhoSistema">
     <img id="logoSistema" src="" style="display:none;">
     <span id="tituloSistema" onclick="tocarNoTitulo()">Gestor IPTV</span>
@@ -1591,6 +1667,7 @@ textarea{
                         <button class="btn-add" onclick="exportarSistema()">📤 Exportar Sistema</button>
                         <button class="btn-edit" onclick="document.getElementById('arquivoSistema').click()">📥 Importar Sistema</button>
                         <input type="file" id="arquivoSistema" accept=".json" style="display:none" onchange="importarSistema(event)">
+                        <button class="btn-historico-lucro" onclick="exportarClientesExcel()">📊 Exportar Excel (Clientes)</button>
                     </div>
                     <div id="textoUltimoBackup" class="texto-ultimo-backup"></div>
                 </div>
@@ -1629,12 +1706,28 @@ textarea{
 
         <div class="config-card">
             <div class="config-card-header" onclick="toggleConfigCard(this)">
-                <div class="config-card-header-titulo">✍️ Extras</div>
+                <div class="config-card-header-titulo">💬 Mensagens</div>
                 <span class="seta-config">▼</span>
             </div>
             <div class="config-card-body">
                 <div class="config-card-body-interno">
-                    <label>Promoção</label>
+                    <div class="dica-variaveis">
+                        💡 Variáveis disponíveis nos modelos: <code>{nome}</code> <code>{usuario}</code> <code>{senha}</code> <code>{plano}</code> <code>{valor}</code> <code>{vencimento}</code> — só na Renovação: <code>{link}</code> (área do cliente) — só no Lembrete: <code>{saudacao}</code> <code>{emoji}</code> <code>{status}</code> <code>{pix_chave}</code> <code>{pix_nome}</code> <code>{pix_banco}</code>
+                    </div>
+
+                    <label><strong>● Modelo de Ativação</strong></label>
+                    <textarea id="modeloAtivacao" rows="8" placeholder="Modelo enviado ao ativar um novo cliente"></textarea>
+                    <button type="button" class="btn-historico-lucro btn-preview-mensagem" onclick="previsualizarMensagem('ativacao')">👁️ Prévia</button>
+
+                    <label style="margin-top:16px;display:block;"><strong>● Modelo de Renovação</strong></label>
+                    <textarea id="modeloRenovacao" rows="8" placeholder="Modelo enviado ao renovar um cliente"></textarea>
+                    <button type="button" class="btn-historico-lucro btn-preview-mensagem" onclick="previsualizarMensagem('renovacao')">👁️ Prévia</button>
+
+                    <label style="margin-top:16px;display:block;"><strong>● Modelo de Lembrete de Vencimento</strong></label>
+                    <textarea id="modeloLembrete" rows="11" placeholder="Modelo enviado ao lembrar um cliente vencendo/vencido"></textarea>
+                    <button type="button" class="btn-historico-lucro btn-preview-mensagem" onclick="previsualizarMensagem('lembrete')">👁️ Prévia</button>
+
+                    <label style="margin-top:16px;display:block;">Promoção</label>
                     <textarea id="textoPromocao" placeholder="Texto promocional enviado nas renovações"></textarea>
                     <label>Rodapé</label>
                     <textarea id="textoRodape" placeholder="Mensagem final da empresa"></textarea>
@@ -1643,10 +1736,141 @@ textarea{
         </div>
 
     </div>
+
+    <!-- MODAL PRÉVIA DE MENSAGEM -->
+    <div class="modal" id="modalPreviewMensagem" onclick="if(event.target===this)fecharPreviewMensagem()">
+        <div class="modal-box">
+            <div class="modal-topo">
+                <h2>👁️ Prévia da Mensagem</h2>
+                <button class="fechar-modal" onclick="fecharPreviewMensagem()">✕</button>
+            </div>
+            <p style="color:#94a3b8; font-size:12px; margin-bottom:10px;">Exemplo com dados fictícios, só para visualização.</p>
+            <div class="preview-whatsapp-fundo">
+                <div class="preview-whatsapp-bolha" id="previewMensagemTexto"></div>
+            </div>
+            <button class="btn-edit" onclick="fecharPreviewMensagem()">Fechar</button>
+        </div>
+    </div>
     <button id="btnSalvarConfiguracoes" class="btn-vencendo" onclick="salvarConfiguracoes()" style="margin-top:15px;width:100%;">Salvar Configurações</button>
 </div>
 
 <script>
+/* ===== MODELOS DE MENSAGEM (padrões, usados quando o campo de configuração está vazio) ===== */
+const MODELO_ATIVACAO_PADRAO =
+`✨ Ativação realizada ✨
+
+📲 Salve este contato para não perder as novidades nos Status
+
+🔰 Seguem seus dados de acesso:
+
+✨️ Nome: {nome}
+✨️ Usuário: {usuario}
+✨️ Senha: {senha}
+
+🔸 Plano: {plano}
+🔸 Valor: R$ {valor}
+
+🗓️ Vencimento: {vencimento}`;
+
+const MODELO_RENOVACAO_PADRAO =
+`*✅ Renovação realizada ✅*
+
+*🔰 Seguem seus dados de acesso:*
+
+*✨️ Nome:* {nome}
+*✨️ Usuário:* {usuario}
+*✨️ Senha:* {senha}
+
+*🔸 Plano:* {plano}
+*🔸 Valor:* R$ {valor}
+
+*🗓️ Vencimento:* {vencimento}
+
+*🔗 Sua área do cliente:*
+{link}`;
+
+const MODELO_LEMBRETE_PADRAO =
+`*{emoji} 🙋🏽‍♂️ Ooi, {nome}*. {saudacao}!
+Passando para lembrar que seu plano {plano} *{status}*.
+
+> ❌️ NÃO FIQUE SEM SUA PROGRAMAÇÃO
+
+*🔑 Chave pix:* {pix_chave}
+*👤 Nome:* {pix_nome}
+*🏦 Banco:* {pix_banco}
+
+📄 Favor enviar o comprovante ao efetuar a transferência.
+
+Nosso sistema leva até 30 minutos para checar e confirmar o pagamento para liberação.
+
+Assim que confirmado, enviarei a mensagem de renovação 😉`;
+
+function preencherTemplate(template, dados){
+    return (template || "").replace(/\{(\w+)\}/g, (correspondencia, chave) => {
+        let valor = dados[chave];
+        return (valor === undefined || valor === null) ? "" : String(valor);
+    });
+}
+
+function formatarComoWhatsapp(texto){
+    // Escapa HTML antes de aplicar as marcações, para não quebrar o layout
+    // nem permitir injeção de tags a partir do texto do modelo.
+    let seguro = String(texto)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    // *negrito*
+    seguro = seguro.replace(/\*([^\n*]+)\*/g, "<strong>$1</strong>");
+    // _itálico_
+    seguro = seguro.replace(/_([^\n_]+)_/g, "<em>$1</em>");
+    // ~tachado~
+    seguro = seguro.replace(/~([^\n~]+)~/g, "<s>$1</s>");
+    // ```monoespaçado```
+    seguro = seguro.replace(/```([^`]+)```/g, "<code>$1</code>");
+    // quebras de linha
+    seguro = seguro.replace(/\n/g, "<br>");
+
+    return seguro;
+}
+
+function previsualizarMensagem(tipo){
+    const camposPorTipo = { ativacao: "modeloAtivacao", renovacao: "modeloRenovacao", lembrete: "modeloLembrete" };
+    const padraoPorTipo = { ativacao: MODELO_ATIVACAO_PADRAO, renovacao: MODELO_RENOVACAO_PADRAO, lembrete: MODELO_LEMBRETE_PADRAO };
+
+    const campo = document.getElementById(camposPorTipo[tipo]);
+    const template = (campo && campo.value.trim()) ? campo.value : padraoPorTipo[tipo];
+
+    const dadosExemplo = {
+        nome: "João", usuario: "joao123", senha: "abc123",
+        plano: "Mensal 1 Tela", valor: "30,00", vencimento: "15/08/2026",
+        link: "https://john-archs.github.io/Usuario/?d=exemplo",
+        saudacao: saudacaoBrasileira(), emoji: "🟡", status: "vence amanhã",
+        pix_chave: (document.getElementById("pixChave").value || "sua-chave-pix"),
+        pix_nome: (document.getElementById("pixNome").value || "Seu Nome"),
+        pix_banco: (document.getElementById("pixBanco").value || "Seu Banco")
+    };
+
+    let mensagem = preencherTemplate(template, dadosExemplo);
+
+    const promocao = (document.getElementById("textoPromocao").value || "").trim();
+    const rodape = (document.getElementById("textoRodape").value || "").trim();
+    if(tipo !== "lembrete"){
+        if(promocao) mensagem += `\n\n${promocao}`;
+        if(rodape) mensagem += `\n\n${rodape}`;
+    }
+    if(tipo === "renovacao" && !template.includes("{link}")){
+        mensagem += `\n\n*🔗 Sua área do cliente:*\n${dadosExemplo.link}`;
+    }
+
+    document.getElementById("previewMensagemTexto").innerHTML = formatarComoWhatsapp(mensagem);
+    document.getElementById("modalPreviewMensagem").classList.add("ativo");
+}
+
+function fecharPreviewMensagem(){
+    document.getElementById("modalPreviewMensagem").classList.remove("ativo");
+}
+
 let configuracaoOriginal = "";
 let filtroAtual = "todos";
 let ordenacaoAtual = "adicao";
@@ -1949,7 +2173,10 @@ function obterConfiguracoesAtuais(){
         pixBanco: document.getElementById("pixBanco").value,
         whatsappSuporte: document.getElementById("whatsappSuporte").value,
         textoPromocao: document.getElementById("textoPromocao").value,
-        textoRodape: document.getElementById("textoRodape").value
+        textoRodape: document.getElementById("textoRodape").value,
+        modeloAtivacao: document.getElementById("modeloAtivacao").value,
+        modeloRenovacao: document.getElementById("modeloRenovacao").value,
+        modeloLembrete: document.getElementById("modeloLembrete").value
     });
 }
 
@@ -1980,21 +2207,15 @@ function enviarMensagemAtivacao(cliente){
     let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
     let promocao = (config.textoPromocao || "").trim();
     let rodape = (config.textoRodape || "").trim();
-    let mensagem =
-`✨ Ativação realizada ✨
-
-📲 Salve este contato para não perder as novidades nos Status
-
-🔰 Seguem seus dados de acesso:
-
-✨️ Nome: ${primeiroNome(cliente.nome)}
-✨️ Usuário: ${cliente.usuario}
-✨️ Senha: ${cliente.senha}
-
-🔸 Plano: ${nomePlano}
-🔸 Valor: R$ ${valor}
-
-🗓️ Vencimento: ${formatarData(cliente.vencimento)}`;
+    let template = (config.modeloAtivacao && config.modeloAtivacao.trim()) ? config.modeloAtivacao : MODELO_ATIVACAO_PADRAO;
+    let mensagem = preencherTemplate(template, {
+        nome: primeiroNome(cliente.nome),
+        usuario: cliente.usuario,
+        senha: cliente.senha,
+        plano: nomePlano,
+        valor: valor,
+        vencimento: formatarData(cliente.vencimento)
+    });
     if(promocao) mensagem += `\n\n${promocao}`;
     if(rodape) mensagem += `\n\n${rodape}`;
     if(cliente.obs){
@@ -2002,6 +2223,171 @@ function enviarMensagemAtivacao(cliente){
         mensagem += `\n~~~~~~~~~~~~~~~~~~\n${obsFormatado}`;
     }
     window.open(`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
+}
+
+async function exportarClientesExcel(){
+    if(typeof ExcelJS === "undefined"){
+        mostrarAlerta("Não foi possível carregar a biblioteca de Excel. Verifique sua conexão com a internet e tente novamente.", "erro");
+        return;
+    }
+    if(!clientes.length){
+        mostrarAlerta("Não há clientes cadastrados para exportar.", "aviso");
+        return;
+    }
+
+    const config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+    const nomeSistema = config.nomeSistema || "Gestor IPTV";
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = nomeSistema;
+    workbook.created = new Date();
+    const sheet = workbook.addWorksheet("Clientes", {
+        views: [{ state: "frozen", ySplit: 5 }]
+    });
+
+    const colunas = [
+        { header: "Nome", key: "nome", width: 26 },
+        { header: "Usuário", key: "usuario", width: 18 },
+        { header: "Senha", key: "senha", width: 16 },
+        { header: "WhatsApp", key: "whatsapp", width: 18 },
+        { header: "Servidor", key: "servidor", width: 16 },
+        { header: "Plano", key: "plano", width: 24 },
+        { header: "Vencimento", key: "vencimento", width: 14 },
+        { header: "Status", key: "status", width: 12 },
+        { header: "Última Renovação", key: "ultimaRenovacao", width: 16 },
+        { header: "Observações", key: "obs", width: 30 }
+    ];
+    // Registra apenas key + width (sem "header") para não deixar o ExcelJS
+    // escrever automaticamente um cabeçalho na linha 1 — o cabeçalho é
+    // desenhado manualmente mais abaixo, junto com o título e a logo.
+    sheet.columns = colunas.map(c => ({ key: c.key, width: c.width }));
+
+    // ---- Cabeçalho com logo e nome do sistema lado a lado, na coluna A ----
+    sheet.getRow(1).height = 30;
+    sheet.getRow(2).height = 22;
+
+    // Título e logo ficam na MESMA célula mesclada (coluna A em diante).
+    // Em vez de reservar a coluna A inteira só para a logo (o que deixava
+    // um vão enorme antes do texto), a logo é desenhada por cima do início
+    // da célula e o texto recebe um recuo (indent) calculado a partir da
+    // largura real da logo, então ele começa logo depois dela.
+    sheet.mergeCells(1, 1, 2, colunas.length);
+    const celulaTitulo = sheet.getCell(1, 1);
+    celulaTitulo.value = `${nomeSistema} — Lista de Clientes`;
+    celulaTitulo.font = { size: 18, bold: true, color: { argb: "FF38BDF8" } };
+    celulaTitulo.alignment = { vertical: "middle", horizontal: "left", indent: 2 };
+
+    if(config.logoSistema){
+        try{
+            let extensao = config.logoSistema.includes("image/png") ? "png"
+                : config.logoSistema.includes("image/jpeg") ? "jpeg"
+                : config.logoSistema.includes("image/gif") ? "gif"
+                : null;
+            if(extensao){
+                // Calcula a proporção real da imagem para não distorcer
+                // ("espremer") a logo ao inseri-la na planilha.
+                const dimensoesLogo = await new Promise((resolve) => {
+                    const imagemTeste = new Image();
+                    imagemTeste.onload = () => resolve({ w: imagemTeste.naturalWidth, h: imagemTeste.naturalHeight });
+                    imagemTeste.onerror = () => resolve({ w: 1, h: 1 });
+                    imagemTeste.src = config.logoSistema;
+                });
+                const alturaAlvo = 46; // logo maior e mais visível, preenchendo as linhas 1-2
+                const proporcao = dimensoesLogo.w / dimensoesLogo.h || 1;
+                const larguraAlvo = Math.round(alturaAlvo * proporcao);
+
+                // Recuo do texto proporcional à largura da logo (cada nível
+                // de indent equivale a ~7px), com uma folga de 10px.
+                celulaTitulo.alignment = { vertical: "middle", horizontal: "left", indent: Math.ceil((larguraAlvo + 10) / 7) };
+
+                const imagemId = workbook.addImage({ base64: config.logoSistema, extension: extensao });
+                sheet.addImage(imagemId, {
+                    tl: { col: 0.08, row: 0.08 },
+                    ext: { width: larguraAlvo, height: alturaAlvo }
+                });
+            }
+        }catch(erroLogo){ console.error("Não foi possível inserir a logo no Excel:", erroLogo); }
+    }
+
+    // ---- Subtítulo: data de exportação e total ----
+    sheet.mergeCells(3, 1, 3, colunas.length);
+    const celulaSub = sheet.getCell(3, 1);
+    celulaSub.value = `Exportado em ${new Date().toLocaleString("pt-BR")}  •  Total de clientes: ${clientes.length}`;
+    celulaSub.font = { italic: true, size: 10, color: { argb: "FF94A3B8" } };
+    celulaSub.alignment = { indent: 2 };
+    sheet.getRow(3).height = 16;
+    sheet.getRow(4).height = 6;
+
+    // ---- Cabeçalho das colunas ----
+    const linhaCabecalho = sheet.getRow(5);
+    colunas.forEach((c, i) => {
+        const celula = linhaCabecalho.getCell(i + 1);
+        celula.value = c.header;
+        celula.font = { bold: true, color: { argb: "FFFFFFFF" } };
+        celula.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
+        celula.alignment = { vertical: "middle", horizontal: "center" };
+        celula.border = { bottom: { style: "medium", color: { argb: "FF38BDF8" } } };
+    });
+    linhaCabecalho.height = 22;
+
+    // ---- Linhas de dados ----
+    const coresStatus = {
+        vencido: "FFEF4444",
+        vencendo: "FFF59E0B",
+        ativo: "FF22C55E"
+    };
+    const rotulosStatus = { vencido: "Vencido", vencendo: "Vencendo", ativo: "Ativo" };
+
+    clientes.forEach((cliente, idx) => {
+        const status = statusCliente(cliente.vencimento);
+        const linha = sheet.addRow({
+            nome: cliente.nome || "",
+            usuario: cliente.usuario || "",
+            senha: cliente.senha || "",
+            whatsapp: cliente.whatsapp || "",
+            servidor: cliente.servidor || "",
+            plano: cliente.plano || "",
+            vencimento: cliente.vencimento ? formatarData(cliente.vencimento) : "-",
+            status: rotulosStatus[status] || "-",
+            ultimaRenovacao: cliente.ultimaRenovacao ? formatarData(cliente.ultimaRenovacao) : "-",
+            obs: (cliente.obs || "").replace(/\\n/g, " ")
+        });
+
+        if(idx % 2 === 1){
+            linha.eachCell(celula => {
+                celula.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF1F5F9" } };
+            });
+        }
+        const celulaStatus = linha.getCell(8);
+        celulaStatus.font = { bold: true, color: { argb: coresStatus[status] || "FF64748B" } };
+        celulaStatus.alignment = { horizontal: "center" };
+
+        linha.eachCell(celula => {
+            celula.border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+            if(!celula.alignment) celula.alignment = { vertical: "middle" };
+        });
+        linha.height = 18;
+    });
+
+    sheet.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: colunas.length } };
+
+    const nomeArquivo = nomeSistema.trim().replace(/[^a-zA-Z0-9À-ÿ ]/g, "").replace(/\s+/g, "_");
+    const dataArquivo = new Date().toISOString().split("T")[0];
+
+    try{
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Clientes_${nomeArquivo}_${dataArquivo}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        mostrarSucesso("📊 Excel exportado com sucesso!");
+    }catch(erro){
+        console.error("Erro ao exportar Excel:", erro);
+        mostrarAlerta("Ocorreu um erro ao gerar o Excel. Tente novamente.", "erro");
+    }
 }
 
 function exportarSistema(){
@@ -2042,15 +2428,25 @@ function mostrarTextoUltimoBackup(){
     let el = document.getElementById("textoUltimoBackup");
     if(!el) return;
     let dataSalva = localStorage.getItem("ultimoBackup");
+    el.classList.remove("backup-atrasado", "backup-alerta");
     if(!dataSalva){
-        el.innerText = "Nenhum backup feito ainda";
+        el.innerText = "⚠️ Nenhum backup feito ainda";
+        el.classList.add("backup-atrasado");
         return;
     }
     let dias = Math.floor((Date.now() - new Date(dataSalva).getTime()) / 86400000);
     let texto;
-    if(dias <= 0) texto = "Último backup: feito hoje";
-    else if(dias === 1) texto = "Último backup: feito há 1 dia";
+    if(dias <= 0) texto = "✅ Último backup: feito hoje";
+    else if(dias === 1) texto = "✅ Último backup: feito há 1 dia";
     else texto = `Último backup: feito há ${dias} dias`;
+
+    if(dias >= 15){
+        texto = `⚠️ ${texto} — faça um novo backup`;
+        el.classList.add("backup-atrasado");
+    } else if(dias >= 7){
+        texto = `🟡 ${texto}`;
+        el.classList.add("backup-alerta");
+    }
     el.innerText = texto;
 }
 
@@ -2365,20 +2761,21 @@ async function enviarMensagemRenovacao(cliente){
     if(match) valor = match[1];
     let nomePlano = cliente.plano.split(" - ")[0];
     let linkCliente = await gerarLinkEncurtadoCliente(cliente);
-    let mensagem =
-`*✅ Renovação realizada ✅*
-
-*🔰 Seguem seus dados de acesso:*
-
-*✨️ Nome:* ${primeiroNome(cliente.nome)}
-*✨️ Usuário:* ${cliente.usuario}
-*✨️ Senha:* ${cliente.senha}
-
-*🔸 Plano:* ${nomePlano}
-*🔸 Valor:* R$ ${valor}
-
-*🗓️ Vencimento:* ${formatarData(cliente.vencimento)}`;
-    if(linkCliente) mensagem += `\n\n*🔗 Sua área do cliente:*\n${linkCliente}`;
+    let template = (config.modeloRenovacao && config.modeloRenovacao.trim()) ? config.modeloRenovacao : MODELO_RENOVACAO_PADRAO;
+    let mensagem = preencherTemplate(template, {
+        nome: primeiroNome(cliente.nome),
+        usuario: cliente.usuario,
+        senha: cliente.senha,
+        plano: nomePlano,
+        valor: valor,
+        vencimento: formatarData(cliente.vencimento),
+        link: linkCliente || ""
+    });
+    // Compatibilidade: modelos personalizados salvos antes da variável {link}
+    // existir continuam recebendo o link automaticamente no final.
+    if(!template.includes("{link}") && linkCliente){
+        mensagem += `\n\n*🔗 Sua área do cliente:*\n${linkCliente}`;
+    }
     if(promocao && promocao.trim()) mensagem += `\n~~~~~~~~~~~~~~~~~~\n${promocao}`;
     if(rodape && rodape.trim()) mensagem += `\n~~~~~~~~~~~~~~~~~~\n${rodape}`;
     if(cliente.obs){
@@ -2717,11 +3114,17 @@ function renderizarServidores(){
         ${servidor.url ? `<div class="plano-valor">${servidor.url}</div>` : "🔗 -"}
     </div>
     <div style="display:flex; gap:10px;">
-        <button class="btn-add" onclick="definirServidorPadrao('${servidor.nome}')">
-            ${servidor.nome === servidorPadrao ? "⭐" : "☆"}
+        <button class="btn-add btn-icon-svg" onclick="definirServidorPadrao('${servidor.nome}')" title="Padrão">
+            ${servidor.nome === servidorPadrao
+                ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="url(#gradienteEstrelaDourada)" stroke="#a16207" stroke-width="1"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>'}
         </button>
-        <button class="btn-vencendo" onclick="editarServidor(${index})">✏️</button>
-        <button class="btn-delete" onclick="removerServidor(${index})">🗑️</button>
+        <button class="btn-vencendo btn-icon-svg" onclick="editarServidor(${index})" title="Editar">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+        </button>
+        <button class="btn-delete btn-icon-svg" onclick="removerServidor(${index})" title="Excluir">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </button>
     </div>
 </div>`;
         if(select){
@@ -2748,7 +3151,13 @@ function adicionarServidor(){
 function removerServidor(index){
     const servidor = servidores[index];
     if(!servidor) return;
-    pedirConfirmacao(`Deseja realmente excluir o servidor "${servidor.nome}"?`, () => {
+    const clientesVinculados = clientes.filter(c =>
+        (c.servidor || "").toLowerCase() === servidor.nome.toLowerCase()
+    ).length;
+    const aviso = clientesVinculados > 0
+        ? `⚠️ ${clientesVinculados} cliente(s) estão cadastrados com o servidor "${servidor.nome}". Eles não serão excluídos, mas ficarão sem um servidor associado. Deseja continuar?`
+        : `Deseja realmente excluir o servidor "${servidor.nome}"?`;
+    pedirConfirmacao(aviso, () => {
         const servidorRemovido = servidor.nome;
         servidores.splice(index, 1);
         servidores = servidores.filter(s => s.nome && s.nome.trim() !== "");
@@ -2821,7 +3230,13 @@ function adicionarPlano(){
 function removerPlano(index){
     const plano = planos[index];
     if(!plano) return;
-    pedirConfirmacao(`Deseja realmente excluir o plano "${plano.nome}"?`, () => {
+    const clientesVinculados = clientes.filter(c =>
+        (c.plano || "").toLowerCase().startsWith(plano.nome.toLowerCase())
+    ).length;
+    const aviso = clientesVinculados > 0
+        ? `⚠️ ${clientesVinculados} cliente(s) estão cadastrados com o plano "${plano.nome}". Eles não serão excluídos, mas o plano deles deixará de existir na lista. Deseja continuar?`
+        : `Deseja realmente excluir o plano "${plano.nome}"?`;
+    pedirConfirmacao(aviso, () => {
         planos.splice(index, 1);
         renderizarPlanos();
     }, "🗑️ Excluir plano");
@@ -4705,7 +5120,17 @@ function enviarLembrete(nome, whatsapp, plano, dias){
     else { emoji = "🟢"; textoExpiracao = `vence em ${dias} dias`; }
 
     const saudacao = saudacaoBrasileira();
-    let mensagem = `*${emoji} 🙋🏽‍♂️ Ooi, ${nome}*. ${saudacao}!\nPassando para lembrar que seu plano ${plano} *${textoExpiracao}*.\n\n> ❌️ NÃO FIQUE SEM SUA PROGRAMAÇÃO\n\n*🔑 Chave pix:* ${chavePix}\n*👤 Nome:* ${nomePix}\n*🏦 Banco:* ${bancoPix}\n\n📄 Favor enviar o comprovante ao efetuar a transferência.\n\nNosso sistema leva até 30 minutos para checar e confirmar o pagamento para liberação.\n\nAssim que confirmado, enviarei a mensagem de renovação 😉`;
+    let template = (config.modeloLembrete && config.modeloLembrete.trim()) ? config.modeloLembrete : MODELO_LEMBRETE_PADRAO;
+    let mensagem = preencherTemplate(template, {
+        nome: nome,
+        plano: plano,
+        saudacao: saudacao,
+        emoji: emoji,
+        status: textoExpiracao,
+        pix_chave: chavePix,
+        pix_nome: nomePix,
+        pix_banco: bancoPix
+    });
     window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
 
@@ -4718,6 +5143,9 @@ function salvarConfiguracoes(){
     config.nomeSistema = document.getElementById("nomeSistema").value;
     config.textoPromocao = document.getElementById("textoPromocao").value;
     config.textoRodape = document.getElementById("textoRodape").value;
+    config.modeloAtivacao = document.getElementById("modeloAtivacao").value;
+    config.modeloRenovacao = document.getElementById("modeloRenovacao").value;
+    config.modeloLembrete = document.getElementById("modeloLembrete").value;
     localStorage.setItem("configuracoes", JSON.stringify(config));
     atualizarCabecalho();
     mostrarSucesso("✅ Configurações salvas com sucesso!");
@@ -4733,6 +5161,9 @@ function carregarConfiguracoes(){
     document.getElementById("pixNome").value = config.pixNome || "";
     document.getElementById("pixBanco").value = config.pixBanco || "";
     document.getElementById("whatsappSuporte").value = config.whatsappSuporte || "";
+    document.getElementById("modeloAtivacao").value = config.modeloAtivacao || MODELO_ATIVACAO_PADRAO;
+    document.getElementById("modeloRenovacao").value = config.modeloRenovacao || MODELO_RENOVACAO_PADRAO;
+    document.getElementById("modeloLembrete").value = config.modeloLembrete || MODELO_LEMBRETE_PADRAO;
     let nomeSistema = document.getElementById("nomeSistema");
     if(nomeSistema) nomeSistema.value = config.nomeSistema || "";
     atualizarCabecalho();
@@ -4913,7 +5344,7 @@ document.addEventListener("DOMContentLoaded", function(){
     try{
         carregarConfiguracoes();
         configurarUploadLogo();
-        ["nomeSistema","pixChave","pixNome","pixBanco","whatsappSuporte","textoPromocao","textoRodape"].forEach(id => {
+        ["nomeSistema","pixChave","pixNome","pixBanco","whatsappSuporte","textoPromocao","textoRodape","modeloAtivacao","modeloRenovacao","modeloLembrete"].forEach(id => {
             const campo = document.getElementById(id);
             if(campo) campo.addEventListener("input", verificarAlteracoesConfiguracao);
         });
