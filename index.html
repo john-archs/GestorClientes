@@ -1668,6 +1668,8 @@ textarea{
                         <button class="btn-edit" onclick="document.getElementById('arquivoSistema').click()">📥 Importar Sistema</button>
                         <input type="file" id="arquivoSistema" accept=".json" style="display:none" onchange="importarSistema(event)">
                         <button class="btn-historico-lucro" onclick="exportarClientesExcel()">📊 Exportar Excel (Clientes)</button>
+                        <button class="btn-historico-lucro" onclick="document.getElementById('arquivoClientesExcel').click()">📥 Importar Excel (Clientes)</button>
+                        <input type="file" id="arquivoClientesExcel" accept=".xlsx,.xls" style="display:none" onchange="importarClientesExcel(event)">
                     </div>
                     <div id="textoUltimoBackup" class="texto-ultimo-backup"></div>
                 </div>
@@ -2387,6 +2389,140 @@ async function exportarClientesExcel(){
     }catch(erro){
         console.error("Erro ao exportar Excel:", erro);
         mostrarAlerta("Ocorreu um erro ao gerar o Excel. Tente novamente.", "erro");
+    }
+}
+
+async function importarClientesExcel(event){
+    const arquivo = event.target.files[0];
+    event.target.value = ""; // permite selecionar o mesmo arquivo de novo depois
+    if(!arquivo) return;
+
+    if(typeof ExcelJS === "undefined"){
+        mostrarAlerta("Não foi possível carregar a biblioteca de Excel. Verifique sua conexão com a internet e tente novamente.", "erro");
+        return;
+    }
+
+    try{
+        const buffer = await arquivo.arrayBuffer();
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(buffer);
+        const sheet = workbook.worksheets[0];
+        if(!sheet){
+            mostrarAlerta("Não foi possível ler a planilha. Verifique o arquivo.", "erro");
+            return;
+        }
+
+        // Mesmos títulos de coluna usados na exportação — assim o arquivo
+        // gerado por "Exportar Excel (Clientes)" é lido automaticamente.
+        const chavesPorTitulo = {
+            "nome": "nome",
+            "usuário": "usuario",
+            "usuario": "usuario",
+            "senha": "senha",
+            "whatsapp": "whatsapp",
+            "servidor": "servidor",
+            "plano": "plano",
+            "vencimento": "vencimento",
+            "última renovação": "ultimaRenovacao",
+            "ultima renovacao": "ultimaRenovacao",
+            "observações": "obs",
+            "observacoes": "obs"
+        };
+
+        // Procura a linha de cabeçalho (a exportação usa a linha 5, mas
+        // aceitamos qualquer posição nas primeiras linhas do arquivo).
+        let linhaCabecalho = null;
+        let mapaColunas = {};
+        for(let numLinha = 1; numLinha <= Math.min(sheet.rowCount, 15); numLinha++){
+            const linha = sheet.getRow(numLinha);
+            const mapaTeste = {};
+            linha.eachCell((celula, numColuna) => {
+                const titulo = String(celula.value || "").trim().toLowerCase();
+                if(chavesPorTitulo[titulo]) mapaTeste[chavesPorTitulo[titulo]] = numColuna;
+            });
+            if(mapaTeste.nome && mapaTeste.usuario){
+                linhaCabecalho = numLinha;
+                mapaColunas = mapaTeste;
+                break;
+            }
+        }
+
+        if(!linhaCabecalho){
+            mostrarAlerta("Não foi possível identificar as colunas da planilha. Use um arquivo exportado pelo próprio sistema (Nome, Usuário, Senha...).", "erro");
+            return;
+        }
+
+        // Converte datas no formato dd/mm/aaaa (usado na exportação) de volta
+        // para o formato aaaa-mm-dd usado internamente pelo sistema.
+        const converterData = (valor) => {
+            if(!valor) return "";
+            if(valor instanceof Date) return valor.toISOString().split("T")[0];
+            const texto = String(valor).trim();
+            if(!texto || texto === "-") return "";
+            const partes = texto.split("/");
+            if(partes.length === 3){
+                const [dia, mes, ano] = partes;
+                return `${ano.padStart(4, "0")}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
+            }
+            return "";
+        };
+
+        const pegarTexto = (linha, chave) => {
+            if(!mapaColunas[chave]) return "";
+            return String(linha.getCell(mapaColunas[chave]).value || "").trim();
+        };
+
+        const clientesImportados = [];
+        for(let numLinha = linhaCabecalho + 1; numLinha <= sheet.rowCount; numLinha++){
+            const linha = sheet.getRow(numLinha);
+            const nome = pegarTexto(linha, "nome");
+            const usuario = pegarTexto(linha, "usuario");
+            if(!nome && !usuario) continue; // linha em branco
+
+            clientesImportados.push({
+                nome,
+                usuario,
+                senha: pegarTexto(linha, "senha"),
+                whatsapp: pegarTexto(linha, "whatsapp"),
+                servidor: pegarTexto(linha, "servidor"),
+                plano: pegarTexto(linha, "plano"),
+                vencimento: mapaColunas.vencimento ? converterData(linha.getCell(mapaColunas.vencimento).value) : "",
+                ultimaRenovacao: mapaColunas.ultimaRenovacao ? converterData(linha.getCell(mapaColunas.ultimaRenovacao).value) : "",
+                obs: pegarTexto(linha, "obs")
+            });
+        }
+
+        if(!clientesImportados.length){
+            mostrarAlerta("Nenhum cliente encontrado no arquivo.", "aviso");
+            return;
+        }
+
+        pedirConfirmacao(
+            `Foram encontrados ${clientesImportados.length} cliente(s) no arquivo. Clientes já cadastrados (mesmo usuário) serão atualizados e os demais serão adicionados como novos. Deseja continuar?`,
+            () => {
+                let adicionados = 0;
+                let atualizados = 0;
+                clientesImportados.forEach(novo => {
+                    const indiceExistente = novo.usuario
+                        ? clientes.findIndex(c => (c.usuario || "").trim().toLowerCase() === novo.usuario.toLowerCase())
+                        : -1;
+                    if(indiceExistente >= 0){
+                        clientes[indiceExistente] = { ...clientes[indiceExistente], ...novo };
+                        atualizados++;
+                    } else {
+                        clientes.push(novo);
+                        adicionados++;
+                    }
+                });
+                salvar();
+                renderizar();
+                atualizarDashboard();
+                mostrarAlerta(`Importação concluída: ${adicionados} cliente(s) adicionados e ${atualizados} atualizados.`, "sucesso");
+            }
+        );
+    }catch(erro){
+        console.error("Erro ao importar Excel:", erro);
+        mostrarAlerta("Ocorreu um erro ao ler o arquivo Excel. Verifique se o arquivo é válido.", "erro");
     }
 }
 
