@@ -1513,6 +1513,10 @@ textarea{
         </h2>
         <div id="listaVencendo"></div>
     </div>
+    <div class="vencimentos-box" id="boxVenceramOntem" style="display:none;">
+        <h2>Venceram ontem</h2>
+        <div id="listaVenceramOntem"></div>
+    </div>
 </div>
 
 <!-- CLIENTES -->
@@ -2070,10 +2074,11 @@ function enviarMensagemVencido(cliente){
     let nomePix = config.pixNome || "";
     let bancoPix = config.pixBanco || "";
     let dias = Math.abs(calcularDiasRestantes(cliente.vencimento));
+    let textoVencimentoMsg = dias === 1 ? "venceu ontem" : `venceu há ${dias} dias`;
     let mensagem =
 `🙋🏽‍♂️ Ooi, ${primeiroNome(cliente.nome)}.
 
-Seu plano venceu há ${dias} dia(s).
+Seu plano ${textoVencimentoMsg}.
 
 ❌ Não fique sem sua programação.
 
@@ -4433,6 +4438,13 @@ function renderizar(){
         listaClientes.reverse();
     }
 
+    // Ordem padrão da aba "Vencidos": os vencidos mais recentemente ficam
+    // no topo, e os vencidos há mais tempo ficam embaixo. Isso só se aplica
+    // quando o usuário não escolheu manualmente A-Z ou Venc. (ordem "adicao").
+    if(filtroAtual === "vencido" && ordenacaoAtual === "adicao"){
+        listaClientes.sort((a,b) => new Date(b.vencimento||"0001-01-01") - new Date(a.vencimento||"0001-01-01"));
+    }
+
     let filtrados = listaClientes.filter(c => {
         let status = statusCliente(c.vencimento || "");
         if(status == "ativo") qtdAtivos++;
@@ -5043,6 +5055,10 @@ function atualizarDashboard(){
     let lucro = 0;
     let lista = document.getElementById("listaVencendo");
     lista.innerHTML = "";
+    let listaOntem = document.getElementById("listaVenceramOntem");
+    listaOntem.innerHTML = "";
+    let boxOntem = document.getElementById("boxVenceramOntem");
+    let venceramOntem = 0;
 
     atualizarCreditosRevenda();
 
@@ -5135,7 +5151,31 @@ function atualizarDashboard(){
     </div>
 </div>`;
         }
+
+        if(diasRestantes === -1){
+            venceramOntem++;
+            let indexRealOntem = clientes.indexOf(cliente);
+            listaOntem.innerHTML += `
+<div class="card vencido">
+    <div class="nome nome-clicavel" onclick="irParaCliente(${indexRealOntem})">${cliente.nome}</div>
+    <div class="info">⏰ Venceu Ontem</div>
+    <div class="info">📅 ${formatarData(cliente.vencimento)}</div>
+    <div class="info">📦 ${cliente.plano}</div>
+    <div class="acoes" style="margin-top:15px; padding-bottom:8px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn-lembrete" style="background:#ef4444;"
+            onclick='enviarMensagemVencido(${JSON.stringify(cliente)})'>
+            💸 Cobrar
+        </button>
+        <button class="btn-renovar" style="background:#22c55e;color:white;padding:10px 15px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;"
+            onclick="abrirModalRenovacao(${indexRealOntem})">
+            🔄 Renovar
+        </button>
+    </div>
+</div>`;
+        }
     });
+
+    boxOntem.style.display = venceramOntem > 0 ? "flex" : "none";
 
     document.getElementById("lucroTotal").innerHTML = moedaCentavos(lucro);
     document.getElementById("clientesAtivos").innerHTML = ativos;
@@ -5250,7 +5290,7 @@ function enviarLembrete(nome, whatsapp, plano, dias){
     let nomePix = config.pixNome || "";
     let bancoPix = config.pixBanco || "";
     let textoExpiracao = "", emoji = "";
-    if(dias < 0){ emoji = "😱"; textoExpiracao = `venceu há ${Math.abs(dias)} dia(s)`; }
+    if(dias < 0){ emoji = "😱"; textoExpiracao = Math.abs(dias) === 1 ? "venceu ontem" : `venceu há ${Math.abs(dias)} dias`; }
     else if(dias == 0){ emoji = "🔴"; textoExpiracao = "vence hoje"; }
     else if(dias == 1){ emoji = "🟡"; textoExpiracao = "vence amanhã"; }
     else { emoji = "🟢"; textoExpiracao = `vence em ${dias} dias`; }
