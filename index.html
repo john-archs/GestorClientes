@@ -5387,13 +5387,21 @@ function calcularDiasRestantes(data){
     return Math.ceil((venc - hoje) / (1000*60*60*24));
 }
 
+function obterDataLocalYMD(){
+    const d = new Date();
+    const ano = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, "0");
+    const dia = String(d.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+}
+
 function registrarLembrete(whatsapp){
-    const hoje = new Date().toISOString().split("T")[0];
+    const hoje = obterDataLocalYMD();
     localStorage.setItem("lembrete_" + whatsapp, hoje);
 }
 
 function foiLembrado(whatsapp){
-    const hoje = new Date().toISOString().split("T")[0];
+    const hoje = obterDataLocalYMD();
     return localStorage.getItem("lembrete_" + whatsapp) === hoje;
 }
 
