@@ -1587,6 +1587,9 @@ textarea{
             <option value="revenda">Revenda (créditos)</option>
         </select>
         <select id="servidor" onchange="atualizarValorRevendaAdicionar()"></select>
+        <select id="servidor2" onchange="atualizarValorRevendaAdicionar()">
+            <option value="">Servidor secundário (opcional)</option>
+        </select>
         <input type="text" id="nome" placeholder="Nome">
         <input type="text" id="usuario" placeholder="Usuário">
         <input type="text" id="senha" placeholder="Senha">
@@ -2096,7 +2099,7 @@ ultimoCredito ? `\n🔸 Último lançamento: ${ultimoCredito.subRevendaNome || c
     const montarTexto = (linkCliente) =>
 `👤 Nome: ${cliente.nome}
 
-🖥️ Servidor: ${cliente.servidor}
+🖥️ Servidor: ${cliente.servidor}${cliente.servidor2 ? ` + ${cliente.servidor2}` : ""}
 🔑 Usuário: ${cliente.usuario}
 🔒 Senha: ${cliente.senha}
 📦 Plano: ${cliente.plano}
@@ -2824,14 +2827,10 @@ function renovarCliente(){
     {
         let matchValorRenov = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
         let valorPlanoRenov = matchValorRenov ? parseFloat(matchValorRenov[1].replace(",",".")) || 0 : 0;
-        let servidorClienteRenov = servidores.find(s =>
-            (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
-        );
-        let custoServidorRenov = servidorClienteRenov
-            ? Number((servidorClienteRenov.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
-            : 0;
+        let custoServidorRenov = custoMensalServidoresCliente(cliente);
         // O custo do servidor é mensal: planos de vários meses (trimestral,
         // semestral, anual...) consomem um crédito de custo por mês, não só um.
+        // Soma o custo do servidor principal + secundário (se houver).
         custoServidorRenov = custoServidorRenov * obterMesesEquivalentes(obterDuracaoPlano(cliente.plano));
         var lucroRenovAtual = valorPlanoRenov - custoServidorRenov;
         registrarMovimentoLucro(cliente.nome, lucroRenovAtual, idOperacaoRenov);
@@ -3180,6 +3179,29 @@ function obterMesesEquivalentes(duracao){
     return 1;
 }
 
+// Busca o custo mensal (número) de um servidor pelo nome. Usa o mesmo
+// casamento "fuzzy" (includes) já usado nos pontos de cálculo de lucro,
+// pois o campo cliente.servidor às vezes vem com texto extra em volta do
+// nome do servidor cadastrado.
+function custoMensalServidorPorNome(nome){
+    if(!nome) return 0;
+    let servidorEncontrado = servidores.find(s =>
+        (nome || "").toLowerCase().includes((s.nome || "").toLowerCase())
+    );
+    if(!servidorEncontrado) return 0;
+    return Number((servidorEncontrado.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0;
+}
+
+// Soma o custo mensal do servidor principal + o secundário (se houver) de
+// um cliente. Cada servidor conta seu próprio custo — é isso que resolve o
+// caso de um cliente com 2 telas em 2 servidores diferentes, que antes só
+// registrava o crédito de 1 servidor no dashboard.
+function custoMensalServidoresCliente(cliente){
+    let custoPrincipal = custoMensalServidorPorNome(cliente && cliente.servidor);
+    let custoSecundario = cliente && cliente.servidor2 ? custoMensalServidorPorNome(cliente.servidor2) : 0;
+    return custoPrincipal + custoSecundario;
+}
+
 function formatarDuracaoPlano(duracao){
     if(!duracao) return "Revenda (sem tempo definido)";
     if(duracao.unidade === "meses"){
@@ -3287,10 +3309,14 @@ function renderizarServidores(){
     let lista = document.getElementById("listaServidores");
     let select = document.getElementById("servidor");
     let selectEdit = document.getElementById("editServidor");
+    let select2 = document.getElementById("servidor2");
+    let selectEdit2 = document.getElementById("editServidor2");
     let servidorPadrao = localStorage.getItem("servidorPadrao") || "";
     lista.innerHTML = "";
     if(select) select.innerHTML = "";
     if(selectEdit) selectEdit.innerHTML = "";
+    if(select2) select2.innerHTML = '<option value="">Servidor secundário (opcional)</option>';
+    if(selectEdit2) selectEdit2.innerHTML = '<option value="">Servidor secundário (opcional)</option>';
 
     servidores.forEach((servidor, index) => {
         lista.innerHTML += `
@@ -3324,6 +3350,15 @@ function renderizarServidores(){
             let padrao = localStorage.getItem("servidorPadrao");
             let selected = servidor.nome === padrao ? "selected" : "";
             select.innerHTML += `<option ${selected}>${servidor.nome}</option>`;
+        }
+        if(selectEdit){
+            selectEdit.innerHTML += `<option>${servidor.nome}</option>`;
+        }
+        if(select2){
+            select2.innerHTML += `<option value="${servidor.nome}">${servidor.nome}</option>`;
+        }
+        if(selectEdit2){
+            selectEdit2.innerHTML += `<option value="${servidor.nome}">${servidor.nome}</option>`;
         }
     });
     localStorage.setItem("servidores", JSON.stringify(servidores));
@@ -4361,6 +4396,7 @@ function adicionarCliente(){
         return;
     }
 
+    let servidor2 = document.getElementById("servidor2") ? document.getElementById("servidor2").value : "";
     let usuario = document.getElementById("usuario").value;
     let clienteExistente = clientes.find(c => (c.usuario||"").trim().toLowerCase() === usuario.trim().toLowerCase());
     if(clienteExistente){
@@ -4386,19 +4422,17 @@ function adicionarCliente(){
 
     const hojeISO = new Date().toISOString().split("T")[0];
     const idOperacaoNovoCliente = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-    clientes.push({ servidor, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO });
+    clientes.push({ servidor, servidor2, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO });
 
     {
         let matchValorNovo = (planoTexto || "").match(/R\$\s*([\d.,]+)/);
         let valorPlanoNovo = matchValorNovo ? parseFloat(matchValorNovo[1].replace(",",".")) || 0 : 0;
-        let servidorClienteNovo = servidores.find(s =>
-            (servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
-        );
-        let custoServidorNovo = servidorClienteNovo
-            ? Number((servidorClienteNovo.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0
-            : 0;
+        let novoClienteParaCusto = clientes[clientes.length - 1];
+        let custoServidorNovo = custoMensalServidoresCliente(novoClienteParaCusto);
         // Mesmo ajuste: custo do servidor é mensal, então planos de vários
         // meses (trimestral, semestral, anual...) contam vários créditos de custo.
+        // Soma o custo do servidor principal + secundário (se houver), cada
+        // um contando seu próprio custo mensal.
         custoServidorNovo = custoServidorNovo * obterMesesEquivalentes(obterDuracaoPlano(planoTexto));
         let lucroNovoAtual = valorPlanoNovo - custoServidorNovo;
         registrarMovimentoLucro(nome, lucroNovoAtual, idOperacaoNovoCliente);
@@ -4427,6 +4461,7 @@ function adicionarCliente(){
     document.getElementById("whatsapp").value = "";
     document.getElementById("vencimento").value = "";
     document.getElementById("obs").value = "";
+    if(document.getElementById("servidor2")) document.getElementById("servidor2").value = "";
 }
 
 let undoExclusao = null; // { cliente, index, timeoutId }
@@ -4578,7 +4613,7 @@ function renderizar(){
         if(status == "vencendo") qtdVencendo++;
         if(status == "vencido") qtdVencidos++;
 
-        let textoPesquisa = `${c.nome||""} ${c.usuario||""} ${c.senha||""} ${c.whatsapp||""} ${c.plano||""} ${c.obs||""} ${c.servidor||""}`.toLowerCase();
+        let textoPesquisa = `${c.nome||""} ${c.usuario||""} ${c.senha||""} ${c.whatsapp||""} ${c.plano||""} ${c.obs||""} ${c.servidor||""} ${c.servidor2||""}`.toLowerCase();
         if(!textoPesquisa.includes(pesquisa)) return false;
         if(filtroAtual == "todos") return true;
         return status == filtroAtual;
@@ -4657,6 +4692,7 @@ function renderizar(){
         })()}</span></div>` : ""}
         <div class="card-row">💳 <span>${(() => { let hoje = new Date(); return somaCreditosGrupoMes(cliente, hoje.getMonth(), hoje.getFullYear()); })()} créditos este mês</span></div>
         ` : `
+        ${cliente.servidor2 ? `<div class="card-row">🖥️ <span>${destacar(cliente.servidor || "-", pesquisa)} + ${destacar(cliente.servidor2, pesquisa)}</span></div>` : ""}
         <div class="card-row">👤 <span>${destacar(cliente.usuario || "-", pesquisa)}</span></div>
         <div class="card-row">📦 <span>${destacar(cliente.plano || "-", pesquisa)}</span></div>
         <div class="card-row">📅 <span>${obterDuracaoPlano(cliente.plano) === null ? "Revenda (sem vencimento)" : formatarData(cliente.vencimento)}</span></div>
@@ -4725,6 +4761,15 @@ function editarCliente(index){
         let selected = cliente.servidor == servidor.nome ? "selected" : "";
         selectServidor.innerHTML += `<option ${selected}>${servidor.nome}</option>`;
     });
+
+    let selectServidor2 = document.getElementById("editServidor2");
+    if(selectServidor2){
+        selectServidor2.innerHTML = '<option value="">Servidor secundário (opcional)</option>';
+        servidores.forEach(servidor => {
+            let selected = cliente.servidor2 && cliente.servidor2 == servidor.nome ? "selected" : "";
+            selectServidor2.innerHTML += `<option value="${servidor.nome}" ${selected}>${servidor.nome}</option>`;
+        });
+    }
 
     let selectPlano = document.getElementById("editPlano");
     selectPlano.innerHTML = "";
@@ -4830,6 +4875,7 @@ function salvarEdicaoCliente(){
     clientes[clienteEditando] = {
         ...clienteAtual,
         servidor: document.getElementById("editServidor").value,
+        servidor2: document.getElementById("editServidor2") ? document.getElementById("editServidor2").value : (clienteAtual.servidor2 || ""),
         nome: document.getElementById("editNome").value,
         usuario: revenda ? clienteAtual.usuario : document.getElementById("editUsuario").value,
         senha: revenda ? clienteAtual.senha : document.getElementById("editSenha").value,
@@ -5072,6 +5118,13 @@ function atualizarCreditosRevenda(){
         let d = new Date(cliente.ultimaRenovacao);
         let creditos = obterMesesEquivalentes(obterDuracaoPlano(cliente.plano));
         registrar(nomeServidor, chaveMes(d.getFullYear(), d.getMonth()), "cliente", creditos);
+
+        // Se o cliente também usa um servidor secundário (2 telas em
+        // servidores diferentes, por exemplo), a mesma renovação consome
+        // igualmente 1 crédito por mês de plano no servidor secundário.
+        if(cliente.servidor2){
+            registrar(cliente.servidor2, chaveMes(d.getFullYear(), d.getMonth()), "cliente", creditos);
+        }
     });
 
     let servidoresEnvolvidos = Object.keys(mapa).sort();
@@ -5162,14 +5215,8 @@ function calcularLucroClienteLegado(cliente, planoTexto){
         let match = planoTexto.match(/R\$\s*([\d.,]+)/);
         if(match) valor = parseFloat(match[1].replace(",",".")) || 0;
     }
-    let servidorCliente = servidores.find(s =>
-        (cliente.servidor || "").toLowerCase().includes((s.nome || "").toLowerCase())
-    );
-    let custoServidor = 0;
-    if(servidorCliente){
-        custoServidor = Number((servidorCliente.custo || "").replace("R$","").replace(".","").replace(",",".")) || 0;
-        custoServidor = custoServidor * obterMesesEquivalentes(obterDuracaoPlano(planoTexto));
-    }
+    let custoServidor = custoMensalServidoresCliente(cliente);
+    custoServidor = custoServidor * obterMesesEquivalentes(obterDuracaoPlano(planoTexto));
     let resultado = valor - custoServidor;
     return isNaN(resultado) ? 0 : resultado;
 }
@@ -5387,21 +5434,13 @@ function calcularDiasRestantes(data){
     return Math.ceil((venc - hoje) / (1000*60*60*24));
 }
 
-function obterDataLocalYMD(){
-    const d = new Date();
-    const ano = d.getFullYear();
-    const mes = String(d.getMonth() + 1).padStart(2, "0");
-    const dia = String(d.getDate()).padStart(2, "0");
-    return `${ano}-${mes}-${dia}`;
-}
-
 function registrarLembrete(whatsapp){
-    const hoje = obterDataLocalYMD();
+    const hoje = new Date().toISOString().split("T")[0];
     localStorage.setItem("lembrete_" + whatsapp, hoje);
 }
 
 function foiLembrado(whatsapp){
-    const hoje = obterDataLocalYMD();
+    const hoje = new Date().toISOString().split("T")[0];
     return localStorage.getItem("lembrete_" + whatsapp) === hoje;
 }
 
@@ -5693,6 +5732,9 @@ document.addEventListener("DOMContentLoaded", function(){
             <button class="fechar-modal" onclick="fecharModal()">✕</button>
         </div>
         <select id="editServidor"></select>
+        <select id="editServidor2">
+            <option value="">Servidor secundário (opcional)</option>
+        </select>
         <input type="text" id="editNome" placeholder="Nome">
         <input type="text" id="editUsuario" placeholder="Usuário">
         <input type="text" id="editSenha" placeholder="Senha">
