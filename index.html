@@ -444,60 +444,98 @@ button{
     display:none;
 }
 
-/* ===== resto do layout original ===== */
-.menu-btn{
+/* ===== navegação (bottom nav no mobile / abaixo da logo no PC) ===== */
+.nav-inferior{
     position:fixed;
-    top:10px;
-    left:15px;
-    width:50px;
-    height:50px;
-    background:#1e293b;
+    bottom:0;
+    left:0;
+    width:100%;
     display:flex;
+    background:#111827;
+    box-shadow:0 -2px 12px rgba(0,0,0,.35);
+    z-index:5000;
+    padding-bottom:env(safe-area-inset-bottom, 0);
+}
+
+.nav-item{
+    flex:1;
+    background:none;
+    border:none;
+    color:#94a3b8;
+    display:flex;
+    flex-direction:column;
     align-items:center;
     justify-content:center;
-    border-radius:12px;
-    font-size:26px;
+    gap:4px;
+    padding:10px 4px 8px 4px;
+    font-size:11px;
+    font-weight:bold;
     cursor:pointer;
-    z-index:5001;
-    box-shadow:0 0 10px rgba(0,0,0,.3);
+    border-radius:0;
+    position:relative;
 }
 
-.sidebar{
-    position:fixed;
-    top:0;
-    left:-260px;
-    width:250px;
-    height:100vh;
-    background:#111827;
-    padding:90px 20px 20px 20px;
-    transition:.3s;
-    z-index:5000;
-    overflow-y:auto;
+.nav-item .nav-icone{
+    font-size:21px;
+    line-height:1;
 }
 
-.sidebar.ativo{
-    left:0;
-}
-
-.sidebar h2{
-    margin-bottom:30px;
+.nav-item.ativo{
     color:#38bdf8;
 }
 
-.sidebar button{
+.nav-item.ativo::before{
+    content:"";
+    position:absolute;
+    top:0;
+    left:20%;
+    right:20%;
+    height:3px;
+    border-radius:0 0 4px 4px;
+    background:#38bdf8;
+}
+
+/* painel flutuante de suporte, aberto pelo item "Suporte" da nav */
+.painel-suporte{
+    position:fixed;
+    bottom:78px;
+    right:14px;
+    background:#111827;
+    border:1px solid #1e293b;
+    border-radius:14px;
+    padding:10px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    box-shadow:0 8px 24px rgba(0,0,0,.45);
+    z-index:5001;
+    min-width:210px;
+    transform:translateY(10px);
+    opacity:0;
+    pointer-events:none;
+    transition:.18s;
+}
+
+.painel-suporte.ativo{
+    transform:translateY(0);
+    opacity:1;
+    pointer-events:auto;
+}
+
+.painel-suporte button{
     width:100%;
-    margin-bottom:10px;
+    text-align:left;
     background:#1e293b;
     color:white;
-    padding:15px;
-    border-radius:12px;
+    padding:12px;
+    border-radius:10px;
     border:none;
-    text-align:left;
 }
 
 .guia{
     display:none;
     padding-top:80px;
+    padding-bottom:90px;
     position:relative;
     z-index:1;
 }
@@ -505,6 +543,57 @@ button{
 .guia.ativa{
     display:block;
 }
+
+/* ===== PC / telas largas: navegação passa para o topo, abaixo da logo ===== */
+@media(min-width:900px){
+    .nav-inferior{
+        top:70px;
+        bottom:auto;
+        left:0;
+        justify-content:center;
+        gap:6px;
+        box-shadow:0 2px 10px rgba(0,0,0,.3);
+        padding:6px 10px;
+        padding-bottom:6px;
+    }
+
+    .nav-item{
+        flex:none;
+        flex-direction:row;
+        gap:8px;
+        padding:12px 22px;
+        border-radius:10px;
+        font-size:14px;
+    }
+
+    .nav-item .nav-icone{
+        font-size:18px;
+    }
+
+    .nav-item.ativo{
+        background:#1e293b;
+    }
+
+    .nav-item.ativo::before{
+        top:auto;
+        bottom:0;
+        left:15%;
+        right:15%;
+        border-radius:4px 4px 0 0;
+    }
+
+    .painel-suporte{
+        bottom:auto;
+        top:128px;
+        right:20px;
+    }
+
+    .guia{
+        padding-top:140px;
+        padding-bottom:30px;
+    }
+}
+
 
 .cards-dashboard{
     display:grid;
@@ -1508,15 +1597,24 @@ textarea{
     <span id="tituloSistema" onclick="tocarNoTitulo()">Gestor IPTV</span>
 </div>
 
-<div class="menu-btn" onclick="toggleMenu()">☰</div>
-
-<div class="sidebar" id="sidebar">
-    <button onclick="abrirGuia('dashboard')">Dashboard</button>
-    <button onclick="abrirGuia('clientes')">Clientes</button>
-    <button onclick="abrirGuia('configuracoes')">Configurações</button>
-    <hr style="margin:20px 0; border-color:#374151;">
+<div class="painel-suporte" id="painelSuporte">
     <button onclick="abrirWhatsappSuporte()">💬 WhatsApp Suporte</button>
     <button onclick="abrirTelegramSuporte()">✈️ Telegram Suporte</button>
+</div>
+
+<div class="nav-inferior" id="navInferior">
+    <button class="nav-item" id="navDashboard" onclick="abrirGuia('dashboard')">
+        <span class="nav-icone">📊</span>Dashboard
+    </button>
+    <button class="nav-item" id="navClientes" onclick="abrirGuia('clientes')">
+        <span class="nav-icone">📺</span>Clientes
+    </button>
+    <button class="nav-item" id="navConfiguracoes" onclick="abrirGuia('configuracoes')">
+        <span class="nav-icone">⚙️</span>Config.
+    </button>
+    <button class="nav-item" id="navSuporte" onclick="toggleMenu()">
+        <span class="nav-icone">🎧</span>Suporte
+    </button>
 </div>
 
 <!-- DASHBOARD -->
@@ -4973,8 +5071,16 @@ function fecharModalPlano(){
 }
 
 function toggleMenu(){
-    document.getElementById("sidebar").classList.toggle("ativo");
+    document.getElementById("painelSuporte").classList.toggle("ativo");
 }
+
+document.addEventListener("click", function(event){
+    let painel = document.getElementById("painelSuporte");
+    let navSuporte = document.getElementById("navSuporte");
+    if(!painel || !painel.classList.contains("ativo")) return;
+    if(painel.contains(event.target) || navSuporte.contains(event.target)) return;
+    painel.classList.remove("ativo");
+});
 
 function primeiroNome(nome){
     if(!nome) return "";
@@ -5044,7 +5150,16 @@ function abrirGuia(id){
     document.querySelectorAll(".guia").forEach(g => g.classList.remove("ativa"));
     document.getElementById(id).classList.add("ativa");
     localStorage.setItem("guiaAtual", id);
-    document.getElementById("sidebar").classList.remove("ativo");
+
+    document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("ativo"));
+    let mapaNav = {dashboard:"navDashboard", clientes:"navClientes", configuracoes:"navConfiguracoes"};
+    let navAtivo = mapaNav[id] ? document.getElementById(mapaNav[id]) : null;
+    if(navAtivo) navAtivo.classList.add("ativo");
+
+    let painel = document.getElementById("painelSuporte");
+    if(painel) painel.classList.remove("ativo");
+
+    window.scrollTo({top:0, behavior:"instant"});
 }
 
 function formatarData(data){
