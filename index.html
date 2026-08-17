@@ -142,6 +142,44 @@ button{
     color:white;
 }
 
+.link-cliente-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:#1e293b;
+    border-radius:8px;
+    padding:10px 10px 10px 14px;
+    margin-bottom:12px;
+}
+.link-cliente-label{
+    flex:1;
+    color:#38bdf8;
+    font-weight:bold;
+    font-size:14px;
+}
+.link-cliente-hidden-input{
+    position:absolute;
+    left:-9999px;
+    width:1px;
+    height:1px;
+    opacity:0;
+}
+.btn-copiar-link{
+    background:#334155;
+    color:#38bdf8;
+    border:none;
+    border-radius:8px;
+    width:38px;
+    height:38px;
+    font-size:16px;
+    flex-shrink:0;
+    cursor:pointer;
+}
+.btn-copiar-link:hover{
+    background:#38bdf8;
+    color:#0f172a;
+}
+
 .botoes-rapidos-creditos{
     display:flex;
     gap:8px;
@@ -2153,6 +2191,31 @@ function fecharDadosCliente(){
     document.getElementById("modalDadosCliente").classList.remove("ativo");
 }
 
+function copiarLinkM3U(){
+    let campo = document.getElementById("linkM3UInput");
+    if(!campo || !campo.value) return;
+    campo.focus();
+    campo.select();
+
+    let respondido = false;
+    const finalizar = (sucesso) => {
+        if(respondido) return;
+        respondido = true;
+        if(sucesso) mostrarSucesso("🔗 Link M3U copiado.");
+        else tentarCopiaAntiga(campo);
+    };
+
+    setTimeout(() => finalizar(false), 600);
+
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(campo.value)
+            .then(() => finalizar(true))
+            .catch(() => finalizar(false));
+    } else {
+        finalizar(false);
+    }
+}
+
 function mostrarDadosCliente(index){
     let cliente = clientes[index];
 
@@ -2184,6 +2247,7 @@ ultimoCredito ? `\n🔸 Último lançamento: ${ultimoCredito.subRevendaNome || c
 
         document.getElementById("dadosClienteTexto").value = textoRevenda;
         document.getElementById("modalDadosCliente").classList.add("ativo");
+        document.getElementById("linkM3URow").style.display = "none";
         return;
     }
 
@@ -2210,17 +2274,22 @@ linkM3U ? `\n\n🔗 Link M3U:\n${linkM3U}` : ""
 }${linkCliente ? `\n\n🔗 Área do cliente:\n${linkCliente}` : ""
 }${observacoes ? `\n\n${observacoes}` : ""}`;
 
-    document.getElementById("dadosClienteTexto").value = montarTexto("");
+    // Não encurta automaticamente (evita gastar chamadas ao TinyURL/is.gd
+    // só de abrir os Dados) — o link da área do cliente já sai completo,
+    // sem esperar nenhuma requisição.
+    let linkCliente = obterLinkClienteCompleto(cliente);
+
+    document.getElementById("dadosClienteTexto").value = montarTexto(linkCliente);
     document.getElementById("modalDadosCliente").classList.add("ativo");
 
-    if(URL_PORTAL_CLIENTE.trim() && temWhatsappSuporte()){
-        document.getElementById("dadosClienteTexto").value = montarTexto("Gerando link...");
-        gerarLinkEncurtadoCliente(cliente).then(linkCliente => {
-            // Só atualiza se o modal ainda estiver aberto no mesmo cliente
-            if(document.getElementById("modalDadosCliente").classList.contains("ativo")){
-                document.getElementById("dadosClienteTexto").value = montarTexto(linkCliente);
-            }
-        });
+    let linhaLink = document.getElementById("linkM3URow");
+    let campoLink = document.getElementById("linkM3UInput");
+    if(linkM3U){
+        campoLink.value = linkM3U;
+        linhaLink.style.display = "flex";
+    } else {
+        campoLink.value = "";
+        linhaLink.style.display = "none";
     }
 }
 
@@ -3011,14 +3080,22 @@ function temWhatsappSuporte(){
     return !!((config.whatsappSuporte || "").trim());
 }
 
-async function gerarLinkEncurtadoCliente(cliente){
+// Versão síncrona (sem chamar TinyURL/is.gd): monta o link completo do
+// portal do cliente na hora, sem esperar nenhuma requisição de rede.
+// Usada na tela de "Dados" pra não encurtar automaticamente.
+function obterLinkClienteCompleto(cliente){
     const urlPortal = URL_PORTAL_CLIENTE.trim();
     if(!urlPortal) return ""; // sem URL do portal definida no código, não há como gerar o link
     if(!temWhatsappSuporte()) return ""; // sem WhatsApp de suporte cadastrado, não exibe área do cliente
 
     const { planoNome, valor } = extrairPlanoValorParaLink(cliente.plano);
     const codigo = codificarLinkCliente(cliente.nome, planoNome, valor, cliente.vencimento, cliente.usuario, cliente.senha);
-    const linkCompleto = `${urlPortal}?d=${codigo}`;
+    return `${urlPortal}?d=${codigo}`;
+}
+
+async function gerarLinkEncurtadoCliente(cliente){
+    const linkCompleto = obterLinkClienteCompleto(cliente);
+    if(!linkCompleto) return "";
     const token = TINYURL_TOKEN.trim();
 
     if(token){
@@ -5948,6 +6025,11 @@ document.addEventListener("DOMContentLoaded", function(){
         <div class="modal-topo">
             <h2>Dados do Cliente</h2>
             <button class="fechar-modal" onclick="fecharDadosCliente()">✕</button>
+        </div>
+        <div id="linkM3URow" class="link-cliente-row" style="display:none;">
+            <span class="link-cliente-label">🔗 Link M3U</span>
+            <input type="text" id="linkM3UInput" readonly class="link-cliente-hidden-input">
+            <button type="button" class="btn-copiar-link" onclick="copiarLinkM3U()" title="Copiar Link M3U">📋</button>
         </div>
         <textarea id="dadosClienteTexto" readonly style="min-height:260px;"></textarea>
         <div style="display:flex; gap:10px;">
