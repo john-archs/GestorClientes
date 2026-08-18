@@ -133,6 +133,10 @@ button{
     border-radius:50%;
     width:24px;
     height:24px;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     font-size:13px;
     line-height:1;
     cursor:pointer;
@@ -3873,8 +3877,10 @@ function mostrarHistoricoCreditos(index){
         document.getElementById("historicoCreditosTotal").innerText = "";
     } else {
         let total = 0;
+        let totalCreditos = 0;
         conteudo.innerHTML = [...historico].reverse().map(({op, posicao}) => {
             total += (op.valorTotal || 0);
+            totalCreditos += (op.creditos || 0);
             let nomeRevenda = op.subRevendaNome || cliente.nome;
             return `
 <div style="background:#1e293b; border-radius:10px; padding:8px 12px; color:#cbd5e1; font-size:12px;">
@@ -3889,7 +3895,8 @@ function mostrarHistoricoCreditos(index){
     <div style="color:#94a3b8; margin-top:4px; font-size:11px;">${op.creditos || 0} crédito(s)</div>
 </div>`;
         }).join("");
-        document.getElementById("historicoCreditosTotal").innerText = `Total do mês${filtroSubId ? " (filtrado)" : ""}: ${moeda(total)}`;
+        let labelCreditos = totalCreditos === 0 ? "" : (totalCreditos === 1 ? "1 crédito" : `${totalCreditos} créditos`);
+        document.getElementById("historicoCreditosTotal").innerHTML = `<span>${labelCreditos}</span><span>Total do mês${filtroSubId ? " (filtrado)" : ""}: ${moeda(total)}</span>`;
     }
 
     document.getElementById("modalHistoricoCreditos").classList.add("ativo");
@@ -6083,7 +6090,7 @@ document.addEventListener("DOMContentLoaded", function(){
         <select id="historicoCreditosFiltroSub" style="display:none; margin-top:8px;" onchange="mostrarHistoricoCreditos(clienteHistoricoCreditosAtual)"></select>
         <div id="historicoCreditosResumoSub" style="display:flex; flex-direction:column; gap:4px; margin-top:8px;"></div>
         <div id="historicoCreditosConteudo" style="display:flex; flex-direction:column; gap:8px; max-height:45vh; overflow-y:auto; margin-top:10px;"></div>
-        <div id="historicoCreditosTotal" style="margin-top:12px; padding-top:12px; border-top:1px solid #334155; color:#38bdf8; font-weight:bold; font-size:12px; text-align:right;"></div>
+        <div id="historicoCreditosTotal" style="margin-top:12px; padding-top:12px; border-top:1px solid #334155; color:#38bdf8; font-weight:bold; font-size:12px; display:flex; justify-content:space-between; align-items:center; gap:8px;"></div>
         <button class="btn-edit" onclick="fecharHistoricoCreditos()">Fechar</button>
     </div>
 </div>
