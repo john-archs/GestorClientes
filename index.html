@@ -1930,7 +1930,7 @@ textarea{
             <div class="config-card-body">
                 <div class="config-card-body-interno">
                     <div class="dica-variaveis">
-                        💡 Variáveis disponíveis nos modelos: <code>{nome}</code> <code>{usuario}</code> <code>{senha}</code> <code>{plano}</code> <code>{valor}</code> <code>{vencimento}</code> — <code>{valor}</code> já sai com o desconto de indicação subtraído, quando o cliente tiver um pendente — <code>{desconto}</code> mostra o valor do desconto aplicado (Renovação, Lembrete e Cobrança) — só na Renovação: <code>{link}</code> (área do cliente) — só no Lembrete e na Cobrança: <code>{saudacao}</code> <code>{status}</code> <code>{pix_chave}</code> <code>{pix_nome}</code> <code>{pix_banco}</code> — só no Lembrete: <code>{emoji}</code> — só na Cobrança: <code>{dias}</code> (dias em atraso)
+                        💡 Variáveis disponíveis nos modelos: <code>{nome}</code> <code>{usuario}</code> <code>{senha}</code> <code>{plano}</code> <code>{valor}</code> <code>{vencimento}</code> — na Ativação e Renovação, <code>{valor}</code> é só o número (ex: "30,00", use "R$ {valor}" no texto) — no Lembrete e na Cobrança, <code>{valor}</code> já vem formatado como "R$ ..." pronto (NÃO coloque "R$" na frente dele nesses dois) e, se houver desconto de indicação pendente, mostra automaticamente o valor original riscado + o valor final + a linha "🎁 Desconto de indicação aplicado" logo abaixo — <code>{desconto}</code> mostra só o número do desconto, se precisar dele separado — só na Renovação: <code>{link}</code> (área do cliente) — só no Lembrete e na Cobrança: <code>{saudacao}</code> <code>{status}</code> <code>{pix_chave}</code> <code>{pix_nome}</code> <code>{pix_banco}</code> — só no Lembrete: <code>{emoji}</code> — só na Cobrança: <code>{dias}</code> (dias em atraso)
                     </div>
 
                     <label><strong>● Modelo de Ativação</strong></label>
@@ -2004,7 +2004,7 @@ const MODELO_RENOVACAO_PADRAO =
 *✨️ Senha:* {senha}
 
 *🔸 Plano:* {plano}
-*🔸 Valor:* R$ {valor}
+*🔸 Valor:* {valor}
 
 *🗓️ Vencimento:* {vencimento}
 
@@ -2015,7 +2015,7 @@ const MODELO_LEMBRETE_PADRAO =
 `*{emoji} 🙋🏽‍♂️ Ooi, {nome}*. {saudacao}!
 Passando para lembrar que seu plano {plano} *{status}*.
 
-*🔸 Valor:* R$ {valor}
+*💰 Valor:* {valor}
 
 > ❌️ NÃO FIQUE SEM SUA PROGRAMAÇÃO
 
@@ -2033,6 +2033,8 @@ const MODELO_COBRANCA_PADRAO =
 `🙋🏽‍♂️ Ooi, {nome}.
 
 Seu plano {status}.
+
+*💰 Valor:* {valor}
 
 ❌ Não fique sem sua programação.
 
@@ -2078,9 +2080,16 @@ function previsualizarMensagem(tipo){
     const campo = document.getElementById(camposPorTipo[tipo]);
     const template = (campo && campo.value.trim()) ? campo.value : padraoPorTipo[tipo];
 
+    // No Lembrete e na Cobrança, {valor} já sai formatado (com "R$" e, se
+    // houver desconto, com o riscado + linha do desconto embutidos).
+    // Na Ativação e na Renovação, {valor} é só o número puro, sem desconto.
+    const valorExemplo = (tipo === "lembrete" || tipo === "cobranca")
+        ? formatarValorComDesconto(30, 5)
+        : "30,00";
+
     const dadosExemplo = {
         nome: "João", usuario: "joao123", senha: "abc123",
-        plano: "Mensal 1 Tela", valor: "30,00", desconto: "5,00", vencimento: "15/08/2026",
+        plano: "Mensal 1 Tela", valor: valorExemplo, desconto: "5,00", vencimento: "15/08/2026",
         dias: 3,
         link: "https://john-archs.github.io/Usuario/?d=exemplo",
         saudacao: saudacaoBrasileira(), emoji: "🟡", status: "vence amanhã",
@@ -2331,6 +2340,19 @@ linkM3U ? `\n\n🔗 Link M3U:\n${linkM3U}` : ""
     }
 }
 
+// Monta o texto da variável {valor} para Lembrete/Cobrança: com desconto
+// pendente, mostra o valor original riscado + valor final, e logo abaixo
+// a linha do desconto aplicado. Sem desconto, mostra só o valor normal.
+function formatarValorComDesconto(valorOriginal, desconto){
+    let final = Math.max(0, valorOriginal - desconto);
+    let textoFinal = final.toFixed(2).replace(".",",");
+    if(desconto > 0){
+        let textoOriginal = valorOriginal.toFixed(2).replace(".",",");
+        return `~R$ ${textoOriginal}~ R$ ${textoFinal}\n*🎁 Desconto de indicação aplicado:* R$ ${desconto.toFixed(2).replace(".",",")}`;
+    }
+    return `R$ ${textoFinal}`;
+}
+
 function enviarMensagemVencido(cliente){
     let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
     let chavePix = config.pixChave || "";
@@ -2345,14 +2367,12 @@ function enviarMensagemVencido(cliente){
     let matchValorCobranca = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
     let valorNumericoCobranca = matchValorCobranca ? parseFloat(matchValorCobranca[1].replace(",",".")) || 0 : 0;
     let descontoCobranca = cliente.descontoIndicacao || 0;
-    let valorComDescontoCobranca = Math.max(0, valorNumericoCobranca - descontoCobranca);
-    let valorTextoCobranca = valorComDescontoCobranca.toFixed(2).replace(".",",");
 
     let template = (config.modeloCobranca && config.modeloCobranca.trim()) ? config.modeloCobranca : MODELO_COBRANCA_PADRAO;
     let mensagem = preencherTemplate(template, {
         nome: primeiroNome(cliente.nome),
-        plano: cliente.plano,
-        valor: valorTextoCobranca,
+        plano: (cliente.plano || "").split(" - ")[0],
+        valor: formatarValorComDesconto(valorNumericoCobranca, descontoCobranca),
         desconto: descontoCobranca > 0 ? descontoCobranca.toFixed(2).replace(".",",") : "",
         dias: dias,
         saudacao: saudacao,
@@ -2361,9 +2381,6 @@ function enviarMensagemVencido(cliente){
         pix_nome: nomePix,
         pix_banco: bancoPix
     });
-    if(descontoCobranca > 0 && !template.includes("{desconto}")){
-        mensagem += `\n\n🎁 Desconto de indicação aplicado: R$ ${descontoCobranca.toFixed(2).replace(".",",")}`;
-    }
     window.open(`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
 
@@ -3213,11 +3230,6 @@ async function enviarMensagemRenovacao(cliente){
     let rodape = config.textoRodape || "";
     let match = cliente.plano.match(/R\$\s*([\d.,]+)/);
     if(match) valorNumerico = parseFloat(match[1].replace(",",".")) || 0;
-    let desconto = cliente.descontoIndicacao || 0;
-    // O desconto de indicação (se houver) já sai subtraído do valor mostrado
-    // na mensagem — o cliente vê direto o valor final a pagar.
-    let valorComDesconto = Math.max(0, valorNumerico - desconto);
-    let valor = valorComDesconto.toFixed(2).replace(".",",");
     let nomePlano = cliente.plano.split(" - ")[0];
     let linkCliente = await gerarLinkEncurtadoCliente(cliente);
     let template = (config.modeloRenovacao && config.modeloRenovacao.trim()) ? config.modeloRenovacao : MODELO_RENOVACAO_PADRAO;
@@ -3226,14 +3238,14 @@ async function enviarMensagemRenovacao(cliente){
         usuario: cliente.usuario,
         senha: cliente.senha,
         plano: nomePlano,
-        valor: valor,
-        desconto: desconto > 0 ? desconto.toFixed(2).replace(".",",") : "",
+        // Renovação e Ativação sempre mostram o valor cheio do plano, sem
+        // desconto — o desconto de indicação só aparece no Lembrete/Cobrança
+        // (que é quando o cliente ainda vai pagar). Aqui é só a confirmação
+        // dos dados de acesso, já com o pagamento concluído.
+        valor: valorNumerico.toFixed(2).replace(".",","),
         vencimento: formatarData(cliente.vencimento),
         link: linkCliente || ""
     });
-    if(desconto > 0 && !template.includes("{desconto}")){
-        mensagem += `\n*🎁 Desconto de indicação aplicado:* R$ ${desconto.toFixed(2).replace(".",",")}`;
-    }
     // Compatibilidade: modelos personalizados salvos antes da variável {link}
     // existir continuam recebendo o link automaticamente no final.
     if(!template.includes("{link}") && linkCliente){
@@ -5828,15 +5840,13 @@ function enviarLembrete(index){
     let matchValorLembrete = (plano || "").match(/R\$\s*([\d.,]+)/);
     let valorNumericoLembrete = matchValorLembrete ? parseFloat(matchValorLembrete[1].replace(",",".")) || 0 : 0;
     let descontoLembrete = cliente.descontoIndicacao || 0;
-    let valorComDescontoLembrete = Math.max(0, valorNumericoLembrete - descontoLembrete);
-    let valorTextoLembrete = valorComDescontoLembrete.toFixed(2).replace(".",",");
 
     const saudacao = saudacaoBrasileira();
     let template = (config.modeloLembrete && config.modeloLembrete.trim()) ? config.modeloLembrete : MODELO_LEMBRETE_PADRAO;
     let mensagem = preencherTemplate(template, {
         nome: nome,
-        plano: plano,
-        valor: valorTextoLembrete,
+        plano: (plano || "").split(" - ")[0],
+        valor: formatarValorComDesconto(valorNumericoLembrete, descontoLembrete),
         desconto: descontoLembrete > 0 ? descontoLembrete.toFixed(2).replace(".",",") : "",
         saudacao: saudacao,
         emoji: emoji,
@@ -5845,9 +5855,6 @@ function enviarLembrete(index){
         pix_nome: nomePix,
         pix_banco: bancoPix
     });
-    if(descontoLembrete > 0 && !template.includes("{desconto}")){
-        mensagem += `\n*🎁 Desconto de indicação aplicado:* R$ ${descontoLembrete.toFixed(2).replace(".",",")}`;
-    }
     window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
 
