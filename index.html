@@ -1930,7 +1930,7 @@ textarea{
             <div class="config-card-body">
                 <div class="config-card-body-interno">
                     <div class="dica-variaveis">
-                        💡 Variáveis disponíveis nos modelos: <code>{nome}</code> <code>{usuario}</code> <code>{senha}</code> <code>{plano}</code> <code>{valor}</code> <code>{vencimento}</code> — <code>{valor}</code> já sai com o desconto de indicação subtraído, quando o cliente tiver um pendente — <code>{desconto}</code> mostra o valor do desconto aplicado (Renovação e Lembrete) — só na Renovação: <code>{link}</code> (área do cliente) — só no Lembrete: <code>{saudacao}</code> <code>{emoji}</code> <code>{status}</code> <code>{pix_chave}</code> <code>{pix_nome}</code> <code>{pix_banco}</code>
+                        💡 Variáveis disponíveis nos modelos: <code>{nome}</code> <code>{usuario}</code> <code>{senha}</code> <code>{plano}</code> <code>{valor}</code> <code>{vencimento}</code> — <code>{valor}</code> já sai com o desconto de indicação subtraído, quando o cliente tiver um pendente — <code>{desconto}</code> mostra o valor do desconto aplicado (Renovação, Lembrete e Cobrança) — só na Renovação: <code>{link}</code> (área do cliente) — só no Lembrete e na Cobrança: <code>{saudacao}</code> <code>{status}</code> <code>{pix_chave}</code> <code>{pix_nome}</code> <code>{pix_banco}</code> — só no Lembrete: <code>{emoji}</code> — só na Cobrança: <code>{dias}</code> (dias em atraso)
                     </div>
 
                     <label><strong>● Modelo de Ativação</strong></label>
@@ -1944,6 +1944,10 @@ textarea{
                     <label style="margin-top:16px;display:block;"><strong>● Modelo de Lembrete de Vencimento</strong></label>
                     <textarea id="modeloLembrete" rows="11" placeholder="Modelo enviado ao lembrar um cliente vencendo/vencido"></textarea>
                     <button type="button" class="btn-historico-lucro btn-preview-mensagem" onclick="previsualizarMensagem('lembrete')">👁️ Prévia</button>
+
+                    <label style="margin-top:16px;display:block;"><strong>● Modelo de Cobrança (botão "Cobrar")</strong></label>
+                    <textarea id="modeloCobranca" rows="11" placeholder="Modelo enviado ao cobrar um cliente vencido"></textarea>
+                    <button type="button" class="btn-historico-lucro btn-preview-mensagem" onclick="previsualizarMensagem('cobranca')">👁️ Prévia</button>
 
                     <label style="margin-top:16px;display:block;">Promoção</label>
                     <textarea id="textoPromocao" placeholder="Texto promocional enviado nas renovações"></textarea>
@@ -2025,6 +2029,19 @@ Nosso sistema leva até 30 minutos para checar e confirmar o pagamento para libe
 
 Assim que confirmado, enviarei a mensagem de renovação 😉`;
 
+const MODELO_COBRANCA_PADRAO =
+`🙋🏽‍♂️ Ooi, {nome}.
+
+Seu plano {status}.
+
+❌ Não fique sem sua programação.
+
+🔑 Chave PIX: {pix_chave}
+👤 Nome: {pix_nome}
+🏦 Banco: {pix_banco}
+
+Caso deseje a chave PIX separada, me envie a palavra *PIX* ou reaja a esta mensagem.`;
+
 function preencherTemplate(template, dados){
     return (template || "").replace(/\{(\w+)\}/g, (correspondencia, chave) => {
         let valor = dados[chave];
@@ -2055,15 +2072,16 @@ function formatarComoWhatsapp(texto){
 }
 
 function previsualizarMensagem(tipo){
-    const camposPorTipo = { ativacao: "modeloAtivacao", renovacao: "modeloRenovacao", lembrete: "modeloLembrete" };
-    const padraoPorTipo = { ativacao: MODELO_ATIVACAO_PADRAO, renovacao: MODELO_RENOVACAO_PADRAO, lembrete: MODELO_LEMBRETE_PADRAO };
+    const camposPorTipo = { ativacao: "modeloAtivacao", renovacao: "modeloRenovacao", lembrete: "modeloLembrete", cobranca: "modeloCobranca" };
+    const padraoPorTipo = { ativacao: MODELO_ATIVACAO_PADRAO, renovacao: MODELO_RENOVACAO_PADRAO, lembrete: MODELO_LEMBRETE_PADRAO, cobranca: MODELO_COBRANCA_PADRAO };
 
     const campo = document.getElementById(camposPorTipo[tipo]);
     const template = (campo && campo.value.trim()) ? campo.value : padraoPorTipo[tipo];
 
     const dadosExemplo = {
         nome: "João", usuario: "joao123", senha: "abc123",
-        plano: "Mensal 1 Tela", valor: "30,00", vencimento: "15/08/2026",
+        plano: "Mensal 1 Tela", valor: "30,00", desconto: "5,00", vencimento: "15/08/2026",
+        dias: 3,
         link: "https://john-archs.github.io/Usuario/?d=exemplo",
         saudacao: saudacaoBrasileira(), emoji: "🟡", status: "vence amanhã",
         pix_chave: (document.getElementById("pixChave").value || "sua-chave-pix"),
@@ -2075,7 +2093,7 @@ function previsualizarMensagem(tipo){
 
     const promocao = (document.getElementById("textoPromocao").value || "").trim();
     const rodape = (document.getElementById("textoRodape").value || "").trim();
-    if(tipo !== "lembrete"){
+    if(tipo !== "lembrete" && tipo !== "cobranca"){
         if(promocao) mensagem += `\n\n${promocao}`;
         if(rodape) mensagem += `\n\n${rodape}`;
     }
@@ -2320,18 +2338,32 @@ function enviarMensagemVencido(cliente){
     let bancoPix = config.pixBanco || "";
     let dias = Math.abs(calcularDiasRestantes(cliente.vencimento));
     let textoVencimentoMsg = dias === 1 ? "venceu ontem" : `venceu há ${dias} dias`;
-    let mensagem =
-`🙋🏽‍♂️ Ooi, ${primeiroNome(cliente.nome)}.
+    const saudacao = saudacaoBrasileira();
 
-Seu plano ${textoVencimentoMsg}.
+    // Valor a cobrar já com o desconto de indicação pendente (se houver)
+    // subtraído, igual às mensagens de Lembrete e Renovação.
+    let matchValorCobranca = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
+    let valorNumericoCobranca = matchValorCobranca ? parseFloat(matchValorCobranca[1].replace(",",".")) || 0 : 0;
+    let descontoCobranca = cliente.descontoIndicacao || 0;
+    let valorComDescontoCobranca = Math.max(0, valorNumericoCobranca - descontoCobranca);
+    let valorTextoCobranca = valorComDescontoCobranca.toFixed(2).replace(".",",");
 
-❌ Não fique sem sua programação.
-
-🔑 Chave PIX: ${chavePix}
-👤 Nome: ${nomePix}
-🏦 Banco: ${bancoPix}
-
-Caso deseje a chave PIX separada, me envie a palavra *PIX* ou reaja a esta mensagem.`;
+    let template = (config.modeloCobranca && config.modeloCobranca.trim()) ? config.modeloCobranca : MODELO_COBRANCA_PADRAO;
+    let mensagem = preencherTemplate(template, {
+        nome: primeiroNome(cliente.nome),
+        plano: cliente.plano,
+        valor: valorTextoCobranca,
+        desconto: descontoCobranca > 0 ? descontoCobranca.toFixed(2).replace(".",",") : "",
+        dias: dias,
+        saudacao: saudacao,
+        status: textoVencimentoMsg,
+        pix_chave: chavePix,
+        pix_nome: nomePix,
+        pix_banco: bancoPix
+    });
+    if(descontoCobranca > 0 && !template.includes("{desconto}")){
+        mensagem += `\n\n🎁 Desconto de indicação aplicado: R$ ${descontoCobranca.toFixed(2).replace(".",",")}`;
+    }
     window.open(`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
 
@@ -2428,7 +2460,8 @@ function obterConfiguracoesAtuais(){
         textoRodape: document.getElementById("textoRodape").value,
         modeloAtivacao: document.getElementById("modeloAtivacao").value,
         modeloRenovacao: document.getElementById("modeloRenovacao").value,
-        modeloLembrete: document.getElementById("modeloLembrete").value
+        modeloLembrete: document.getElementById("modeloLembrete").value,
+        modeloCobranca: document.getElementById("modeloCobranca").value
     });
 }
 
@@ -5830,6 +5863,7 @@ function salvarConfiguracoes(){
     config.modeloAtivacao = document.getElementById("modeloAtivacao").value;
     config.modeloRenovacao = document.getElementById("modeloRenovacao").value;
     config.modeloLembrete = document.getElementById("modeloLembrete").value;
+    config.modeloCobranca = document.getElementById("modeloCobranca").value;
     localStorage.setItem("configuracoes", JSON.stringify(config));
     atualizarCabecalho();
     mostrarSucesso("✅ Configurações salvas com sucesso!");
@@ -5848,6 +5882,7 @@ function carregarConfiguracoes(){
     document.getElementById("modeloAtivacao").value = config.modeloAtivacao || MODELO_ATIVACAO_PADRAO;
     document.getElementById("modeloRenovacao").value = config.modeloRenovacao || MODELO_RENOVACAO_PADRAO;
     document.getElementById("modeloLembrete").value = config.modeloLembrete || MODELO_LEMBRETE_PADRAO;
+    document.getElementById("modeloCobranca").value = config.modeloCobranca || MODELO_COBRANCA_PADRAO;
     let nomeSistema = document.getElementById("nomeSistema");
     if(nomeSistema) nomeSistema.value = config.nomeSistema || "";
     atualizarCabecalho();
@@ -6036,7 +6071,7 @@ document.addEventListener("DOMContentLoaded", function(){
     try{
         carregarConfiguracoes();
         configurarUploadLogo();
-        ["nomeSistema","pixChave","pixNome","pixBanco","whatsappSuporte","textoPromocao","textoRodape","modeloAtivacao","modeloRenovacao","modeloLembrete"].forEach(id => {
+        ["nomeSistema","pixChave","pixNome","pixBanco","whatsappSuporte","textoPromocao","textoRodape","modeloAtivacao","modeloRenovacao","modeloLembrete","modeloCobranca"].forEach(id => {
             const campo = document.getElementById(id);
             if(campo) campo.addEventListener("input", verificarAlteracoesConfiguracao);
         });
