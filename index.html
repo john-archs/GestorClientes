@@ -427,6 +427,20 @@ button{
 .btn-acao.lembrete{ background:#06b6d4; color:white; }
 .btn-acao.cobranca{ background:#c084fc; color:white; }
 .btn-acao.historico{ background:#8b5cf6; color:white; }
+.btn-acao.indicacao{ background:#ec4899; color:white; position:relative; }
+.badge-desconto{
+    position:absolute;
+    top:-8px;
+    right:-6px;
+    background:#16a34a;
+    color:white;
+    font-size:10px;
+    font-weight:bold;
+    padding:2px 6px;
+    border-radius:8px;
+    line-height:1.3;
+    box-shadow:0 1px 3px rgba(0,0,0,.4);
+}
 
 /* ===== Destaque de termo pesquisado ===== */
 .destaque-busca{
@@ -1916,7 +1930,7 @@ textarea{
             <div class="config-card-body">
                 <div class="config-card-body-interno">
                     <div class="dica-variaveis">
-                        💡 Variáveis disponíveis nos modelos: <code>{nome}</code> <code>{usuario}</code> <code>{senha}</code> <code>{plano}</code> <code>{valor}</code> <code>{vencimento}</code> — só na Renovação: <code>{link}</code> (área do cliente) — só no Lembrete: <code>{saudacao}</code> <code>{emoji}</code> <code>{status}</code> <code>{pix_chave}</code> <code>{pix_nome}</code> <code>{pix_banco}</code>
+                        💡 Variáveis disponíveis nos modelos: <code>{nome}</code> <code>{usuario}</code> <code>{senha}</code> <code>{plano}</code> <code>{valor}</code> <code>{vencimento}</code> — <code>{valor}</code> já sai com o desconto de indicação subtraído, quando o cliente tiver um pendente — <code>{desconto}</code> mostra o valor do desconto aplicado (Renovação e Lembrete) — só na Renovação: <code>{link}</code> (área do cliente) — só no Lembrete: <code>{saudacao}</code> <code>{emoji}</code> <code>{status}</code> <code>{pix_chave}</code> <code>{pix_nome}</code> <code>{pix_banco}</code>
                     </div>
 
                     <label><strong>● Modelo de Ativação</strong></label>
@@ -1996,6 +2010,8 @@ const MODELO_RENOVACAO_PADRAO =
 const MODELO_LEMBRETE_PADRAO =
 `*{emoji} 🙋🏽‍♂️ Ooi, {nome}*. {saudacao}!
 Passando para lembrar que seu plano {plano} *{status}*.
+
+*🔸 Valor:* R$ {valor}
 
 > ❌️ NÃO FIQUE SEM SUA PROGRAMAÇÃO
 
@@ -2907,6 +2923,21 @@ function abrirModalRenovacao(index){
             : formatarData(cliente.vencimento);
         document.getElementById("renovacaoPlano").innerHTML =
             `<strong>Plano:</strong> ${cliente.plano || "-"}<br><strong>Duração:</strong> ${formatarDuracaoPlano(duracaoDias)}`;
+
+        // Mostra o desconto de indicação pendente (se houver) e o valor
+        // final já calculado, para o usuário conferir antes de confirmar.
+        let descontoPendente = cliente.descontoIndicacao || 0;
+        let boxDesconto = document.getElementById("renovacaoDescontoBox");
+        if(descontoPendente > 0){
+            let matchValorModal = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
+            let valorPlanoModal = matchValorModal ? parseFloat(matchValorModal[1].replace(",",".")) || 0 : 0;
+            let valorFinalModal = Math.max(0, valorPlanoModal - descontoPendente);
+            document.getElementById("renovacaoDescontoValor").innerText = moeda(descontoPendente);
+            document.getElementById("renovacaoValorFinal").innerText = moeda(valorFinalModal);
+            boxDesconto.style.display = "block";
+        } else {
+            boxDesconto.style.display = "none";
+        }
     }
     document.getElementById("modalRenovacao").classList.add("ativo");
 }
@@ -2998,6 +3029,10 @@ function renovarCliente(){
 
     const idOperacaoRenov = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 
+    // Desconto de indicação pendente (se houver) vale só para ESTA
+    // renovação: entra no cálculo do lucro agora e é zerado logo depois.
+    let descontoAplicadoRenov = cliente.descontoIndicacao || 0;
+
     {
         let matchValorRenov = (cliente.plano || "").match(/R\$\s*([\d.,]+)/);
         let valorPlanoRenov = matchValorRenov ? parseFloat(matchValorRenov[1].replace(",",".")) || 0 : 0;
@@ -3006,7 +3041,9 @@ function renovarCliente(){
         // semestral, anual...) consomem um crédito de custo por mês, não só um.
         // Soma o custo do servidor principal + secundário (se houver).
         custoServidorRenov = custoServidorRenov * obterMesesEquivalentes(obterDuracaoPlano(cliente.plano));
-        var lucroRenovAtual = valorPlanoRenov - custoServidorRenov;
+        // O desconto de indicação reduz o valor efetivamente recebido do
+        // cliente, então também reduz o lucro lançado no Dashboard.
+        var lucroRenovAtual = (valorPlanoRenov - descontoAplicadoRenov) - custoServidorRenov;
         registrarMovimentoLucro(cliente.nome, lucroRenovAtual, idOperacaoRenov);
     }
 
@@ -3019,13 +3056,23 @@ function renovarCliente(){
         idOperacao: idOperacaoRenov,
         // Lucro CONGELADO no momento dessa renovação (não recalcula depois
         // com o custo atual do servidor, se ele mudar em Configurações).
-        lucro: lucroRenovAtual
+        lucro: lucroRenovAtual,
+        // Registro do desconto de indicação usado nesta renovação, se houve.
+        descontoIndicacao: descontoAplicadoRenov || undefined
     });
 
     salvar();
     renderizar();
     atualizarDashboard();
+    // A mensagem de renovação ainda enxerga o desconto pendente do cliente
+    // (usado para já mostrar o valor com desconto). Só depois dela zeramos
+    // o campo, garantindo que ele valha só para esta renovação.
     enviarMensagemRenovacao(clientes[clienteRenovacao]);
+    if(descontoAplicadoRenov > 0){
+        clientes[clienteRenovacao].descontoIndicacao = 0;
+        salvar();
+        renderizar();
+    }
     fecharModalRenovacao();
 }
 
@@ -3127,12 +3174,17 @@ async function gerarLinkEncurtadoCliente(cliente){
 }
 
 async function enviarMensagemRenovacao(cliente){
-    let valor = "";
+    let valorNumerico = 0;
     let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
     let promocao = config.textoPromocao || "";
     let rodape = config.textoRodape || "";
     let match = cliente.plano.match(/R\$\s*([\d.,]+)/);
-    if(match) valor = match[1];
+    if(match) valorNumerico = parseFloat(match[1].replace(",",".")) || 0;
+    let desconto = cliente.descontoIndicacao || 0;
+    // O desconto de indicação (se houver) já sai subtraído do valor mostrado
+    // na mensagem — o cliente vê direto o valor final a pagar.
+    let valorComDesconto = Math.max(0, valorNumerico - desconto);
+    let valor = valorComDesconto.toFixed(2).replace(".",",");
     let nomePlano = cliente.plano.split(" - ")[0];
     let linkCliente = await gerarLinkEncurtadoCliente(cliente);
     let template = (config.modeloRenovacao && config.modeloRenovacao.trim()) ? config.modeloRenovacao : MODELO_RENOVACAO_PADRAO;
@@ -3142,9 +3194,13 @@ async function enviarMensagemRenovacao(cliente){
         senha: cliente.senha,
         plano: nomePlano,
         valor: valor,
+        desconto: desconto > 0 ? desconto.toFixed(2).replace(".",",") : "",
         vencimento: formatarData(cliente.vencimento),
         link: linkCliente || ""
     });
+    if(desconto > 0 && !template.includes("{desconto}")){
+        mensagem += `\n*🎁 Desconto de indicação aplicado:* R$ ${desconto.toFixed(2).replace(".",",")}`;
+    }
     // Compatibilidade: modelos personalizados salvos antes da variável {link}
     // existir continuam recebendo o link automaticamente no final.
     if(!template.includes("{link}") && linkCliente){
@@ -4840,7 +4896,7 @@ function renderizar(){
             if(mostrarLembrete){
                 botoesExtras += `
 <button class="btn-acao lembrete"
-    onclick="enviarLembrete('${primeiroNome(cliente.nome)}','${cliente.whatsapp}','${cliente.plano}','${diasRestantes}')">
+    onclick="enviarLembrete(${indexReal})">
     ⏰<span class="btn-label"> Lembrar</span>
 </button>`;
             }
@@ -4892,6 +4948,7 @@ function renderizar(){
         <div class="acao-grupo">
             <button class="btn-acao editar" onclick="editarCliente(${indexReal})">✏️<span class="btn-label"> Editar</span></button>
             <button class="btn-acao renovar" onclick="abrirModalRenovacao(${indexReal})">🔄<span class="btn-label"> ${ehClienteRevenda(cliente) ? "Add Créditos" : "Renovar"}</span></button>
+            ${!ehClienteRevenda(cliente) ? `<button class="btn-acao indicacao" onclick="abrirModalDesconto(${indexReal})" title="Desconto de indicação${cliente.descontoIndicacao ? ` (atual: ${moeda(cliente.descontoIndicacao)})` : ""}">🎁<span class="btn-label"> Indicação</span>${cliente.descontoIndicacao ? `<span class="badge-desconto">${moeda(cliente.descontoIndicacao)}</span>` : ""}</button>` : ""}
         </div>
         <div class="acao-grupo">
             ${ehClienteRevenda(cliente)
@@ -4919,6 +4976,56 @@ function renderizar(){
     }, 150);
 }
 
+let clienteDescontoAtual = null;
+
+function abrirModalDesconto(index){
+    clienteDescontoAtual = index;
+    let cliente = clientes[index];
+    if(!cliente) return;
+    document.getElementById("descontoClienteNome").innerText = cliente.nome || "";
+    let atual = cliente.descontoIndicacao || 0;
+    document.getElementById("descontoAtualTexto").innerText = atual > 0
+        ? `Desconto pendente atual: ${moeda(atual)} (será usado na próxima renovação)`
+        : "Nenhum desconto pendente no momento.";
+    document.getElementById("inputDescontoIndicacao").value = "";
+    document.getElementById("modalDesconto").classList.add("ativo");
+}
+
+function fecharModalDesconto(){
+    document.getElementById("modalDesconto").classList.remove("ativo");
+    clienteDescontoAtual = null;
+}
+
+function confirmarDescontoIndicacao(){
+    if(clienteDescontoAtual === null) return;
+    let cliente = clientes[clienteDescontoAtual];
+    if(!cliente) return;
+    let texto = (document.getElementById("inputDescontoIndicacao").value || "").replace("R$","").replace(",",".").trim();
+    let valor = parseFloat(texto);
+    if(isNaN(valor) || valor <= 0){
+        mostrarAlerta("Informe um valor de desconto válido.", "aviso");
+        return;
+    }
+    cliente.descontoIndicacao = (cliente.descontoIndicacao || 0) + valor;
+    salvar();
+    renderizar();
+    mostrarSucesso(`🎁 Desconto de ${moeda(valor)} adicionado para ${cliente.nome}. Total pendente: ${moeda(cliente.descontoIndicacao)}.`);
+    fecharModalDesconto();
+}
+
+function zerarDescontoIndicacao(){
+    if(clienteDescontoAtual === null) return;
+    let cliente = clientes[clienteDescontoAtual];
+    if(!cliente) return;
+    pedirConfirmacao(`Remover o desconto de indicação pendente de ${cliente.nome}?`, () => {
+        cliente.descontoIndicacao = 0;
+        salvar();
+        renderizar();
+        fecharModalDesconto();
+        mostrarSucesso("Desconto pendente removido.");
+    }, "🗑️ Zerar desconto");
+}
+
 function editarCliente(index){
     clienteEditando = index;
     let cliente = clientes[index];
@@ -4930,6 +5037,7 @@ function editarCliente(index){
     document.getElementById("editWhatsapp").value = cliente.whatsapp || "";
     document.getElementById("editVencimento").value = cliente.vencimento || "";
     document.getElementById("editObs").value = cliente.obs || "";
+    document.getElementById("editDescontoIndicacao").value = cliente.descontoIndicacao ? String(cliente.descontoIndicacao).replace(".", ",") : "";
 
     // Cliente revenda não usa usuário/senha, WhatsApp, vencimento nem plano
     // de mensalidade — só o servidor (que guia o custo por crédito), nome
@@ -4939,6 +5047,7 @@ function editarCliente(index){
     document.getElementById("editWhatsapp").style.display = revenda ? "none" : "block";
     document.getElementById("editVencimento").style.display = revenda ? "none" : "block";
     document.getElementById("editPlano").style.display = revenda ? "none" : "block";
+    document.getElementById("editDescontoIndicacao").style.display = revenda ? "none" : "block";
 
     let selectServidor = document.getElementById("editServidor");
     selectServidor.innerHTML = "";
@@ -5067,7 +5176,8 @@ function salvarEdicaoCliente(){
         whatsapp: revenda ? clienteAtual.whatsapp : document.getElementById("editWhatsapp").value,
         vencimento: vencimentoEditado,
         plano: revenda ? clienteAtual.plano : document.getElementById("editPlano").value,
-        obs: document.getElementById("editObs").value
+        obs: document.getElementById("editObs").value,
+        descontoIndicacao: revenda ? (clienteAtual.descontoIndicacao || 0) : (parseFloat((document.getElementById("editDescontoIndicacao").value || "0").replace("R$","").replace(",",".").trim()) || 0)
     };
 
     // Se a nova data for ANTERIOR à data que estava salva, entendemos que o
@@ -5517,7 +5627,7 @@ function atualizarDashboard(){
         ${foiLembrado(cliente.whatsapp)
             ? `<button class="btn-lembrete" style="background:#475569;cursor:default;opacity:.85;" disabled>✅️ Lembrado ✅️</button>`
             : `<button class="btn-lembrete"
-            onclick="enviarLembreteComMarca('${primeiroNome(cliente.nome)}','${cliente.whatsapp}','${cliente.plano}','${diasRestantes}')">
+            onclick="enviarLembreteComMarca(${indexReal})">
             Lembrar
         </button>`}
         <button class="btn-renovar" style="background:#22c55e;color:white;padding:10px 15px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;"
@@ -5646,9 +5756,11 @@ function foiLembrado(whatsapp){
     return localStorage.getItem("lembrete_" + whatsapp) === hoje;
 }
 
-function enviarLembreteComMarca(nome, whatsapp, plano, dias){
-    enviarLembrete(nome, whatsapp, plano, dias);
-    registrarLembrete(whatsapp);
+function enviarLembreteComMarca(index){
+    let cliente = clientes[index];
+    if(!cliente) return;
+    enviarLembrete(index);
+    registrarLembrete(cliente.whatsapp);
     atualizarDashboard();
 }
 
@@ -5660,7 +5772,14 @@ function saudacaoBrasileira(){
     return "Boa noite";
 }
 
-function enviarLembrete(nome, whatsapp, plano, dias){
+function enviarLembrete(index){
+    let cliente = clientes[index];
+    if(!cliente) return;
+    let nome = primeiroNome(cliente.nome);
+    let whatsapp = cliente.whatsapp;
+    let plano = cliente.plano;
+    let dias = calcularDiasRestantes(cliente.vencimento);
+
     let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
     let chavePix = config.pixChave || "";
     let nomePix = config.pixNome || "";
@@ -5671,11 +5790,21 @@ function enviarLembrete(nome, whatsapp, plano, dias){
     else if(dias == 1){ emoji = "🟡"; textoExpiracao = "vence amanhã"; }
     else { emoji = "🟢"; textoExpiracao = `vence em ${dias} dias`; }
 
+    // Valor a pagar já com o desconto de indicação pendente (se houver)
+    // subtraído, para o cliente ver direto o valor final atualizado.
+    let matchValorLembrete = (plano || "").match(/R\$\s*([\d.,]+)/);
+    let valorNumericoLembrete = matchValorLembrete ? parseFloat(matchValorLembrete[1].replace(",",".")) || 0 : 0;
+    let descontoLembrete = cliente.descontoIndicacao || 0;
+    let valorComDescontoLembrete = Math.max(0, valorNumericoLembrete - descontoLembrete);
+    let valorTextoLembrete = valorComDescontoLembrete.toFixed(2).replace(".",",");
+
     const saudacao = saudacaoBrasileira();
     let template = (config.modeloLembrete && config.modeloLembrete.trim()) ? config.modeloLembrete : MODELO_LEMBRETE_PADRAO;
     let mensagem = preencherTemplate(template, {
         nome: nome,
         plano: plano,
+        valor: valorTextoLembrete,
+        desconto: descontoLembrete > 0 ? descontoLembrete.toFixed(2).replace(".",",") : "",
         saudacao: saudacao,
         emoji: emoji,
         status: textoExpiracao,
@@ -5683,6 +5812,9 @@ function enviarLembrete(nome, whatsapp, plano, dias){
         pix_nome: nomePix,
         pix_banco: bancoPix
     });
+    if(descontoLembrete > 0 && !template.includes("{desconto}")){
+        mensagem += `\n*🎁 Desconto de indicação aplicado:* R$ ${descontoLembrete.toFixed(2).replace(".",",")}`;
+    }
     window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
 
@@ -5934,6 +6066,24 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 </script>
 
+<!-- MODAL DESCONTO DE INDICAÇÃO -->
+<div class="modal" id="modalDesconto">
+    <div class="modal-box">
+        <div class="modal-topo">
+            <h2>🎁 Desconto de Indicação</h2>
+            <button class="fechar-modal" onclick="fecharModalDesconto()">✕</button>
+        </div>
+        <p id="descontoClienteNome" style="color:#94a3b8; margin:-8px 0 12px;"></p>
+        <p id="descontoAtualTexto" style="color:#38bdf8; font-weight:bold; margin:-8px 0 12px;"></p>
+        <input type="text" id="inputDescontoIndicacao" placeholder="Valor do desconto a adicionar (R$)" inputmode="decimal">
+        <p style="color:#64748b; font-size:12px; margin-top:-6px;">Esse valor será somado ao desconto pendente do cliente e aplicado automaticamente na próxima renovação — depois disso, zera sozinho.</p>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+            <button class="btn-add" style="flex:1;" onclick="confirmarDescontoIndicacao()">➕ Adicionar Desconto</button>
+        </div>
+        <button class="btn-acao deletar" style="width:100%; margin-top:8px;" onclick="zerarDescontoIndicacao()">🗑️ Zerar desconto pendente</button>
+    </div>
+</div>
+
 <!-- MODAL EDITAR CLIENTE -->
 <div class="modal" id="modalEditar">
     <div class="modal-box">
@@ -5951,6 +6101,7 @@ document.addEventListener("DOMContentLoaded", function(){
         <input type="text" id="editWhatsapp" placeholder="WhatsApp" onblur="limparWhatsapp(this)">
         <select id="editPlano"></select>
         <input type="date" id="editVencimento">
+        <input type="text" id="editDescontoIndicacao" placeholder="🎁 Desconto de indicação (R$) — vale só na próxima renovação" inputmode="decimal">
         <textarea id="editObs" placeholder="Dispositivo"></textarea>
         <div id="editSubRevendasBox" style="display:none;">
             <hr style="border-color:#334155; margin:10px 0;">
@@ -6001,6 +6152,10 @@ document.addEventListener("DOMContentLoaded", function(){
         <div id="renovacaoInfoNormal">
             <div>Vencimento atual: <span id="renovacaoAtual"></span></div>
             <div id="renovacaoPlano"></div>
+            <div id="renovacaoDescontoBox" style="display:none; margin-top:8px; padding:10px 12px; background:#1e293b; border:1px solid #ec4899; border-radius:10px;">
+                <div style="color:#f9a8d4; font-size:13px;">🎁 Desconto de indicação pendente: <strong id="renovacaoDescontoValor"></strong></div>
+                <div style="color:#e2e8f0; font-size:14px; margin-top:4px;">💰 Valor final a cobrar: <strong id="renovacaoValorFinal" style="color:#22c55e;"></strong></div>
+            </div>
         </div>
         <div id="renovacaoInfoRevenda" style="display:none;">
             <select id="renovacaoSubRevenda" style="display:none;"></select>
