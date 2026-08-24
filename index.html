@@ -1930,7 +1930,7 @@ textarea{
             <div class="config-card-body">
                 <div class="config-card-body-interno">
                     <div class="dica-variaveis">
-                        💡 Variáveis disponíveis nos modelos: <code>{nome}</code> <code>{usuario}</code> <code>{senha}</code> <code>{plano}</code> <code>{valor}</code> <code>{vencimento}</code> — na Ativação e Renovação, <code>{valor}</code> é só o número (ex: "30,00", use "R$ {valor}" no texto) — no Lembrete e na Cobrança, <code>{valor}</code> já vem formatado como "R$ ..." pronto (NÃO coloque "R$" na frente dele nesses dois) e, se houver desconto de indicação pendente, mostra automaticamente o valor original riscado + o valor final + a linha "🎁 Desconto de indicação aplicado" logo abaixo — <code>{desconto}</code> mostra só o número do desconto, se precisar dele separado — só na Renovação: <code>{link}</code> (área do cliente) — só no Lembrete e na Cobrança: <code>{saudacao}</code> <code>{status}</code> <code>{pix_chave}</code> <code>{pix_nome}</code> <code>{pix_banco}</code> — só no Lembrete: <code>{emoji}</code> — só na Cobrança: <code>{dias}</code> (dias em atraso)
+                        💡 Variáveis disponíveis nos modelos: <code>{nome}</code> <code>{usuario}</code> <code>{senha}</code> <code>{plano}</code> <code>{valor}</code> <code>{vencimento}</code> — na Ativação e Renovação, <code>{valor}</code> é só o número (ex: "30,00", use "R$ {valor}" no texto) — no Lembrete e na Cobrança, <code>{valor}</code> já vem formatado como "R$ ..." pronto (NÃO coloque "R$" na frente dele nesses dois) e, se houver desconto pendente, mostra automaticamente o valor original riscado + o valor final + a linha "🎁 Desconto aplicado" logo abaixo — <code>{desconto}</code> mostra só o número do desconto, se precisar dele separado — só na Renovação: <code>{link}</code> (área do cliente) — só no Lembrete e na Cobrança: <code>{saudacao}</code> <code>{status}</code> <code>{pix_chave}</code> <code>{pix_nome}</code> <code>{pix_banco}</code> — só no Lembrete: <code>{emoji}</code> — só na Cobrança: <code>{dias}</code> (dias em atraso)
                     </div>
 
                     <label><strong>● Modelo de Ativação</strong></label>
@@ -2348,7 +2348,7 @@ function formatarValorComDesconto(valorOriginal, desconto){
     let textoFinal = final.toFixed(2).replace(".",",");
     if(desconto > 0){
         let textoOriginal = valorOriginal.toFixed(2).replace(".",",");
-        return `~R$ ${textoOriginal}~ R$ ${textoFinal}\n*🎁 Desconto de indicação aplicado:* R$ ${desconto.toFixed(2).replace(".",",")}`;
+        return `~R$ ${textoOriginal}~ R$ ${textoFinal}\n*🎁 Desconto aplicado:* R$ ${desconto.toFixed(2).replace(".",",")}`;
     }
     return `R$ ${textoFinal}`;
 }
@@ -4993,7 +4993,7 @@ function renderizar(){
         <div class="acao-grupo">
             <button class="btn-acao editar" onclick="editarCliente(${indexReal})">✏️<span class="btn-label"> Editar</span></button>
             <button class="btn-acao renovar" onclick="abrirModalRenovacao(${indexReal})">🔄<span class="btn-label"> ${ehClienteRevenda(cliente) ? "Add Créditos" : "Renovar"}</span></button>
-            ${!ehClienteRevenda(cliente) ? `<button class="btn-acao indicacao" onclick="abrirModalDesconto(${indexReal})" title="Desconto de indicação${cliente.descontoIndicacao ? ` (atual: ${moeda(cliente.descontoIndicacao)})` : ""}">🎁<span class="btn-label"> Indicação</span>${cliente.descontoIndicacao ? `<span class="badge-desconto">${moeda(cliente.descontoIndicacao)}</span>` : ""}</button>` : ""}
+            ${!ehClienteRevenda(cliente) ? `<button class="btn-acao indicacao" onclick="abrirModalDesconto(${indexReal})" title="Desconto${cliente.descontoIndicacao ? ` (atual: ${moeda(cliente.descontoIndicacao)})` : ""}">🎁<span class="btn-label"> Desconto</span>${cliente.descontoIndicacao ? `<span class="badge-desconto">${moeda(cliente.descontoIndicacao)}</span>` : ""}</button>` : ""}
         </div>
         <div class="acao-grupo">
             ${ehClienteRevenda(cliente)
@@ -5062,7 +5062,7 @@ function zerarDescontoIndicacao(){
     if(clienteDescontoAtual === null) return;
     let cliente = clientes[clienteDescontoAtual];
     if(!cliente) return;
-    pedirConfirmacao(`Remover o desconto de indicação pendente de ${cliente.nome}?`, () => {
+    pedirConfirmacao(`Remover o desconto pendente de ${cliente.nome}?`, () => {
         cliente.descontoIndicacao = 0;
         salvar();
         renderizar();
@@ -6108,11 +6108,11 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 </script>
 
-<!-- MODAL DESCONTO DE INDICAÇÃO -->
+<!-- MODAL DESCONTO -->
 <div class="modal" id="modalDesconto">
     <div class="modal-box">
         <div class="modal-topo">
-            <h2>🎁 Desconto de Indicação</h2>
+            <h2>🎁 Desconto</h2>
             <button class="fechar-modal" onclick="fecharModalDesconto()">✕</button>
         </div>
         <p id="descontoClienteNome" style="color:#94a3b8; margin:-8px 0 12px;"></p>
@@ -6143,7 +6143,7 @@ document.addEventListener("DOMContentLoaded", function(){
         <input type="text" id="editWhatsapp" placeholder="WhatsApp" onblur="limparWhatsapp(this)">
         <select id="editPlano"></select>
         <input type="date" id="editVencimento">
-        <input type="text" id="editDescontoIndicacao" placeholder="🎁 Desconto de indicação (R$) — vale só na próxima renovação" inputmode="decimal">
+        <input type="text" id="editDescontoIndicacao" placeholder="🎁 Desconto (R$) — vale só na próxima renovação" inputmode="decimal">
         <textarea id="editObs" placeholder="Dispositivo"></textarea>
         <div id="editSubRevendasBox" style="display:none;">
             <hr style="border-color:#334155; margin:10px 0;">
@@ -6195,7 +6195,7 @@ document.addEventListener("DOMContentLoaded", function(){
             <div>Vencimento atual: <span id="renovacaoAtual"></span></div>
             <div id="renovacaoPlano"></div>
             <div id="renovacaoDescontoBox" style="display:none; margin-top:8px; padding:10px 12px; background:#1e293b; border:1px solid #ec4899; border-radius:10px;">
-                <div style="color:#f9a8d4; font-size:13px;">🎁 Desconto de indicação pendente: <strong id="renovacaoDescontoValor"></strong></div>
+                <div style="color:#f9a8d4; font-size:13px;">🎁 Desconto pendente: <strong id="renovacaoDescontoValor"></strong></div>
                 <div style="color:#e2e8f0; font-size:14px; margin-top:4px;">💰 Valor final a cobrar: <strong id="renovacaoValorFinal" style="color:#22c55e;"></strong></div>
             </div>
         </div>
