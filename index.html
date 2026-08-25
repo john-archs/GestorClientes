@@ -1753,10 +1753,11 @@ textarea{
         <input type="text" id="whatsapp" placeholder="+55 DDD NÚMERO" onblur="limparWhatsapp(this)">
         <select id="plano" onchange="sugerirVencimentoPlano()"></select>
         <input type="text" id="vencimento" placeholder="Data" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+        <input type="number" id="valorRecebido" min="0" step="0.01" placeholder="Valor recebido (opcional, ex: 1º mês RokuTV +R$10)" style="display:none;">
         <input type="number" id="creditosRevenda" min="1" placeholder="Quantidade de créditos (inicial)" oninput="atualizarValorRevendaAdicionar()" style="display:none;">
         <input type="text" id="valorRevendaCalculado" placeholder="Valor (calculado automaticamente)" readonly style="display:none;">
         <textarea id="obs" placeholder="OBS: dispositivo"></textarea>
-        <button class="btn-add" onclick="adicionarCliente()">✅</button>
+        <button class="btn-add" id="btnAdicionarCliente" onclick="adicionarCliente()">✅</button>
     </div>
 
     <div class="topo" id="boxPesquisa" style="display:none;">
@@ -4586,6 +4587,8 @@ function alternarTipoCliente(){
     document.getElementById("senha").style.display = ehRevenda ? "none" : "block";
     document.getElementById("plano").style.display = ehRevenda ? "none" : "block";
     document.getElementById("vencimento").style.display = ehRevenda ? "none" : "block";
+    document.getElementById("valorRecebido").style.display = "none";
+    atualizarVisibilidadeValorRecebido();
     document.getElementById("creditosRevenda").style.display = ehRevenda ? "block" : "none";
     document.getElementById("valorRevendaCalculado").style.display = ehRevenda ? "block" : "none";
     document.getElementById("nome").placeholder = ehRevenda ? "Nome do Revenda" : "Nome";
@@ -4624,7 +4627,59 @@ function enviarMensagemRenovacaoRevenda(cliente, creditos, valorTotal){
     window.open(`https://wa.me/${cliente.whatsapp}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
 
+// ===== Campo "Valor recebido": fica oculto por padrão (só quem sabe do
+// gesto consegue usá-lo). Segurando 3s no botão de adicionar cliente (✅)
+// ele é revelado; volta a ficar oculto sozinho ao atualizar a página ou
+// assim que um cliente é adicionado. =====
+let valorRecebidoDesbloqueado = false;
+let timerPressionamentoBtnAdicionar = null;
+let ignorarProximoCliqueAdicionar = false;
+
+function atualizarVisibilidadeValorRecebido(){
+    let campo = document.getElementById("valorRecebido");
+    let campoTipo = document.getElementById("tipoCliente");
+    if(!campo || !campoTipo) return;
+    let ehRevenda = campoTipo.value === "revenda";
+    campo.style.display = (!ehRevenda && valorRecebidoDesbloqueado) ? "block" : "none";
+}
+
+function ocultarValorRecebidoNovamente(){
+    valorRecebidoDesbloqueado = false;
+    atualizarVisibilidadeValorRecebido();
+}
+
+function iniciarPressionamentoBtnAdicionar(){
+    cancelarPressionamentoBtnAdicionar();
+    timerPressionamentoBtnAdicionar = setTimeout(() => {
+        valorRecebidoDesbloqueado = true;
+        ignorarProximoCliqueAdicionar = true;
+        atualizarVisibilidadeValorRecebido();
+    }, 3000);
+}
+
+function cancelarPressionamentoBtnAdicionar(){
+    if(timerPressionamentoBtnAdicionar){
+        clearTimeout(timerPressionamentoBtnAdicionar);
+        timerPressionamentoBtnAdicionar = null;
+    }
+}
+
+(function(){
+    let btn = document.getElementById("btnAdicionarCliente");
+    if(!btn) return;
+    btn.addEventListener("mousedown", iniciarPressionamentoBtnAdicionar);
+    btn.addEventListener("touchstart", iniciarPressionamentoBtnAdicionar, {passive:true});
+    btn.addEventListener("mouseup", cancelarPressionamentoBtnAdicionar);
+    btn.addEventListener("mouseleave", cancelarPressionamentoBtnAdicionar);
+    btn.addEventListener("touchend", cancelarPressionamentoBtnAdicionar);
+    btn.addEventListener("touchcancel", cancelarPressionamentoBtnAdicionar);
+})();
+
 function adicionarCliente(){
+    if(ignorarProximoCliqueAdicionar){
+        ignorarProximoCliqueAdicionar = false;
+        return;
+    }
     let tipoCliente = document.getElementById("tipoCliente") ? document.getElementById("tipoCliente").value : "normal";
     let servidor = document.getElementById("servidor").value;
     let nome = document.getElementById("nome").value;
@@ -4710,9 +4765,19 @@ function adicionarCliente(){
     const idOperacaoNovoCliente = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     clientes.push({ servidor, servidor2, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO });
 
+    // Valor recebido manual (opcional): usado quando o valor cobrado nesse
+    // primeiro mês é diferente do valor padrão do plano (ex: acréscimo de
+    // RokuTV). Vale só para esta ativação — não altera o plano salvo no
+    // cliente, então as próximas renovações continuam usando o valor normal.
+    let campoValorRecebido = document.getElementById("valorRecebido");
+    let valorRecebidoStr = campoValorRecebido ? campoValorRecebido.value : "";
+    let valorRecebido = valorRecebidoStr !== "" ? parseFloat(String(valorRecebidoStr).replace(",",".")) : NaN;
+    let temValorRecebido = !isNaN(valorRecebido);
+
     {
         let matchValorNovo = (planoTexto || "").match(/R\$\s*([\d.,]+)/);
-        let valorPlanoNovo = matchValorNovo ? parseFloat(matchValorNovo[1].replace(",",".")) || 0 : 0;
+        let valorPlanoBase = matchValorNovo ? parseFloat(matchValorNovo[1].replace(",",".")) || 0 : 0;
+        let valorPlanoNovo = temValorRecebido ? valorRecebido : valorPlanoBase;
         let novoClienteParaCusto = clientes[clientes.length - 1];
         let custoServidorNovo = custoMensalServidoresCliente(novoClienteParaCusto);
         // Mesmo ajuste: custo do servidor é mensal, então planos de vários
@@ -4747,6 +4812,8 @@ function adicionarCliente(){
     document.getElementById("whatsapp").value = "";
     document.getElementById("vencimento").value = "";
     document.getElementById("obs").value = "";
+    document.getElementById("valorRecebido").value = "";
+    ocultarValorRecebidoNovamente();
     if(document.getElementById("servidor2")) document.getElementById("servidor2").value = "";
 }
 
