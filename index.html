@@ -2975,6 +2975,11 @@ function abrirModalRenovacao(index){
         document.getElementById("renovacaoPlano").innerHTML =
             `<strong>Plano:</strong> ${cliente.plano || "-"}<br><strong>Duração:</strong> ${formatarDuracaoPlano(duracaoDias)}`;
 
+        // Data do pagamento da renovação: por padrão é hoje, mas pode ser
+        // alterada (ex: cliente pagou ontem e o lançamento ficou atrasado).
+        // O cálculo do novo vencimento usa essa data como referência.
+        document.getElementById("renovacaoDataPagamento").value = new Date().toISOString().split("T")[0];
+
         // Mostra o desconto de indicação pendente (se houver) e o valor
         // final já calculado, para o usuário conferir antes de confirmar.
         let descontoPendente = cliente.descontoIndicacao || 0;
@@ -2989,8 +2994,33 @@ function abrirModalRenovacao(index){
         } else {
             boxDesconto.style.display = "none";
         }
+
+        atualizarPreviaVencimentoRenovacao();
     }
     document.getElementById("modalRenovacao").classList.add("ativo");
+}
+
+// Recalcula e mostra, em tempo real, qual seria o novo vencimento do
+// cliente considerando a data de pagamento escolhida no modal.
+function atualizarPreviaVencimentoRenovacao(){
+    if(clienteRenovacao === null) return;
+    let cliente = clientes[clienteRenovacao];
+    if(ehClienteRevenda(cliente)) return;
+
+    let duracao = obterDuracaoPlano(cliente.plano);
+    let previa = document.getElementById("renovacaoPreviaVencimento");
+    if(!duracao){
+        previa.innerText = "";
+        return;
+    }
+
+    let dataPagamentoISO = document.getElementById("renovacaoDataPagamento").value || new Date().toISOString().split("T")[0];
+    let dataPagamento = paraDataLocal(dataPagamentoISO);
+    let dataBase = (cliente.vencimento && paraDataLocal(cliente.vencimento) > dataPagamento)
+        ? paraDataLocal(cliente.vencimento)
+        : dataPagamento;
+    let novoVencimento = adicionarPeriodoData(dataBase, duracao);
+    previa.innerText = `Novo vencimento: ${formatarData(novoVencimento.toISOString().split("T")[0])}`;
 }
 
 function fecharModalRenovacao(){
@@ -3064,19 +3094,27 @@ function renovarCliente(){
     let vencimentoAnterior = cliente.vencimento || "";
     let vencimentoNovo = vencimentoAnterior;
 
+    // Data em que o pagamento da renovação realmente aconteceu. Por padrão
+    // é hoje, mas pode ser alterada no modal (ex: cliente pagou ontem e o
+    // lançamento ficou atrasado) — todo o cálculo usa essa data no lugar
+    // da data de hoje.
+    let campoDataPagamento = document.getElementById("renovacaoDataPagamento");
+    const dataPagamentoISORenov = (campoDataPagamento && campoDataPagamento.value) || new Date().toISOString().split("T")[0];
+    let dataPagamentoRenov = paraDataLocal(dataPagamentoISORenov);
+
     // Planos sem duração definida (ex: revenda) não têm vencimento: a
     // renovação apenas registra a data e fica no histórico, sem alterar
     // (ou exigir) uma data de vencimento.
     if(duracao){
-        let dataBase = (cliente.vencimento && paraDataLocal(cliente.vencimento) > new Date())
+        let dataBase = (cliente.vencimento && paraDataLocal(cliente.vencimento) > dataPagamentoRenov)
             ? paraDataLocal(cliente.vencimento)
-            : new Date();
+            : dataPagamentoRenov;
         let novaData = adicionarPeriodoData(dataBase, duracao);
         vencimentoNovo = novaData.toISOString().split("T")[0];
         clientes[clienteRenovacao].vencimento = vencimentoNovo;
     }
 
-    clientes[clienteRenovacao].ultimaRenovacao = new Date().toISOString().split("T")[0];
+    clientes[clienteRenovacao].ultimaRenovacao = dataPagamentoISORenov;
 
     const idOperacaoRenov = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 
@@ -3095,12 +3133,12 @@ function renovarCliente(){
         // O desconto de indicação reduz o valor efetivamente recebido do
         // cliente, então também reduz o lucro lançado no Dashboard.
         var lucroRenovAtual = (valorPlanoRenov - descontoAplicadoRenov) - custoServidorRenov;
-        registrarMovimentoLucro(cliente.nome, lucroRenovAtual, idOperacaoRenov);
+        registrarMovimentoLucro(cliente.nome, lucroRenovAtual, idOperacaoRenov, dataPagamentoISORenov);
     }
 
     if(!Array.isArray(clientes[clienteRenovacao].historico)) clientes[clienteRenovacao].historico = [];
     clientes[clienteRenovacao].historico.push({
-        data: new Date().toISOString().split("T")[0],
+        data: dataPagamentoISORenov,
         vencimentoAnterior,
         vencimentoNovo,
         plano: cliente.plano || "",
@@ -6265,6 +6303,9 @@ document.addEventListener("DOMContentLoaded", function(){
                 <div style="color:#f9a8d4; font-size:13px;">🎁 Desconto pendente: <strong id="renovacaoDescontoValor"></strong></div>
                 <div style="color:#e2e8f0; font-size:14px; margin-top:4px;">💰 Valor final a cobrar: <strong id="renovacaoValorFinal" style="color:#22c55e;"></strong></div>
             </div>
+            <label style="font-size:12px;color:#94a3b8;display:block;margin:10px 0 4px;">📅 Data do pagamento (renovação)</label>
+            <input type="date" id="renovacaoDataPagamento" onchange="atualizarPreviaVencimentoRenovacao()">
+            <div id="renovacaoPreviaVencimento" style="color:#94a3b8; font-size:13px; margin-top:4px;"></div>
         </div>
         <div id="renovacaoInfoRevenda" style="display:none;">
             <select id="renovacaoSubRevenda" style="display:none;"></select>
