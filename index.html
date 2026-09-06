@@ -1191,6 +1191,11 @@ select{
     font-size:24px;
     font-weight:bold;
     color:#38bdf8;
+    -webkit-user-select:none;
+    -moz-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+    touch-action:manipulation;
 }
 .backup-acoes{
     display:flex;
@@ -1653,7 +1658,7 @@ textarea{
 </svg>
 <div id="cabecalhoSistema">
     <img id="logoSistema" src="" style="display:none;">
-    <span id="tituloSistema" onclick="tocarNoTitulo()">Gestor IPTV</span>
+    <span id="tituloSistema" oncontextmenu="return false" onpointerdown="iniciarPressaoSecreta(event)" onpointerup="soltarPressaoSecreta()" onpointerleave="cancelarPressaoSecreta()" onpointercancel="cancelarPressaoSecreta()">Gestor IPTV</span>
 </div>
 
 <div class="painel-suporte" id="painelSuporte">
@@ -6121,6 +6126,132 @@ function tocarNoTitulo(){
     }
 }
 
+/* ══════════════════════════════════════════════
+   ATALHO SECRETO — LANÇAMENTO RÁPIDO DE CRÉDITOS
+   (segure o título "Gestor IPTV" pressionado por ~1.5s)
+══════════════════════════════════════════════ */
+let timerPressaoSecreta = null;
+let pressaoSecretaDisparada = false;
+
+function iniciarPressaoSecreta(event){
+    if(event) event.preventDefault();
+    pressaoSecretaDisparada = false;
+    clearTimeout(timerPressaoSecreta);
+    timerPressaoSecreta = setTimeout(() => {
+        pressaoSecretaDisparada = true;
+        abrirPainelCreditoRapido();
+    }, 1200);
+}
+
+function soltarPressaoSecreta(){
+    clearTimeout(timerPressaoSecreta);
+    // Se soltou antes do tempo de segurar, conta como toque normal
+    // (mantém o recurso antigo de 5 toques rápidos para o modo teste de backup)
+    if(!pressaoSecretaDisparada){
+        tocarNoTitulo();
+    }
+    pressaoSecretaDisparada = false;
+}
+
+function cancelarPressaoSecreta(){
+    // Dedo saiu da área ou gesto cancelado: só limpa o timer, não conta toque
+    clearTimeout(timerPressaoSecreta);
+    pressaoSecretaDisparada = false;
+}
+
+function abrirPainelCreditoRapido(){
+    let select = document.getElementById("creditoRapidoCliente");
+    let revendas = clientes
+        .map((c, i) => ({ c, i }))
+        .filter(o => ehClienteRevenda(o.c));
+
+    if(revendas.length === 0){
+        mostrarAlerta("Nenhum cliente marcado como revenda ainda.", "aviso");
+        return;
+    }
+
+    select.innerHTML = revendas.map(o => `<option value="${o.i}">${o.c.nome}</option>`).join("");
+    document.getElementById("creditoRapidoQtd").value = "";
+    document.getElementById("creditoRapidoData").value = new Date().toISOString().split("T")[0];
+    atualizarSubRevendaCreditoRapido();
+    document.getElementById("modalCreditoRapido").classList.add("ativo");
+}
+
+function atualizarSubRevendaCreditoRapido(){
+    let idx = parseInt(document.getElementById("creditoRapidoCliente").value);
+    let cliente = clientes[idx];
+    let selectSub = document.getElementById("creditoRapidoSubRevenda");
+    let subRevendas = cliente && Array.isArray(cliente.subRevendas) ? cliente.subRevendas : [];
+
+    if(subRevendas.length > 0){
+        selectSub.innerHTML = subRevendas.map(s => `<option value="${s.id}">${s.nome}</option>`).join("");
+        let padrao = subRevendas.find(s => s.padrao) || subRevendas[0];
+        if(padrao) selectSub.value = padrao.id;
+        selectSub.style.display = "block";
+    } else {
+        selectSub.innerHTML = "";
+        selectSub.style.display = "none";
+    }
+}
+
+function definirCreditoRapidoQtd(qtd){
+    let campo = document.getElementById("creditoRapidoQtd");
+    campo.value = (parseInt(campo.value) || 0) + qtd;
+}
+
+function fecharPainelCreditoRapido(){
+    document.getElementById("modalCreditoRapido").classList.remove("ativo");
+}
+
+function confirmarCreditoRapido(){
+    let idx = parseInt(document.getElementById("creditoRapidoCliente").value);
+    let cliente = clientes[idx];
+    if(!cliente) return;
+
+    let creditos = parseInt(document.getElementById("creditoRapidoQtd").value) || 0;
+    if(creditos <= 0){ mostrarAlerta("Informe a quantidade de créditos.", "aviso"); return; }
+
+    let subRevendas = Array.isArray(cliente.subRevendas) ? cliente.subRevendas : [];
+    let subSelecionada = null;
+    if(subRevendas.length > 0){
+        let subId = document.getElementById("creditoRapidoSubRevenda").value;
+        subSelecionada = subRevendas.find(s => s.id === subId) || subRevendas.find(s => s.padrao) || subRevendas[0];
+    }
+
+    let custoCreditoAtual = obterCustoCreditoRevenda(cliente.servidor);
+    let valorTotal = creditos * VALOR_CREDITO_REVENDA;
+    let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - custoCreditoAtual);
+    let dataCredito = document.getElementById("creditoRapidoData").value || new Date().toISOString().split("T")[0];
+    let idOperacao = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+
+    if(!Array.isArray(cliente.historicoCreditos)) cliente.historicoCreditos = [];
+    cliente.tipoCliente = "revenda";
+    cliente.historicoCreditos.push({
+        data:dataCredito, creditos, valorUnitario:VALOR_CREDITO_REVENDA, custoUnitario:custoCreditoAtual,
+        valorTotal, lucro:lucroOperacao, idOperacao,
+        subRevendaId: subSelecionada ? subSelecionada.id : null,
+        subRevendaNome: subSelecionada ? subSelecionada.nome : cliente.nome
+    });
+    cliente.ultimaRenovacao = dataCredito;
+    if(!cliente.plano) cliente.plano = "Revenda (créditos)";
+
+    let nomeLucro = subSelecionada ? `${cliente.nome} - ${subSelecionada.nome}` : cliente.nome;
+    registrarMovimentoLucro(nomeLucro, lucroOperacao, idOperacao, dataCredito);
+
+    if(!Array.isArray(cliente.historico)) cliente.historico = [];
+    cliente.historico.push({
+        data:dataCredito, vencimentoAnterior:"Revenda", vencimentoNovo:"Revenda",
+        plano: subSelecionada ? `+${creditos} créditos (${subSelecionada.nome})` : `+${creditos} créditos`,
+        idOperacao
+    });
+
+    salvar();
+    renderizar();
+    atualizarDashboard();
+    fecharPainelCreditoRapido();
+    mostrarSucesso(`✅ ${creditos} créditos lançados para ${nomeLucro}`);
+}
+
 function fecharResumoDiario(){
     document.getElementById("modalResumoDiario").style.display = "none";
     if(modoTesteBackupAtivo){
@@ -6508,6 +6639,30 @@ document.addEventListener("DOMContentLoaded", function(){
     </div>
 </div>
 
+
+<!-- PAINEL SECRETO — LANÇAMENTO RÁPIDO DE CRÉDITOS -->
+<div class="modal" id="modalCreditoRapido">
+    <div class="modal-box">
+        <div class="modal-topo">
+            <h2>⚡ Crédito Rápido</h2>
+            <button class="fechar-modal" onclick="fecharPainelCreditoRapido()">✕</button>
+        </div>
+        <label style="font-size:12px;color:#94a3b8;display:block;margin:6px 0 4px;">Revenda</label>
+        <select id="creditoRapidoCliente" onchange="atualizarSubRevendaCreditoRapido()"></select>
+        <select id="creditoRapidoSubRevenda" style="display:none; margin-top:8px;"></select>
+        <label style="font-size:12px;color:#94a3b8;display:block;margin:10px 0 4px;">📅 Data</label>
+        <input type="date" id="creditoRapidoData">
+        <div class="botoes-rapidos-creditos" style="margin-top:10px;">
+            <button type="button" onclick="definirCreditoRapidoQtd(10)">+10</button>
+            <button type="button" onclick="definirCreditoRapidoQtd(15)">+15</button>
+            <button type="button" onclick="definirCreditoRapidoQtd(20)">+20</button>
+            <button type="button" onclick="definirCreditoRapidoQtd(30)">+30</button>
+            <button type="button" onclick="definirCreditoRapidoQtd(50)">+50</button>
+        </div>
+        <input type="number" id="creditoRapidoQtd" min="1" placeholder="Quantidade de créditos" style="margin-top:10px;">
+        <button class="btn-add" onclick="confirmarCreditoRapido()" style="margin-top:12px;">✅ Lançar Créditos</button>
+    </div>
+</div>
 
 <!-- MODAL ALERTA (substitui o alert()) -->
 <div class="modal" id="modalAlerta" onclick="if(event.target===this)fecharModalAlerta()">
