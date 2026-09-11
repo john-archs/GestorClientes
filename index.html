@@ -1419,6 +1419,28 @@ textarea{
     flex:1;
     min-width:0;
 }
+.linha-checkbox-config{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:#1e293b;
+    border-radius:8px;
+    padding:10px 12px;
+    margin-bottom:12px;
+}
+.linha-checkbox-config input[type="checkbox"]{
+    width:18px;
+    height:18px;
+    flex-shrink:0;
+    accent-color:#38bdf8;
+    cursor:pointer;
+}
+.linha-checkbox-config label{
+    margin:0;
+    cursor:pointer;
+    font-size:13px;
+    line-height:1.4;
+}
 .config-box input,
 .config-box textarea,
 .config-box select{
@@ -1936,7 +1958,12 @@ textarea{
             <div class="config-card-body">
                 <div class="config-card-body-interno">
                     <div class="dica-variaveis">
-                        💡 Variáveis disponíveis nos modelos: <code>{nome}</code> <code>{usuario}</code> <code>{senha}</code> <code>{plano}</code> <code>{valor}</code> <code>{vencimento}</code> — na Ativação e Renovação, <code>{valor}</code> é só o número (ex: "30,00", use "R$ {valor}" no texto) — no Lembrete e na Cobrança, <code>{valor}</code> já vem formatado como "R$ ..." pronto (NÃO coloque "R$" na frente dele nesses dois) e, se houver desconto pendente, mostra automaticamente o valor original riscado + o valor final + a linha "🎁 Desconto aplicado" logo abaixo — <code>{desconto}</code> mostra só o número do desconto, se precisar dele separado — só na Renovação: <code>{link}</code> (área do cliente) — só no Lembrete e na Cobrança: <code>{saudacao}</code> <code>{status}</code> <code>{pix_chave}</code> <code>{pix_nome}</code> <code>{pix_banco}</code> — só no Lembrete: <code>{emoji}</code> — só na Cobrança: <code>{dias}</code> (dias em atraso)
+                        💡 Variáveis disponíveis nos modelos: <code>{nome}</code> <code>{usuario}</code> <code>{senha}</code> <code>{plano}</code> <code>{valor}</code> <code>{vencimento}</code> — na Ativação e Renovação, <code>{valor}</code> é só o número (ex: "30,00", use "R$ {valor}" no texto) — no Lembrete e na Cobrança, <code>{valor}</code> já vem formatado como "R$ ..." pronto (NÃO coloque "R$" na frente dele nesses dois) e, se houver desconto pendente, mostra automaticamente o valor original riscado + o valor final + a linha "🎁 Desconto aplicado" logo abaixo — <code>{desconto}</code> mostra só o número do desconto, se precisar dele separado — só na Renovação: <code>{areacliente}</code> (frase "🔗 Sua área do cliente:" + link, já com quebra de linha — some sozinho se não houver link ou se estiver desativado nas configurações; use <code>{link}</code> em vez dele se quiser só a URL, sem a frase) — só no Lembrete e na Cobrança: <code>{saudacao}</code> <code>{status}</code> <code>{pix_chave}</code> <code>{pix_nome}</code> <code>{pix_banco}</code> — só no Lembrete: <code>{emoji}</code> — só na Cobrança: <code>{dias}</code> (dias em atraso)
+                    </div>
+
+                    <div class="linha-checkbox-config">
+                        <input type="checkbox" id="linkClienteAtivado" checked onchange="verificarAlteracoesConfiguracao()">
+                        <label for="linkClienteAtivado">🔗 Incluir link da área do cliente no Renovar e nas demais mensagens prontas</label>
                     </div>
 
                     <label><strong>● Modelo de Ativação</strong></label>
@@ -2014,8 +2041,7 @@ const MODELO_RENOVACAO_PADRAO =
 
 *🗓️ Vencimento:* {vencimento}
 
-*🔗 Sua área do cliente:*
-{link}`;
+{areacliente}`;
 
 const MODELO_LEMBRETE_PADRAO =
 `*{emoji} 🙋🏽‍♂️ Ooi, {nome}*. {saudacao}!
@@ -2093,18 +2119,24 @@ function previsualizarMensagem(tipo){
         ? formatarValorComDesconto(30, 5)
         : "30,00";
 
+    const linkExemploAtivado = document.getElementById("linkClienteAtivado").checked;
+
     const dadosExemplo = {
         nome: "João", usuario: "joao123", senha: "abc123",
         plano: "Mensal 1 Tela", valor: valorExemplo, desconto: "5,00", vencimento: "15/08/2026",
         dias: 3,
-        link: "https://john-archs.github.io/Usuario/?d=exemplo",
+        link: linkExemploAtivado ? "https://john-archs.github.io/Usuario/?d=exemplo" : "",
         saudacao: saudacaoBrasileira(), emoji: "🟡", status: "vence amanhã",
         pix_chave: (document.getElementById("pixChave").value || "sua-chave-pix"),
         pix_nome: (document.getElementById("pixNome").value || "Seu Nome"),
         pix_banco: (document.getElementById("pixBanco").value || "Seu Banco")
     };
+    dadosExemplo.areacliente = linkExemploAtivado ? `*🔗 Sua área do cliente:*\n${dadosExemplo.link}` : "";
 
     let mensagem = preencherTemplate(template, dadosExemplo);
+    // Se {areacliente} (ou {link}) virou "" por estar desativado, evita
+    // deixar linha(s) em branco sobrando no meio/fim da mensagem.
+    mensagem = mensagem.replace(/\n{3,}/g, "\n\n").trimEnd();
 
     const promocao = (document.getElementById("textoPromocao").value || "").trim();
     const rodape = (document.getElementById("textoRodape").value || "").trim();
@@ -2112,7 +2144,7 @@ function previsualizarMensagem(tipo){
         if(promocao) mensagem += `\n\n${promocao}`;
         if(rodape) mensagem += `\n\n${rodape}`;
     }
-    if(tipo === "renovacao" && !template.includes("{link}")){
+    if(tipo === "renovacao" && linkExemploAtivado && !template.includes("{link}") && !template.includes("{areacliente}")){
         mensagem += `\n\n*🔗 Sua área do cliente:*\n${dadosExemplo.link}`;
     }
 
@@ -2484,7 +2516,8 @@ function obterConfiguracoesAtuais(){
         modeloAtivacao: document.getElementById("modeloAtivacao").value,
         modeloRenovacao: document.getElementById("modeloRenovacao").value,
         modeloLembrete: document.getElementById("modeloLembrete").value,
-        modeloCobranca: document.getElementById("modeloCobranca").value
+        modeloCobranca: document.getElementById("modeloCobranca").value,
+        linkClienteAtivado: document.getElementById("linkClienteAtivado").checked
     });
 }
 
@@ -3225,6 +3258,14 @@ function temWhatsappSuporte(){
     return !!((config.whatsappSuporte || "").trim());
 }
 
+// Controla se o link da área do cliente deve ser incluído nas mensagens
+// prontas (Renovar, Dados, etc). Fica ativado por padrão — só some se o
+// usuário desmarcar explicitamente o checkbox em Configurações → Mensagens.
+function linkClienteAtivado(){
+    let config = JSON.parse(localStorage.getItem("configuracoes")) || {};
+    return config.linkClienteAtivado !== false;
+}
+
 // Versão síncrona (sem chamar TinyURL/is.gd): monta o link completo do
 // portal do cliente na hora, sem esperar nenhuma requisição de rede.
 // Usada na tela de "Dados" pra não encurtar automaticamente.
@@ -3232,6 +3273,7 @@ function obterLinkClienteCompleto(cliente){
     const urlPortal = URL_PORTAL_CLIENTE.trim();
     if(!urlPortal) return ""; // sem URL do portal definida no código, não há como gerar o link
     if(!temWhatsappSuporte()) return ""; // sem WhatsApp de suporte cadastrado, não exibe área do cliente
+    if(!linkClienteAtivado()) return ""; // usuário desativou o link da área do cliente nas configurações
 
     const { planoNome, valor } = extrairPlanoValorParaLink(cliente.plano);
     const codigo = codificarLinkCliente(cliente.nome, planoNome, valor, cliente.vencimento, cliente.usuario, cliente.senha);
@@ -3288,13 +3330,20 @@ async function enviarMensagemRenovacao(cliente){
         // dos dados de acesso, já com o pagamento concluído.
         valor: valorNumerico.toFixed(2).replace(".",","),
         vencimento: formatarData(cliente.vencimento),
-        link: linkCliente || ""
+        link: linkCliente || "",
+        // {areacliente}: já vem com a frase "🔗 Sua área do cliente:" e o
+        // link, com quebra de linha entre os dois — junta tudo numa
+        // variável só. Some sozinho se não houver link nenhum.
+        areacliente: linkCliente ? `*🔗 Sua área do cliente:*\n${linkCliente}` : ""
     });
-    // Compatibilidade: modelos personalizados salvos antes da variável {link}
-    // existir continuam recebendo o link automaticamente no final.
-    if(!template.includes("{link}") && linkCliente){
+    // Compatibilidade: modelos personalizados salvos antes das variáveis
+    // {link}/{areacliente} existirem continuam recebendo o link automaticamente no final.
+    if(!template.includes("{link}") && !template.includes("{areacliente}") && linkCliente){
         mensagem += `\n\n*🔗 Sua área do cliente:*\n${linkCliente}`;
     }
+    // Se {areacliente} (ou {link}) virou "" por estar desativado, evita
+    // deixar linha(s) em branco sobrando no meio/fim da mensagem.
+    mensagem = mensagem.replace(/\n{3,}/g, "\n\n").trimEnd();
     if(promocao && promocao.trim()) mensagem += `\n~~~~~~~~~~~~~~~~~~\n${promocao}`;
     if(rodape && rodape.trim()) mensagem += `\n~~~~~~~~~~~~~~~~~~\n${rodape}`;
     if(cliente.obs){
@@ -5989,6 +6038,7 @@ function salvarConfiguracoes(){
     config.modeloRenovacao = document.getElementById("modeloRenovacao").value;
     config.modeloLembrete = document.getElementById("modeloLembrete").value;
     config.modeloCobranca = document.getElementById("modeloCobranca").value;
+    config.linkClienteAtivado = document.getElementById("linkClienteAtivado").checked;
     localStorage.setItem("configuracoes", JSON.stringify(config));
     atualizarCabecalho();
     mostrarSucesso("✅ Configurações salvas com sucesso!");
@@ -6008,6 +6058,7 @@ function carregarConfiguracoes(){
     document.getElementById("modeloRenovacao").value = config.modeloRenovacao || MODELO_RENOVACAO_PADRAO;
     document.getElementById("modeloLembrete").value = config.modeloLembrete || MODELO_LEMBRETE_PADRAO;
     document.getElementById("modeloCobranca").value = config.modeloCobranca || MODELO_COBRANCA_PADRAO;
+    document.getElementById("linkClienteAtivado").checked = config.linkClienteAtivado !== false;
     let nomeSistema = document.getElementById("nomeSistema");
     if(nomeSistema) nomeSistema.value = config.nomeSistema || "";
     atualizarCabecalho();
