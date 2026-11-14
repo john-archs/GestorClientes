@@ -2713,7 +2713,7 @@ async function exportarClientesExcel(){
     sheet.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: colunas.length } };
 
     const nomeArquivo = nomeSistema.trim().replace(/[^a-zA-Z0-9À-ÿ ]/g, "").replace(/\s+/g, "_");
-    const dataArquivo = new Date().toISOString().split("T")[0];
+    const dataArquivo = dataISOLocal(new Date());
 
     try{
         const buffer = await workbook.xlsx.writeBuffer();
@@ -2990,7 +2990,7 @@ function abrirModalRenovacao(index){
         document.getElementById("renovacaoInfoRevenda").style.display = "block";
         document.getElementById("renovacaoCreditos").value = "";
         document.getElementById("renovacaoValorRevenda").value = "";
-        document.getElementById("renovacaoDataCredito").value = new Date().toISOString().split("T")[0];
+        document.getElementById("renovacaoDataCredito").value = dataISOLocal(new Date());
 
         let selectSub = document.getElementById("renovacaoSubRevenda");
         let subRevendas = Array.isArray(cliente.subRevendas) ? cliente.subRevendas : [];
@@ -3016,7 +3016,7 @@ function abrirModalRenovacao(index){
         // Data do pagamento da renovação: por padrão é hoje, mas pode ser
         // alterada (ex: cliente pagou ontem e o lançamento ficou atrasado).
         // O cálculo do novo vencimento usa essa data como referência.
-        document.getElementById("renovacaoDataPagamento").value = new Date().toISOString().split("T")[0];
+        document.getElementById("renovacaoDataPagamento").value = dataISOLocal(new Date());
 
         // Mostra o desconto de indicação pendente (se houver) e o valor
         // final já calculado, para o usuário conferir antes de confirmar.
@@ -3052,13 +3052,13 @@ function atualizarPreviaVencimentoRenovacao(){
         return;
     }
 
-    let dataPagamentoISO = document.getElementById("renovacaoDataPagamento").value || new Date().toISOString().split("T")[0];
+    let dataPagamentoISO = document.getElementById("renovacaoDataPagamento").value || dataISOLocal(new Date());
     let dataPagamento = paraDataLocal(dataPagamentoISO);
     let dataBase = (cliente.vencimento && paraDataLocal(cliente.vencimento) > dataPagamento)
         ? paraDataLocal(cliente.vencimento)
         : dataPagamento;
     let novoVencimento = adicionarPeriodoData(dataBase, duracao);
-    previa.innerText = `Novo vencimento: ${formatarData(novoVencimento.toISOString().split("T")[0])}`;
+    previa.innerText = `Novo vencimento: ${formatarData(dataISOLocal(novoVencimento))}`;
 }
 
 function fecharModalRenovacao(){
@@ -3096,7 +3096,7 @@ function renovarCliente(){
         let custoCreditoAtual = obterCustoCreditoRevenda(cliente.servidor);
         let valorTotal = creditos * VALOR_CREDITO_REVENDA;
         let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - custoCreditoAtual);
-        const hojeISORenovacao = document.getElementById("renovacaoDataCredito").value || new Date().toISOString().split("T")[0];
+        const hojeISORenovacao = document.getElementById("renovacaoDataCredito").value || dataISOLocal(new Date());
         const idOperacaoRevenda = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 
         if(!Array.isArray(cliente.historicoCreditos)) cliente.historicoCreditos = [];
@@ -3137,7 +3137,7 @@ function renovarCliente(){
     // lançamento ficou atrasado) — todo o cálculo usa essa data no lugar
     // da data de hoje.
     let campoDataPagamento = document.getElementById("renovacaoDataPagamento");
-    const dataPagamentoISORenov = (campoDataPagamento && campoDataPagamento.value) || new Date().toISOString().split("T")[0];
+    const dataPagamentoISORenov = (campoDataPagamento && campoDataPagamento.value) || dataISOLocal(new Date());
     let dataPagamentoRenov = paraDataLocal(dataPagamentoISORenov);
 
     // Planos sem duração definida (ex: revenda) não têm vencimento: a
@@ -3148,7 +3148,7 @@ function renovarCliente(){
             ? paraDataLocal(cliente.vencimento)
             : dataPagamentoRenov;
         let novaData = adicionarPeriodoData(dataBase, duracao);
-        vencimentoNovo = novaData.toISOString().split("T")[0];
+        vencimentoNovo = dataISOLocal(novaData);
         clientes[clienteRenovacao].vencimento = vencimentoNovo;
     }
 
@@ -3659,7 +3659,7 @@ function sugerirVencimentoPlano(){
     }
     let data = adicionarPeriodoData(new Date(), duracao);
     campoVencimento.type = "date";
-    campoVencimento.value = data.toISOString().split("T")[0];
+    campoVencimento.value = dataISOLocal(data);
 }
 
 function iniciarDrag(el, tipo, index){
@@ -4301,8 +4301,8 @@ function abrirModalLucroPeriodo(){
     let hoje = new Date();
     let primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
-    document.getElementById("lucroPeriodoInicio").value = primeiroDia.toISOString().split("T")[0];
-    document.getElementById("lucroPeriodoFim").value = hoje.toISOString().split("T")[0];
+    document.getElementById("lucroPeriodoInicio").value = dataISOLocal(primeiroDia);
+    document.getElementById("lucroPeriodoFim").value = dataISOLocal(hoje);
 
     marcarAtalhoAtivo("atalhoMesAtual");
     document.getElementById("modalLucroPeriodo").classList.add("ativo");
@@ -4337,8 +4337,8 @@ function aplicarAtalhoPeriodo(tipo){
         marcarAtalhoAtivo("atalhoAnoAtual");
     }
 
-    document.getElementById("lucroPeriodoInicio").value = inicio.toISOString().split("T")[0];
-    document.getElementById("lucroPeriodoFim").value = fim.toISOString().split("T")[0];
+    document.getElementById("lucroPeriodoInicio").value = dataISOLocal(inicio);
+    document.getElementById("lucroPeriodoFim").value = dataISOLocal(fim);
     calcularLucroPeriodo();
 }
 
@@ -4400,8 +4400,8 @@ function abrirModalRelatorio(){
     let hoje = new Date();
     let primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
-    document.getElementById("relatorioDataInicio").value = primeiroDia.toISOString().split("T")[0];
-    document.getElementById("relatorioDataFim").value = hoje.toISOString().split("T")[0];
+    document.getElementById("relatorioDataInicio").value = dataISOLocal(primeiroDia);
+    document.getElementById("relatorioDataFim").value = dataISOLocal(hoje);
 
     document.getElementById("modalRelatorioPDF").classList.add("ativo");
 }
@@ -4785,7 +4785,7 @@ function adicionarCliente(){
         let custoCreditoAtual = obterCustoCreditoRevenda(servidor);
         let valorTotal = creditos * VALOR_CREDITO_REVENDA;
         let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - custoCreditoAtual);
-        const hojeISO = new Date().toISOString().split("T")[0];
+        const hojeISO = dataISOLocal(new Date());
         const idOperacaoRevendaNovo = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
         const idSub = gerarIdSubRevenda();
 
@@ -4849,11 +4849,11 @@ function adicionarCliente(){
         let duracao = obterDuracaoPlano(planoTexto);
         if(duracao){
             let data = adicionarPeriodoData(new Date(), duracao);
-            vencimento = data.toISOString().split("T")[0];
+            vencimento = dataISOLocal(data);
         }
     }
 
-    const hojeISO = new Date().toISOString().split("T")[0];
+    const hojeISO = dataISOLocal(new Date());
     const idOperacaoNovoCliente = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     clientes.push({ servidor, servidor2, nome, usuario, senha, whatsapp, vencimento, plano: planoTexto, obs, ultimaRenovacao: hojeISO });
 
@@ -5950,6 +5950,16 @@ function calcularDiasRestantes(data){
     return Math.ceil((venc - hoje) / (1000*60*60*24));
 }
 
+/* Converte uma Date para "YYYY-MM-DD" no fuso LOCAL (toISOString usa UTC e
+   adiantava o dia após as 21h no Brasil). */
+function dataISOLocal(d){
+    d = d || new Date();
+    const ano = d.getFullYear();
+    const mes = String(d.getMonth()+1).padStart(2,"0");
+    const dia = String(d.getDate()).padStart(2,"0");
+    return `${ano}-${mes}-${dia}`;
+}
+
 function getDataLocalHoje(){
     const d = new Date();
     const ano = d.getFullYear();
@@ -6076,7 +6086,7 @@ function toggleAdicionar(){
             let data = new Date();
             data.setMonth(data.getMonth() + 1);
             campoVencimento.type = "date";
-            campoVencimento.value = data.toISOString().split("T")[0];
+            campoVencimento.value = dataISOLocal(data);
         }
     }
 }
@@ -6223,7 +6233,7 @@ function abrirPainelCreditoRapido(){
 
     select.innerHTML = revendas.map(o => `<option value="${o.i}">${o.c.nome}</option>`).join("");
     document.getElementById("creditoRapidoQtd").value = "";
-    document.getElementById("creditoRapidoData").value = new Date().toISOString().split("T")[0];
+    document.getElementById("creditoRapidoData").value = dataISOLocal(new Date());
     atualizarSubRevendaCreditoRapido();
     document.getElementById("modalCreditoRapido").classList.add("ativo");
 }
@@ -6272,7 +6282,7 @@ function confirmarCreditoRapido(){
     let custoCreditoAtual = obterCustoCreditoRevenda(cliente.servidor);
     let valorTotal = creditos * VALOR_CREDITO_REVENDA;
     let lucroOperacao = creditos * (VALOR_CREDITO_REVENDA - custoCreditoAtual);
-    let dataCredito = document.getElementById("creditoRapidoData").value || new Date().toISOString().split("T")[0];
+    let dataCredito = document.getElementById("creditoRapidoData").value || dataISOLocal(new Date());
     let idOperacao = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 
     if(!Array.isArray(cliente.historicoCreditos)) cliente.historicoCreditos = [];
